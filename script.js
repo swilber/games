@@ -56,6 +56,32 @@ function getDifficulty(gameType) {
             };
             console.log('Maze3D settings:', maze3dSettings);
             return maze3dSettings;
+        case 'mario':
+            const marioSettings = {
+                levelLength: Math.max(800, 600 + (difficulty * 200)),
+                enemyCount: Math.max(2, difficulty),
+                jumpHeight: 15,
+                gravity: 0.8
+            };
+            console.log('Mario settings:', marioSettings);
+            return marioSettings;
+        case 'donkeykong':
+            const dkSettings = {
+                barrelSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
+                barrelFrequency: config.gameSettings.barrelFrequency,
+                ladderCount: Math.max(3, 2 + Math.floor(difficulty / 2)),
+                levelCount: Math.max(1, Math.floor(difficulty / 2))
+            };
+            console.log('DonkeyKong settings:', dkSettings);
+            return dkSettings;
+        case 'pacman':
+            const pacmanSettings = {
+                ghostSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
+                powerPelletDuration: Math.max(3000, 8000 - (difficulty * 500)),
+                ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3))
+            };
+            console.log('Pacman settings:', pacmanSettings);
+            return pacmanSettings;
         default:
             return {};
     }
@@ -178,6 +204,15 @@ function startLevel() {
             break;
         case 'maze3d':
             createMaze3DGame(getDifficulty('maze3d'));
+            break;
+        case 'mario':
+            createMarioGame(getDifficulty('mario'));
+            break;
+        case 'donkeykong':
+            createDonkeyKongGame(getDifficulty('donkeykong'));
+            break;
+        case 'pacman':
+            createPacmanGame(getDifficulty('pacman'));
             break;
     }
 }

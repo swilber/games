@@ -1,10 +1,11 @@
 {
   "gameSettings": {
-    "totalLevels": 6,
+    "totalLevels": 9,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
-    "moveSpeed": 0.08
+    "moveSpeed": 0.08,
+    "barrelFrequency": 150
   },
   "levels": [
     {
@@ -42,6 +43,24 @@
       "order": 6,
       "enabled": true,
       "type": "maze3d"
+    },
+    {
+      "id": 7,
+      "order": 7,
+      "enabled": true,
+      "type": "mario"
+    },
+    {
+      "id": 8,
+      "order": 8,
+      "enabled": true,
+      "type": "donkeykong"
+    },
+    {
+      "id": 9,
+      "order": 9,
+      "enabled": true,
+      "type": "pacman"
     }
   ]
 }

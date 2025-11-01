@@ -57,6 +57,36 @@
       "answer": "abc",
       "unlockQuestion": "What do you avoid in Frogger?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 7,
+      "title": "Level 7: Mario Bros",
+      "description": "Jump and run to reach the flag!",
+      "type": "mario",
+      "question": "What do you collect in Mario?",
+      "answer": "abc",
+      "unlockQuestion": "What perspective is this maze in?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 8,
+      "title": "Level 8: Donkey Kong",
+      "description": "Climb ladders and avoid barrels to save the princess!",
+      "type": "donkeykong",
+      "question": "What does Donkey Kong throw?",
+      "answer": "abc",
+      "unlockQuestion": "What do you collect in Mario?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 9,
+      "title": "Level 9: Pac-Man",
+      "description": "Eat all the dots while avoiding ghosts!",
+      "type": "pacman",
+      "question": "What do you eat in Pac-Man?",
+      "answer": "abc",
+      "unlockQuestion": "What does Donkey Kong throw?",
+      "unlockAnswer": "abc"
     }
   ]
 }
