@@ -1,0 +1,62 @@
+{
+  "levels": [
+    {
+      "id": 1,
+      "title": "Level 1: Memory Game",
+      "description": "Click the squares in the order they light up",
+      "type": "memory",
+      "question": "What color flashes when you click correctly?",
+      "answer": "abc"
+    },
+    {
+      "id": 2,
+      "title": "Level 2: Snake Game",
+      "description": "Use arrow keys to eat the red food",
+      "type": "snake",
+      "question": "What happens when the snake hits the wall?",
+      "answer": "abc",
+      "unlockQuestion": "What color flashes when you click correctly?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 3,
+      "title": "Level 3: Quiz Game",
+      "description": "Answer the trivia question correctly",
+      "type": "quiz",
+      "question": "What programming language is this game written in?",
+      "answer": "abc",
+      "unlockQuestion": "What happens when the snake hits the wall?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 4,
+      "title": "Level 4: Flappy Bird",
+      "description": "Press SPACE to flap and avoid the pipes",
+      "type": "flappy",
+      "question": "How many pipes did you pass?",
+      "answer": "abc",
+      "unlockQuestion": "What programming language is this game written in?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 5,
+      "title": "Level 5: Frogger",
+      "description": "Use arrow keys to cross the road safely",
+      "type": "frogger",
+      "question": "What do you avoid in Frogger?",
+      "answer": "abc",
+      "unlockQuestion": "How many pipes did you pass?",
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 6,
+      "title": "Level 6: 3D Maze",
+      "description": "Navigate the maze to find the exit",
+      "type": "maze3d",
+      "question": "What perspective is this maze in?",
+      "answer": "abc",
+      "unlockQuestion": "What do you avoid in Frogger?",
+      "unlockAnswer": "abc"
+    }
+  ]
+}

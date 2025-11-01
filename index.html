@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Level Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="level-select" class="screen">
+            <h2>Select Level</h2>
+            <div id="level-buttons"></div>
+        </div>
+        
+        <div id="game-screen" class="screen hidden">
+            <div id="level-info">
+                <h2 id="level-title">Level 1: Memory Game</h2>
+                <p id="level-description">Click the squares in the order they light up</p>
+                <button onclick="showLevelSelect()">Back to Level Select</button>
+            </div>
+            
+            <div id="game-area">
+                <!-- Game content will be dynamically inserted here -->
+            </div>
+        </div>
+        
+        <div id="level-unlock-modal" class="hidden">
+            <div class="modal-content">
+                <h3>Answer to unlock this level:</h3>
+                <p id="unlock-question-text"></p>
+                <input type="text" id="unlock-answer-input" placeholder="Your answer">
+                <button onclick="checkUnlockAnswer()">Submit</button>
+                <button onclick="hideLevelUnlock()">Cancel</button>
+            </div>
+        </div>
+        
+        <div id="question-modal" class="hidden">
+            <div class="modal-content">
+                <h3>Answer to proceed to next level:</h3>
+                <p id="question-text"></p>
+                <input type="text" id="answer-input" placeholder="Your answer">
+                <button onclick="checkAnswer()">Submit</button>
+            </div>
+        </div>
+        
+        <div id="game-complete" class="hidden">
+            <h2>Congratulations! You've completed all levels!</h2>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+    
+    <script src="games/memory.js"></script>
+    <script src="games/snake.js"></script>
+    <script src="games/quiz.js"></script>
+    <script src="games/flappy.js"></script>
+    <script src="games/frogger.js"></script>
+    <script src="games/maze3d.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

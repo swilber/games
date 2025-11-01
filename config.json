@@ -1,0 +1,47 @@
+{
+  "gameSettings": {
+    "totalLevels": 6,
+    "startUnlocked": 1,
+    "difficulty": 5,
+    "showMinimap": true,
+    "moveSpeed": 0.08
+  },
+  "levels": [
+    {
+      "id": 1,
+      "order": 1,
+      "enabled": true,
+      "type": "memory"
+    },
+    {
+      "id": 2,
+      "order": 2,
+      "enabled": true,
+      "type": "snake"
+    },
+    {
+      "id": 3,
+      "order": 3,
+      "enabled": true,
+      "type": "quiz"
+    },
+    {
+      "id": 4,
+      "order": 4,
+      "enabled": true,
+      "type": "flappy"
+    },
+    {
+      "id": 5,
+      "order": 5,
+      "enabled": true,
+      "type": "frogger"
+    },
+    {
+      "id": 6,
+      "order": 6,
+      "enabled": true,
+      "type": "maze3d"
+    }
+  ]
+}
