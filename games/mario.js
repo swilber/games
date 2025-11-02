@@ -40,25 +40,51 @@ const SpriteRenderer = {
         },
         
         koopa: (ctx, enemy) => {
-            // Koopa shell - green with yellow details
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 10); // Main shell
-            
-            // Yellow shell trim
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 1);  // Top edge
-            ctx.fillRect(enemy.x + 2, enemy.y + 19, 16, 1);  // Bottom edge
-            ctx.fillRect(enemy.x + 2, enemy.y + 11, 1, 8);   // Left edge
-            ctx.fillRect(enemy.x + 17, enemy.y + 11, 1, 8);  // Right edge
-            
-            // Shell pattern - hexagonal segments
-            ctx.fillStyle = '#32CD32';
-            ctx.fillRect(enemy.x + 6, enemy.y + 13, 2, 2);
-            ctx.fillRect(enemy.x + 12, enemy.y + 13, 2, 2);
-            ctx.fillRect(enemy.x + 9, enemy.y + 16, 2, 2);
-            
-            // Head (when not in shell)
-            if (!enemy.inShell) {
+            if (enemy.state === 'shell' || enemy.state === 'shellMoving') {
+                // Shell only - green with yellow trim
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(enemy.x + 2, enemy.y + 4, 16, 12); // Shell body
+                
+                // Yellow shell trim
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(enemy.x + 2, enemy.y + 4, 16, 1);  // Top edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 15, 16, 1); // Bottom edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 5, 1, 10);  // Left edge
+                ctx.fillRect(enemy.x + 17, enemy.y + 5, 1, 10); // Right edge
+                
+                // Shell pattern
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(enemy.x + 6, enemy.y + 8, 2, 2);
+                ctx.fillRect(enemy.x + 12, enemy.y + 8, 2, 2);
+                ctx.fillRect(enemy.x + 9, enemy.y + 11, 2, 2);
+                
+                // Add motion lines if moving
+                if (enemy.state === 'shellMoving') {
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillRect(enemy.x - 2, enemy.y + 6, 1, 1);
+                    ctx.fillRect(enemy.x - 4, enemy.y + 10, 1, 1);
+                    ctx.fillRect(enemy.x + 22, enemy.y + 8, 1, 1);
+                    ctx.fillRect(enemy.x + 24, enemy.y + 12, 1, 1);
+                }
+            } else {
+                // Walking Koopa - shell with head and feet
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 10); // Main shell
+                
+                // Yellow shell trim
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 1);  // Top edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 19, 16, 1);  // Bottom edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 11, 1, 8);   // Left edge
+                ctx.fillRect(enemy.x + 17, enemy.y + 11, 1, 8);  // Right edge
+                
+                // Shell pattern
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(enemy.x + 6, enemy.y + 13, 2, 2);
+                ctx.fillRect(enemy.x + 12, enemy.y + 13, 2, 2);
+                ctx.fillRect(enemy.x + 9, enemy.y + 16, 2, 2);
+                
+                // Head
                 ctx.fillStyle = '#FFFF99';
                 ctx.fillRect(enemy.x + 6, enemy.y + 4, 8, 6); // Head
                 
@@ -70,71 +96,104 @@ const SpriteRenderer = {
                 // Beak
                 ctx.fillStyle = '#FFA500';
                 ctx.fillRect(enemy.x + 9, enemy.y + 7, 2, 1);
+                
+                // Feet
+                ctx.fillStyle = '#FFFF99';
+                ctx.fillRect(enemy.x + 5, enemy.y + 20, 2, 1);
+                ctx.fillRect(enemy.x + 13, enemy.y + 20, 2, 1);
             }
-            
-            // Feet
-            ctx.fillStyle = '#FFFF99';
-            ctx.fillRect(enemy.x + 5, enemy.y + 20, 2, 1);
-            ctx.fillRect(enemy.x + 13, enemy.y + 20, 2, 1);
         }
     },
     player: {
         mario: (ctx, player) => {
             const isSmall = player.powerState === 'small';
+            const baseY = isSmall ? player.y + 8 : player.y; // Adjust for size difference
             
             // Mario's hat - red with proper shading
             ctx.fillStyle = '#FF0000';
-            ctx.fillRect(player.x + 2, player.y, 12, 6);
+            if (isSmall) {
+                ctx.fillRect(player.x + 2, baseY, 12, 4);
+            } else {
+                ctx.fillRect(player.x + 2, baseY, 16, 6);
+            }
+            
             ctx.fillStyle = '#CC0000';
-            ctx.fillRect(player.x + 3, player.y + 1, 10, 1); // Hat shadow
+            if (isSmall) {
+                ctx.fillRect(player.x + 3, baseY + 1, 10, 1); // Hat shadow
+            } else {
+                ctx.fillRect(player.x + 3, baseY + 1, 14, 1);
+            }
             
             // Face - peach color
             ctx.fillStyle = '#FFDBAC';
-            ctx.fillRect(player.x + 3, player.y + 5, 10, 6);
+            if (isSmall) {
+                ctx.fillRect(player.x + 3, baseY + 3, 10, 4);
+            } else {
+                ctx.fillRect(player.x + 3, baseY + 5, 14, 6);
+            }
             
             // Eyes - black dots
             ctx.fillStyle = '#000';
-            ctx.fillRect(player.x + 5, player.y + 6, 1, 1);
-            ctx.fillRect(player.x + 9, player.y + 6, 1, 1);
+            if (isSmall) {
+                ctx.fillRect(player.x + 5, baseY + 4, 1, 1);
+                ctx.fillRect(player.x + 9, baseY + 4, 1, 1);
+            } else {
+                ctx.fillRect(player.x + 6, baseY + 7, 1, 1);
+                ctx.fillRect(player.x + 12, baseY + 7, 1, 1);
+            }
             
             // Mustache - brown
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(player.x + 6, player.y + 8, 4, 1);
+            if (isSmall) {
+                ctx.fillRect(player.x + 6, baseY + 6, 4, 1);
+            } else {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(player.x + 7, baseY + 9, 6, 1);
+            }
             
             if (!isSmall) {
                 // Big Mario - overalls and shirt
                 ctx.fillStyle = '#0066CC'; // Blue overalls
-                ctx.fillRect(player.x + 2, player.y + 11, 12, 10);
+                ctx.fillRect(player.x + 2, baseY + 11, 16, 12);
                 
                 // Red shirt showing through
                 ctx.fillStyle = '#FF0000';
-                ctx.fillRect(player.x + 6, player.y + 13, 4, 6);
+                ctx.fillRect(player.x + 7, baseY + 14, 6, 8);
                 
                 // Overall straps
                 ctx.fillStyle = '#0066CC';
-                ctx.fillRect(player.x + 4, player.y + 9, 2, 3);
-                ctx.fillRect(player.x + 10, player.y + 9, 2, 3);
+                ctx.fillRect(player.x + 4, baseY + 9, 3, 4);
+                ctx.fillRect(player.x + 13, baseY + 9, 3, 4);
                 
                 // Buttons - yellow
                 ctx.fillStyle = '#FFD700';
-                ctx.fillRect(player.x + 7, player.y + 14, 1, 1);
-                ctx.fillRect(player.x + 7, player.y + 16, 1, 1);
+                ctx.fillRect(player.x + 8, baseY + 15, 1, 1);
+                ctx.fillRect(player.x + 8, baseY + 18, 1, 1);
+                
+                // Gloves - white (bigger)
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(player.x, baseY + 16, 3, 4);
+                ctx.fillRect(player.x + 17, baseY + 16, 3, 4);
+                
+                // Shoes - brown (bigger)
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(player.x, baseY + 27, 6, 4);
+                ctx.fillRect(player.x + 14, baseY + 27, 6, 4);
             } else {
-                // Small Mario - just overalls
+                // Small Mario - just overalls (much smaller)
                 ctx.fillStyle = '#0066CC';
-                ctx.fillRect(player.x + 2, player.y + 11, 12, 8);
+                ctx.fillRect(player.x + 2, baseY + 7, 12, 6);
+                
+                // Small gloves
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(player.x + 1, baseY + 9, 2, 2);
+                ctx.fillRect(player.x + 13, baseY + 9, 2, 2);
+                
+                // Small shoes
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(player.x + 2, baseY + 13, 4, 2);
+                ctx.fillRect(player.x + 10, baseY + 13, 4, 2);
             }
-            
-            // Gloves - white
-            ctx.fillStyle = '#FFF';
-            ctx.fillRect(player.x + 1, player.y + (isSmall ? 13 : 15), 2, 3);
-            ctx.fillRect(player.x + 13, player.y + (isSmall ? 13 : 15), 2, 3);
-            
-            // Shoes - brown
-            ctx.fillStyle = '#8B4513';
-            const shoeY = player.y + player.height - 3;
-            ctx.fillRect(player.x + 1, shoeY, 5, 3);
-            ctx.fillRect(player.x + 10, shoeY, 5, 3);
         }
     }
 };
@@ -259,7 +318,7 @@ function createMarioGame(settings) {
         // Add some enemies and blocks for gameplay
         game.enemies = [
             {x: 300, y: 340, width: 20, height: 20, vx: -0.5, type: 'goomba', alive: true, animFrame: 0, animTimer: 0},
-            {x: 700, y: 340, width: 20, height: 20, vx: -1, type: 'koopa', alive: true, animFrame: 0, animTimer: 0},
+            {x: 700, y: 340, width: 20, height: 24, vx: -1, type: 'koopa', alive: true, animFrame: 0, animTimer: 0, state: 'walking'},
             {x: 1200, y: 340, width: 20, height: 20, vx: -0.5, type: 'goomba', alive: true, animFrame: 0, animTimer: 0}
         ];
         
@@ -380,6 +439,14 @@ function createMarioGame(settings) {
     function updatePlayer() {
         if (game.gameOver || game.won || !game.gameStarted) return;
         
+        // Update invincibility timer
+        if (game.player.invincible) {
+            game.player.invincibleTimer--;
+            if (game.player.invincibleTimer <= 0) {
+                game.player.invincible = false;
+            }
+        }
+        
         if (game.keys['ArrowLeft'] || game.keys['KeyA']) {
             game.player.vx = Math.max(game.player.vx - 0.5, -5);
         } else if (game.keys['ArrowRight'] || game.keys['KeyD']) {
@@ -495,7 +562,30 @@ function createMarioGame(settings) {
         game.enemies.forEach(enemy => {
             if (!enemy.alive) return;
             
-            enemy.x += enemy.vx;
+            // Handle Koopa states
+            if (enemy.type === 'koopa') {
+                if (enemy.state === 'walking') {
+                    enemy.x += enemy.vx;
+                } else if (enemy.state === 'shell') {
+                    // Shell is stationary
+                    enemy.vx = 0;
+                } else if (enemy.state === 'shellMoving') {
+                    enemy.x += enemy.vx;
+                    // Moving shell can kill other enemies
+                    game.enemies.forEach(otherEnemy => {
+                        if (otherEnemy !== enemy && otherEnemy.alive &&
+                            enemy.x < otherEnemy.x + otherEnemy.width &&
+                            enemy.x + enemy.width > otherEnemy.x &&
+                            enemy.y < otherEnemy.y + otherEnemy.height &&
+                            enemy.y + enemy.height > otherEnemy.y) {
+                            otherEnemy.alive = false;
+                        }
+                    });
+                }
+            } else {
+                // Regular enemy movement
+                enemy.x += enemy.vx;
+            }
             
             // Enemy collision with platforms and blocks
             let hitWall = false;
@@ -530,19 +620,70 @@ function createMarioGame(settings) {
             }
             
             // Player collision
-            if (game.player.x < enemy.x + enemy.width &&
+            if (!game.player.invincible && 
+                game.player.x < enemy.x + enemy.width &&
                 game.player.x + game.player.width > enemy.x &&
                 game.player.y < enemy.y + enemy.height &&
                 game.player.y + game.player.height > enemy.y) {
                 
                 if (game.player.vy > 0 && game.player.y < enemy.y) {
-                    enemy.alive = false;
-                    game.player.vy = -8;
-                    game.player.score += 100;
+                    // Jumping on enemy
+                    if (enemy.type === 'koopa') {
+                        if (enemy.state === 'walking') {
+                            // Koopa goes into shell
+                            enemy.state = 'shell';
+                            enemy.vx = 0;
+                            enemy.height = 16;
+                            enemy.y += 4; // Adjust position for smaller shell
+                            game.player.vy = -8;
+                            game.player.score += 100;
+                        } else if (enemy.state === 'shell') {
+                            // Kick the shell
+                            enemy.state = 'shellMoving';
+                            enemy.vx = game.player.x < enemy.x ? 3 : -3; // Kick away from Mario (slower speed)
+                            game.player.vy = -8;
+                            game.player.score += 400;
+                        } else if (enemy.state === 'shellMoving') {
+                            // Stop the moving shell
+                            enemy.state = 'shell';
+                            enemy.vx = 0;
+                            game.player.vy = -8;
+                            game.player.score += 100;
+                        }
+                    } else {
+                        // Goomba dies normally
+                        enemy.alive = false;
+                        game.player.vy = -8;
+                        game.player.score += 100;
+                    }
                 } else {
-                    game.player.lives--;
-                    if (game.player.lives <= 0) {
-                        game.gameOver = true;
+                    // Hit by enemy - handle power-up states
+                    if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
+                        // Downgrade to small Mario
+                        game.player.powerState = 'small';
+                        game.player.height = 30;
+                        game.player.y += 2; // Adjust position for smaller size
+                        
+                        // Add invincibility frames
+                        game.player.invincible = true;
+                        game.player.invincibleTimer = 120; // 2 seconds at 60fps
+                        
+                        // Push Mario away from enemy
+                        if (game.player.x < enemy.x) {
+                            game.player.x -= 20;
+                        } else {
+                            game.player.x += 20;
+                        }
+                    } else {
+                        // Small Mario loses a life
+                        game.player.lives--;
+                        if (game.player.lives <= 0) {
+                            game.gameOver = true;
+                        } else {
+                            // Reset position
+                            game.player.x = Math.max(50, game.player.x - 100);
+                            game.player.vx = 0;
+                        }
                     }
                 }
             }
@@ -670,8 +811,10 @@ function createMarioGame(settings) {
             }
         });
         
-        // Player
-        SpriteRenderer.player.mario(ctx, game.player);
+        // Player (with invincibility flashing)
+        if (!game.player.invincible || Math.floor(Date.now() / 100) % 2 === 0) {
+            SpriteRenderer.player.mario(ctx, game.player);
+        }
         
         // Particles (coins, effects)
         game.particles.forEach(particle => {
