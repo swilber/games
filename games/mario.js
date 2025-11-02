@@ -281,8 +281,45 @@ function createMarioGame(settings) {
     
     function updatePowerUps() {
         game.powerUps.forEach((powerUp, index) => {
+            // Horizontal movement
             powerUp.x += powerUp.vx;
             
+            // Add gravity
+            if (!powerUp.vy) powerUp.vy = 0;
+            powerUp.vy += 0.3; // Gravity
+            powerUp.y += powerUp.vy;
+            
+            // Check collision with platforms and blocks (power-ups land on them)
+            let onGround = false;
+            [...game.platforms, ...game.blocks].forEach(solid => {
+                if (powerUp.x < solid.x + solid.width &&
+                    powerUp.x + powerUp.width > solid.x &&
+                    powerUp.y < solid.y + solid.height &&
+                    powerUp.y + powerUp.height > solid.y) {
+                    
+                    // Landing on top
+                    if (powerUp.vy > 0 && powerUp.y < solid.y) {
+                        powerUp.y = solid.y - powerUp.height;
+                        powerUp.vy = 0;
+                        onGround = true;
+                    }
+                    // Side collision - bounce off walls
+                    else if (powerUp.vx > 0 && powerUp.x < solid.x) {
+                        powerUp.x = solid.x - powerUp.width;
+                        powerUp.vx *= -1;
+                    } else if (powerUp.vx < 0 && powerUp.x > solid.x) {
+                        powerUp.x = solid.x + solid.width;
+                        powerUp.vx *= -1;
+                    }
+                }
+            });
+            
+            // Turn around at level edges
+            if (powerUp.x <= 0 || powerUp.x >= game.levelWidth - powerUp.width) {
+                powerUp.vx *= -1;
+            }
+            
+            // Player collision
             if (game.player.x < powerUp.x + powerUp.width &&
                 game.player.x + game.player.width > powerUp.x &&
                 game.player.y < powerUp.y + powerUp.height &&
@@ -564,8 +601,66 @@ function createMarioGame(settings) {
         
         // Power-ups
         game.powerUps.forEach(powerUp => {
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+            if (powerUp.type === 'mushroom') {
+                // Super Mushroom - red with white spots (1.5x size)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(powerUp.x + 3, powerUp.y + 12, 18, 12); // Mushroom cap
+                ctx.fillRect(powerUp.x + 6, powerUp.y + 9, 12, 3);   // Cap top
+                
+                // White spots on cap
+                ctx.fillStyle = '#FFF';
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 14, 3, 3);
+                ctx.fillRect(powerUp.x + 14, powerUp.y + 14, 3, 3);
+                ctx.fillRect(powerUp.x + 10, powerUp.y + 18, 3, 3);
+                
+                // Mushroom stem - beige/tan (smaller)
+                ctx.fillStyle = '#FFDBAC';
+                ctx.fillRect(powerUp.x + 10, powerUp.y + 24, 4, 8);
+                
+                // Stem shading
+                ctx.fillStyle = '#DEB887';
+                ctx.fillRect(powerUp.x + 11, powerUp.y + 25, 2, 6);
+                
+            } else if (powerUp.type === 'fireflower') {
+                // Fire Flower - orange petals with yellow center
+                ctx.fillStyle = '#FF4500';
+                
+                // Flower petals (4 petals in cross pattern)
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 4, 2, 6);  // Top petal
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 14, 2, 6); // Bottom petal
+                ctx.fillRect(powerUp.x + 3, powerUp.y + 10, 6, 2); // Left petal
+                ctx.fillRect(powerUp.x + 11, powerUp.y + 10, 6, 2); // Right petal
+                
+                // Yellow center
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(powerUp.x + 6, powerUp.y + 9, 4, 4);
+                
+                // Green stem
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 20, 2, 8);
+                
+                // Small leaves on stem
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(powerUp.x + 5, powerUp.y + 22, 2, 1);
+                ctx.fillRect(powerUp.x + 9, powerUp.y + 24, 2, 1);
+                
+            } else if (powerUp.type === 'star') {
+                // Super Star - yellow with animated sparkle
+                ctx.fillStyle = '#FFD700';
+                
+                // Star shape (simplified as diamond with points)
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 2, 2, 4);   // Top point
+                ctx.fillRect(powerUp.x + 5, powerUp.y + 6, 6, 4);   // Middle section
+                ctx.fillRect(powerUp.x + 3, powerUp.y + 8, 2, 2);   // Left point
+                ctx.fillRect(powerUp.x + 11, powerUp.y + 8, 2, 2);  // Right point
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 10, 2, 4);  // Bottom point
+                
+                // Sparkle effect (animated)
+                ctx.fillStyle = '#FFF';
+                const sparkleOffset = Math.floor(Date.now() / 100) % 4;
+                ctx.fillRect(powerUp.x + 1 + sparkleOffset, powerUp.y + 4, 1, 1);
+                ctx.fillRect(powerUp.x + 14 - sparkleOffset, powerUp.y + 12, 1, 1);
+            }
         });
         
         // Enemies
