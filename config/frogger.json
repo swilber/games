@@ -19,6 +19,13 @@
     "lanes": {
       "value": 5,
       "static": true
+    },
+    "levelsToWin": {
+      "base": 1,
+      "multiplier": 0.5,
+      "min": 1,
+      "max": 8,
+      "formula": "Math.ceil(difficulty / 2)"
     }
   }
 }

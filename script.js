@@ -89,7 +89,8 @@ function getFallbackDifficulty(gameType, difficulty) {
             return {
                 carSpeed: Math.max(1, 1 + (difficulty * 0.3)),
                 carDensity: Math.max(0.3, 0.1 + (difficulty * 0.05)),
-                lanes: 5
+                lanes: 5,
+                levelsToWin: Math.ceil(difficulty / 2)
             };
         case 'maze3d':
             return {
