@@ -1,0 +1,24 @@
+{
+  "name": "Snake Game",
+  "description": "Control the snake to eat food and grow",
+  "difficulty": {
+    "gameSpeed": {
+      "base": 250,
+      "multiplier": -20,
+      "min": 50,
+      "max": 250,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "requiredScore": {
+      "base": 0,
+      "multiplier": 0.5,
+      "min": 1,
+      "max": 10,
+      "formula": "Math.ceil(difficulty / 2)"
+    },
+    "boardSize": {
+      "value": 400,
+      "static": true
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "Memory Game",
+  "description": "Match the sequence of colored tiles",
+  "difficulty": {
+    "sequenceLength": {
+      "base": 2,
+      "multiplier": 1,
+      "min": 2,
+      "max": 12,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "showSpeed": {
+      "base": 1000,
+      "multiplier": -80,
+      "min": 200,
+      "max": 1000,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "gridSize": {
+      "value": 9,
+      "static": true
+    }
+  }
+}

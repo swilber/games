@@ -1,0 +1,28 @@
+{
+  "name": "Mario Bros",
+  "description": "Side-scrolling platformer with enemies and coins",
+  "difficulty": {
+    "levelLength": {
+      "base": 600,
+      "multiplier": 200,
+      "min": 800,
+      "max": 2600,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "enemyCount": {
+      "base": 0,
+      "multiplier": 1,
+      "min": 2,
+      "max": 10,
+      "formula": "difficulty"
+    },
+    "jumpHeight": {
+      "value": 15,
+      "static": true
+    },
+    "gravity": {
+      "value": 0.8,
+      "static": true
+    }
+  }
+}

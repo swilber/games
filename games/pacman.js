@@ -12,34 +12,67 @@ function createPacmanGame(settings) {
     const cols = Math.floor(canvas.width / cellSize);
     const rows = Math.floor(canvas.height / cellSize);
     
-    // Classic Pac-Man maze layout (1 = wall, 0 = dot, 2 = power pellet, 3 = empty)
-    const maze = [
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-        [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-        [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
-        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-        [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
-        [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
-        [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-        [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-        [1,1,1,1,1,1,0,1,1,3,1,1,3,3,3,3,1,1,3,1,1,0,1,1,1,1,1,1],
-        [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
-        [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
-        [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
-        [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-        [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-        [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-        [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-        [1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
-        [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
-        [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
-        [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
-        [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    // Multiple maze layouts
+    const mazeLayouts = [
+        // Layout 1 - Classic
+        [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,3,3,3,3,1,1,3,1,1,0,1,1,1,1,1,1],
+            [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
+            [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
+            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ],
+        // Layout 2 - Modified corners
+        [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,2,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,2,1],
+            [1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+            [1,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,0,1,1,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [3,3,3,3,0,1,1,3,3,3,3,3,3,3,3,3,3,3,3,1,1,0,3,3,3,3,3,3],
+            [1,1,1,1,0,1,1,3,1,1,3,3,3,3,3,3,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,3,1,3,3,3,3,3,3,3,3,1,3,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
+            [3,3,3,3,0,1,1,3,1,1,1,1,1,1,1,1,1,1,3,1,1,0,3,3,3,3,3,3],
+            [1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,1,1,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,0,0,0,0,0,1],
+            [1,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,1,1,1],
+            [1,0,1,1,0,1,1,0,1,1,1,1,0,1,1,0,1,1,1,1,0,1,1,0,1,1,0,1],
+            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ]
     ];
     
     let game = {
+        currentMazeIndex: Math.floor(Math.random() * mazeLayouts.length),
+        levelsCompleted: 0,
+        levelsToWin: settings.levelsToWin || 2,
+        maze: null,
         pacman: { x: 14, y: 21, direction: 0, nextDirection: 0 }, // 0=right, 1=down, 2=left, 3=up
         ghosts: [
             { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
@@ -101,7 +134,43 @@ function createPacmanGame(settings) {
     
     function canMove(x, y) {
         if (x < 0 || x >= cols || y < 0 || y >= rows) return false;
-        return maze[y][x] !== 1;
+        return game.maze[y][x] !== 1;
+    }
+    
+    function nextLevel() {
+        game.levelsCompleted++;
+        if (game.levelsCompleted >= game.levelsToWin) {
+            game.won = true;
+            return;
+        }
+        
+        // Select new random maze
+        game.currentMazeIndex = Math.floor(Math.random() * mazeLayouts.length);
+        initializeLevel();
+    }
+    
+    function initializeLevel() {
+        game.maze = JSON.parse(JSON.stringify(mazeLayouts[game.currentMazeIndex]));
+        game.pacman = { x: 14, y: 21, direction: 0, nextDirection: 0 };
+        game.ghosts = [
+            { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
+            { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
+            { x: 14, y: 12, direction: 0, color: '#00ffff', mode: 'scatter' },
+            { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
+        ].slice(0, settings.ghostCount);
+        
+        // Count dots
+        game.dotsRemaining = 0;
+        for (let y = 0; y < game.maze.length; y++) {
+            for (let x = 0; x < game.maze[y].length; x++) {
+                if (game.maze[y][x] === 0 || game.maze[y][x] === 2) {
+                    game.dotsRemaining++;
+                }
+            }
+        }
+        
+        game.powerMode = false;
+        game.powerModeTimer = 0;
     }
     
     function updatePacman() {
@@ -137,15 +206,25 @@ function createPacmanGame(settings) {
             if (game.pacman.x >= cols) game.pacman.x = 0;
             
             // Eat dots
-            const cell = maze[game.pacman.y][game.pacman.x];
+            const cell = game.maze[game.pacman.y][game.pacman.x];
             if (cell === 0) {
-                maze[game.pacman.y][game.pacman.x] = 3;
+                game.maze[game.pacman.y][game.pacman.x] = 3;
                 game.score += 10;
                 game.dotsRemaining--;
+                
+                // Check for level completion
+                if (game.dotsRemaining === 0) {
+                    nextLevel();
+                }
             } else if (cell === 2) {
-                maze[game.pacman.y][game.pacman.x] = 3;
+                game.maze[game.pacman.y][game.pacman.x] = 3;
                 game.score += 50;
                 game.dotsRemaining--;
+                
+                // Check for level completion
+                if (game.dotsRemaining === 0) {
+                    nextLevel();
+                }
                 
                 // Power mode
                 game.powerMode = true;
@@ -356,9 +435,9 @@ function createPacmanGame(settings) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Draw maze
-        for (let y = 0; y < maze.length; y++) {
-            for (let x = 0; x < maze[y].length; x++) {
-                const cell = maze[y][x];
+        for (let y = 0; y < game.maze.length; y++) {
+            for (let x = 0; x < game.maze[y].length; x++) {
+                const cell = game.maze[y][x];
                 const pixelX = x * cellSize;
                 const pixelY = y * cellSize;
                 
@@ -376,6 +455,26 @@ function createPacmanGame(settings) {
                     ctx.fillRect(pixelX + 4, pixelY + 4, 12, 12);
                 }
             }
+        }
+        
+        // Draw UI
+        ctx.fillStyle = '#ffff00';
+        ctx.font = '16px Arial';
+        ctx.fillText(`Score: ${game.score}`, 10, 20);
+        ctx.fillText(`Lives: ${game.lives}`, 120, 20);
+        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 200, 20);
+        
+        if (game.won) {
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('YOU WIN!', canvas.width/2, canvas.height/2);
+            ctx.font = '24px Arial';
+            ctx.fillText(`Completed ${game.levelsToWin} levels!`, canvas.width/2, canvas.height/2 + 50);
+            ctx.textAlign = 'left';
+            return;
         }
         
         // Draw Pac-Man
@@ -547,6 +646,7 @@ function createPacmanGame(settings) {
     gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
-    initializeGame();
+    // Initialize first level
+    initializeLevel();
     render();
 }

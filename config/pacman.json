@@ -1,0 +1,34 @@
+{
+  "name": "Pac-Man",
+  "description": "Eat dots while avoiding ghosts in classic mazes",
+  "difficulty": {
+    "ghostSpeed": {
+      "base": 0.5,
+      "multiplier": 0.1,
+      "min": 0.8,
+      "max": 1.5,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "powerPelletDuration": {
+      "base": 8000,
+      "multiplier": -500,
+      "min": 3000,
+      "max": 8000,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "ghostCount": {
+      "base": 1,
+      "multiplier": 0.33,
+      "min": 1,
+      "max": 4,
+      "formula": "1 + Math.floor(difficulty / 3)"
+    },
+    "levelsToWin": {
+      "base": 0,
+      "multiplier": 0.5,
+      "min": 1,
+      "max": 5,
+      "formula": "Math.ceil(difficulty / 2)"
+    }
+  }
+}

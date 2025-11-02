@@ -4,84 +4,121 @@ let selectedLevel = 0;
 let unlockedLevels = [];
 let levels = [];
 let config = {};
+let gameConfigs = {};
 
-function getDifficulty(gameType) {
-    const difficulty = config.gameSettings.difficulty; // 1-10
-    console.log(`Getting difficulty for ${gameType}: ${difficulty}`);
+async function loadGameConfig(gameType) {
+    if (!gameConfigs[gameType]) {
+        try {
+            const response = await fetch(`config/${gameType}.json`);
+            gameConfigs[gameType] = await response.json();
+        } catch (error) {
+            console.error(`Failed to load config for ${gameType}:`, error);
+            return null;
+        }
+    }
+    return gameConfigs[gameType];
+}
+
+function calculateDifficultyValue(param, difficulty) {
+    if (param.static) return param.value;
     
+    let value;
+    if (param.formula) {
+        // Use custom formula with available variables
+        const base = param.base || 0;
+        const multiplier = param.multiplier || 0;
+        value = eval(param.formula);
+    } else {
+        // Use base + multiplier formula
+        value = param.base + (difficulty * param.multiplier);
+    }
+    
+    return Math.max(param.min, Math.min(param.max, value));
+}
+
+async function getDifficulty(gameType) {
+    // Check for difficulty override via query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const difficultyParam = urlParams.get('difficulty');
+    const difficulty = difficultyParam ? Math.max(1, Math.min(10, parseInt(difficultyParam))) : config.gameSettings.difficulty;
+    
+    console.log(`Getting difficulty for ${gameType}: ${difficulty}${difficultyParam ? ' (from URL param)' : ''}`);
+    
+    const gameConfig = await loadGameConfig(gameType);
+    if (!gameConfig) {
+        console.error(`No config found for ${gameType}, using fallback`);
+        return getFallbackDifficulty(gameType, difficulty);
+    }
+    
+    const settings = {};
+    for (const [key, param] of Object.entries(gameConfig.difficulty)) {
+        settings[key] = calculateDifficultyValue(param, difficulty);
+    }
+    
+    console.log(`${gameConfig.name} settings:`, settings);
+    return settings;
+}
+
+function getFallbackDifficulty(gameType, difficulty) {
+    // Fallback to original hardcoded logic if config files fail
     switch(gameType) {
         case 'memory':
-            const memorySettings = {
+            return {
                 sequenceLength: Math.max(2, Math.min(12, 2 + difficulty)),
                 gridSize: 9,
                 showSpeed: Math.max(200, 1000 - (difficulty * 80))
             };
-            console.log('Memory settings:', memorySettings);
-            return memorySettings;
         case 'snake':
-            const snakeSettings = {
+            return {
                 gameSpeed: Math.max(50, 250 - (difficulty * 20)),
                 requiredScore: Math.max(1, Math.min(10, Math.ceil(difficulty / 2))),
                 boardSize: 400
             };
-            console.log('Snake settings:', snakeSettings);
-            return snakeSettings;
         case 'quiz':
             return {
                 timeLimit: difficulty > 7 ? 30 - (difficulty - 7) * 5 : 0,
                 multipleChoice: true
             };
         case 'flappy':
-            const flappySettings = {
+            return {
                 gameSpeed: Math.max(1.5, 1 + (difficulty * 0.2)),
                 pipeGap: Math.max(100, 180 - (difficulty * 10)),
                 pipesToWin: Math.max(3, 3 + difficulty)
             };
-            console.log('Flappy settings:', flappySettings);
-            return flappySettings;
         case 'frogger':
-            const froggerSettings = {
+            return {
                 carSpeed: Math.max(1, 1 + (difficulty * 0.3)),
                 carDensity: Math.max(0.3, 0.1 + (difficulty * 0.05)),
                 lanes: 5
             };
-            console.log('Frogger settings:', froggerSettings);
-            return froggerSettings;
         case 'maze3d':
-            const maze3dSettings = {
+            return {
                 mazeSize: Math.max(8, 5 + (difficulty * 3)),
                 wallDensity: Math.max(0.2, 0.1 + (difficulty * 0.03)),
                 moveSpeed: config.gameSettings.moveSpeed,
                 showMinimap: config.gameSettings.showMinimap
             };
-            console.log('Maze3D settings:', maze3dSettings);
-            return maze3dSettings;
         case 'mario':
-            const marioSettings = {
+            return {
                 levelLength: Math.max(800, 600 + (difficulty * 200)),
                 enemyCount: Math.max(2, difficulty),
                 jumpHeight: 15,
                 gravity: 0.8
             };
-            console.log('Mario settings:', marioSettings);
-            return marioSettings;
         case 'donkeykong':
-            const dkSettings = {
+            return {
                 barrelSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
                 barrelFrequency: config.gameSettings.barrelFrequency,
                 ladderCount: Math.max(3, 2 + Math.floor(difficulty / 2)),
                 levelCount: Math.max(1, Math.floor(difficulty / 2))
             };
-            console.log('DonkeyKong settings:', dkSettings);
-            return dkSettings;
         case 'pacman':
-            const pacmanSettings = {
+            return {
                 ghostSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
                 powerPelletDuration: Math.max(3000, 8000 - (difficulty * 500)),
-                ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3))
+                ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3)),
+                levelsToWin: Math.max(1, Math.min(5, Math.ceil(difficulty / 2)))
             };
-            console.log('Pacman settings:', pacmanSettings);
-            return pacmanSettings;
         default:
             return {};
     }
@@ -177,7 +214,7 @@ function hideLevelUnlock() {
     document.getElementById('level-unlock-modal').classList.add('hidden');
 }
 
-function startLevel() {
+async function startLevel() {
     const level = levels[currentLevel];
     document.getElementById('level-title').textContent = level.title;
     document.getElementById('level-description').textContent = level.description;
@@ -188,31 +225,31 @@ function startLevel() {
     
     switch(level.type) {
         case 'memory':
-            createMemoryGame(getDifficulty('memory'));
+            createMemoryGame(await getDifficulty('memory'));
             break;
         case 'snake':
-            createSnakeGame(getDifficulty('snake'));
+            createSnakeGame(await getDifficulty('snake'));
             break;
         case 'quiz':
-            createQuizGame(getDifficulty('quiz'));
+            createQuizGame(await getDifficulty('quiz'));
             break;
         case 'flappy':
-            createFlappyGame(getDifficulty('flappy'));
+            createFlappyGame(await getDifficulty('flappy'));
             break;
         case 'frogger':
-            createFroggerGame(getDifficulty('frogger'));
+            createFroggerGame(await getDifficulty('frogger'));
             break;
         case 'maze3d':
-            createMaze3DGame(getDifficulty('maze3d'));
+            createMaze3DGame(await getDifficulty('maze3d'));
             break;
         case 'mario':
-            createMarioGame(getDifficulty('mario'));
+            createMarioGame(await getDifficulty('mario'));
             break;
         case 'donkeykong':
-            createDonkeyKongGame(getDifficulty('donkeykong'));
+            createDonkeyKongGame(await getDifficulty('donkeykong'));
             break;
         case 'pacman':
-            createPacmanGame(getDifficulty('pacman'));
+            createPacmanGame(await getDifficulty('pacman'));
             break;
     }
 }

@@ -1,0 +1,30 @@
+{
+  "name": "3D Maze",
+  "description": "Navigate through a 3D maze using raycasting",
+  "difficulty": {
+    "mazeSize": {
+      "base": 5,
+      "multiplier": 3,
+      "min": 8,
+      "max": 35,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "wallDensity": {
+      "base": 0.1,
+      "multiplier": 0.03,
+      "min": 0.2,
+      "max": 0.4,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "moveSpeed": {
+      "value": 0.08,
+      "static": true,
+      "source": "config.gameSettings.moveSpeed"
+    },
+    "showMinimap": {
+      "value": true,
+      "static": true,
+      "source": "config.gameSettings.showMinimap"
+    }
+  }
+}

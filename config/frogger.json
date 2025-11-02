@@ -1,0 +1,24 @@
+{
+  "name": "Frogger",
+  "description": "Cross roads and rivers safely",
+  "difficulty": {
+    "carSpeed": {
+      "base": 1,
+      "multiplier": 0.3,
+      "min": 1,
+      "max": 4,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "carDensity": {
+      "base": 0.1,
+      "multiplier": 0.05,
+      "min": 0.3,
+      "max": 0.6,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "lanes": {
+      "value": 5,
+      "static": true
+    }
+  }
+}

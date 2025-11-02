@@ -1,0 +1,27 @@
+{
+  "name": "Flappy Bird",
+  "description": "Navigate through pipes by flapping",
+  "difficulty": {
+    "gameSpeed": {
+      "base": 1,
+      "multiplier": 0.2,
+      "min": 1.5,
+      "max": 3,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "pipeGap": {
+      "base": 180,
+      "multiplier": -10,
+      "min": 100,
+      "max": 180,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "pipesToWin": {
+      "base": 3,
+      "multiplier": 1,
+      "min": 3,
+      "max": 13,
+      "formula": "base + difficulty"
+    }
+  }
+}
