@@ -172,7 +172,7 @@ function showLevelSelect() {
             button.onclick = () => selectLevel(index);
         } else {
             button.classList.add('locked');
-            button.onclick = () => showLevelUnlock(index);
+            button.onclick = () => selectLevel(index); // Use new system for all levels
         }
         
         levelButtons.appendChild(button);
@@ -184,7 +184,35 @@ function selectLevel(levelIndex) {
     selectedLevel = levelIndex;
     document.getElementById('level-select').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
+    
+    console.log('selectLevel called for level:', levelIndex);
+    
+    // Check if this level requires answering a question first
+    if (levelIndex > 0) {
+        const pendingQuestion = localStorage.getItem('pendingQuestion');
+        console.log('Pending question:', pendingQuestion);
+        console.log('questionSystem available:', typeof questionSystem !== 'undefined');
+        
+        if (pendingQuestion && typeof questionSystem !== 'undefined') {
+            // Show answer prompt before starting level
+            questionSystem.showAnswerPrompt((success) => {
+                if (success) {
+                    startLevel();
+                } else {
+                    // Return to level selection
+                    showLevelSelection();
+                }
+            });
+            return;
+        }
+    }
+    
     startLevel();
+}
+
+function showLevelSelection() {
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('level-select').classList.remove('hidden');
 }
 
 function showLevelUnlock(levelIndex) {
@@ -216,6 +244,22 @@ function hideLevelUnlock() {
 }
 
 async function startLevel() {
+    // Check if there's a pending answer before starting the level
+    if (currentLevel > 0) {
+        questionSystem.showAnswerPrompt((success) => {
+            if (success) {
+                initializeLevel();
+            } else {
+                // Return to level selection if answer is wrong or cancelled
+                showLevelSelection();
+            }
+        });
+    } else {
+        initializeLevel();
+    }
+}
+
+async function initializeLevel() {
     const level = levels[currentLevel];
     document.getElementById('level-title').textContent = level.title;
     document.getElementById('level-description').textContent = level.description;
@@ -255,17 +299,53 @@ async function startLevel() {
     }
 }
 
+function showGameComplete() {
+    const gameArea = document.getElementById('game-area');
+    gameArea.innerHTML = `
+        <div style="text-align: center; padding: 50px; color: #00ff00; font-family: 'Courier New', monospace;">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">GAME COMPLETE!</h1>
+            <p style="font-size: 24px;">Congratulations! You've beaten all levels!</p>
+            <button onclick="location.reload()" style="margin-top: 30px; padding: 15px 30px; font-size: 18px; background: #00ff00; color: #000; border: none; cursor: pointer;">PLAY AGAIN</button>
+        </div>
+    `;
+}
+
 function showQuestion() {
     if(!gameWon) return;
     
-    const modal = document.getElementById('question-modal');
-    const questionText = document.getElementById('question-text');
-    const answerInput = document.getElementById('answer-input');
+    // Check if questionSystem is available
+    if (typeof questionSystem === 'undefined') {
+        console.error('Question system not loaded');
+        // Fallback to direct progression
+        proceedToNextLevel();
+        return;
+    }
     
-    questionText.textContent = levels[currentLevel].question;
-    answerInput.value = '';
-    modal.classList.remove('hidden');
-    answerInput.focus();
+    // Show question using the new 8-bit system
+    const currentLevelData = levels[currentLevel];
+    if (currentLevelData && currentLevelData.question) {
+        questionSystem.showQuestion(currentLevelData.id);
+        
+        // Unlock next level immediately
+        if (currentLevel < levels.length - 1) {
+            unlockedLevels[currentLevel + 1] = true;
+            updateLevelButtons();
+        }
+    } else {
+        // No question, proceed directly
+        proceedToNextLevel();
+    }
+}
+
+function proceedToNextLevel() {
+    if (currentLevel < levels.length - 1) {
+        unlockedLevels[currentLevel + 1] = true;
+        updateLevelButtons();
+        currentLevel++;
+        startLevel();
+    } else {
+        showGameComplete();
+    }
 }
 
 function checkAnswer() {

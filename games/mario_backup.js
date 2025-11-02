@@ -213,6 +213,7 @@ function createMarioGame(settings) {
         gameStarted: false,
         keys: {}
     };
+}
     
     function initializeLevel() {
         const layout = levelLayouts[game.currentLevel];
@@ -337,6 +338,23 @@ function createMarioGame(settings) {
     }
     
     function checkPitCollision() {
+        game.pits.forEach(pit => {
+            if (game.player.x + game.player.width > pit.x && 
+                game.player.x < pit.x + pit.width && 
+                game.player.y > 350) {
+                // Player fell in pit
+                game.lives--;
+                if (game.lives <= 0) {
+                    game.gameOver = true;
+                } else {
+                    // Reset player position
+                    game.player.x = 50;
+                    game.player.y = 300;
+                    game.camera.x = 0;
+                }
+            }
+        });
+    }
         game.pits.forEach(pit => {
             if (game.player.x + game.player.width > pit.x && 
                 game.player.x < pit.x + pit.width && 
@@ -786,4 +804,3 @@ function createMarioGame(settings) {
     
     initializeLevel();
     gameLoop();
-}

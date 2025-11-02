@@ -23,6 +23,13 @@
     "gravity": {
       "value": 0.8,
       "static": true
+    },
+    "levelsToWin": {
+      "base": 3,
+      "multiplier": 0.5,
+      "min": 3,
+      "max": 5,
+      "formula": "Math.min(5, 3 + Math.floor(difficulty / 3))"
     }
   }
 }
