@@ -445,7 +445,7 @@ async function createMarioGame(settings) {
     async function initializeLevel() {
         console.log('initializeLevel called - loading mario-1-1-map.txt specifically');
         try {
-            const response = await fetch('./mario-1-1-map.txt');
+            const response = await fetch('./games/mario/mario-1-1-map.txt');
             console.log('Fetch response:', response.status);
             const mapText = await response.text();
             console.log('Map text length:', mapText.length, 'first 100 chars:', mapText.substring(0, 100));
@@ -1081,16 +1081,53 @@ async function createMarioGame(settings) {
                 ctx.fillStyle = '#006400';
                 ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
             } else {
-                ctx.fillStyle = '#8B4513';
+                // SMB 1-1 ground - slightly lighter brown than bricks
+                ctx.fillStyle = '#A0522D';
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Granite-like continuous veining lines
+                ctx.fillStyle = '#8B4513';
+                
+                // Horizontal veins
+                for (let y = platform.y + 2; y < platform.y + platform.height; y += 6) {
+                    for (let x = platform.x; x < platform.x + platform.width; x += 3) {
+                        ctx.fillRect(x, y, 2, 1);
+                    }
+                }
+                
+                // Diagonal veins
+                for (let x = platform.x; x < platform.x + platform.width; x += 8) {
+                    for (let y = platform.y; y < platform.y + platform.height; y++) {
+                        if ((x + y) % 4 === 0) {
+                            ctx.fillRect(x + (y % 3), y, 1, 1);
+                        }
+                    }
+                }
             }
         });
         
         // Blocks
         game.blocks.forEach(block => {
             if (block.type === 'brick') {
-                ctx.fillStyle = '#8B4513';
+                // Brick base color - orange/brown
+                ctx.fillStyle = '#CD853F';
                 ctx.fillRect(block.x, block.y, block.width, block.height);
+                
+                // Brick pattern - darker lines
+                ctx.fillStyle = '#8B4513';
+                // Horizontal mortar lines
+                ctx.fillRect(block.x, block.y + 6, block.width, 1);
+                ctx.fillRect(block.x, block.y + 13, block.width, 1);
+                // Vertical mortar lines (offset pattern)
+                ctx.fillRect(block.x + 10, block.y, 1, 6);
+                ctx.fillRect(block.x + 5, block.y + 7, 1, 6);
+                ctx.fillRect(block.x + 15, block.y + 7, 1, 6);
+                ctx.fillRect(block.x + 10, block.y + 14, 1, 6);
+                
+                // Brick highlights
+                ctx.fillStyle = '#DEB887';
+                ctx.fillRect(block.x, block.y, block.width, 1);
+                ctx.fillRect(block.x, block.y, 1, block.height);
             } else if (block.type === 'question') {
                 ctx.fillStyle = block.content ? '#FFD700' : '#8B4513';
                 ctx.fillRect(block.x, block.y, block.width, block.height);
