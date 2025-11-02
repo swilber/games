@@ -473,22 +473,34 @@ function createMarioGame(settings) {
                 game.player.y < platform.y + platform.height &&
                 game.player.y + game.player.height > platform.y) {
                 
+                // Determine collision direction based on previous position
+                const overlapLeft = (game.player.x + game.player.width) - platform.x;
+                const overlapRight = (platform.x + platform.width) - game.player.x;
+                const overlapTop = (game.player.y + game.player.height) - platform.y;
+                const overlapBottom = (platform.y + platform.height) - game.player.y;
+                
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                
                 // Landing on top
-                if (game.player.vy > 0 && game.player.y < platform.y) {
+                if (minOverlap === overlapTop && game.player.vy > 0) {
                     game.player.y = platform.y - game.player.height;
                     game.player.vy = 0;
                     game.player.onGround = true;
                 }
                 // Hitting from below
-                else if (game.player.vy < 0 && game.player.y > platform.y) {
+                else if (minOverlap === overlapBottom && game.player.vy < 0) {
                     game.player.y = platform.y + platform.height;
                     game.player.vy = 0;
                 }
-                // Side collision
-                else if (game.player.vx > 0) {
+                // Side collision from right
+                else if (minOverlap === overlapLeft && game.player.vx > 0) {
                     game.player.x = platform.x - game.player.width;
-                } else if (game.player.vx < 0) {
+                    game.player.vx = 0;
+                }
+                // Side collision from left
+                else if (minOverlap === overlapRight && game.player.vx < 0) {
                     game.player.x = platform.x + platform.width;
+                    game.player.vx = 0;
                 }
             }
         });
@@ -561,6 +573,34 @@ function createMarioGame(settings) {
         
         game.enemies.forEach(enemy => {
             if (!enemy.alive) return;
+            
+            // Add gravity to enemies
+            if (!enemy.vy) enemy.vy = 0;
+            enemy.vy += 0.3; // Gravity
+            enemy.y += enemy.vy;
+            
+            // Check if enemy lands on platforms
+            let onGround = false;
+            game.platforms.forEach(platform => {
+                if (enemy.x < platform.x + platform.width &&
+                    enemy.x + enemy.width > platform.x &&
+                    enemy.y < platform.y + platform.height &&
+                    enemy.y + enemy.height > platform.y) {
+                    
+                    // Landing on top
+                    if (enemy.vy > 0 && enemy.y < platform.y) {
+                        enemy.y = platform.y - enemy.height;
+                        enemy.vy = 0;
+                        onGround = true;
+                    }
+                }
+            });
+            
+            // Remove enemies that fall too far (into pits)
+            if (enemy.y > 500) {
+                enemy.alive = false;
+                return;
+            }
             
             // Handle Koopa states
             if (enemy.type === 'koopa') {
