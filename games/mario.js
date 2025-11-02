@@ -198,25 +198,179 @@ const SpriteRenderer = {
     }
 };
 
-// Level mapping system
+// ASCII Map Converter
+const convertASCIIToLevel = (asciiLines) => {
+    console.log('Converting ASCII lines:', asciiLines.length, 'lines');
+    console.log('All lines:');
+    asciiLines.forEach((line, i) => {
+        console.log(`Line ${i}: "${line.substring(0, 50)}..." (length: ${line.length})`);
+        // Show unique characters in this line
+        const uniqueChars = [...new Set(line.split(''))].sort();
+        console.log(`  Unique chars: [${uniqueChars.join(', ')}]`);
+        
+        // Count specific characters we're looking for
+        const counts = {
+            'G': (line.match(/G/g) || []).length,
+            'K': (line.match(/K/g) || []).length,
+            'B': (line.match(/B/g) || []).length,
+            '?': (line.match(/\?/g) || []).length,
+            'X': (line.match(/X/g) || []).length,
+            'P': (line.match(/P/g) || []).length,
+            '#': (line.match(/#/g) || []).length
+        };
+        if (Object.values(counts).some(c => c > 0)) {
+            console.log(`  Character counts:`, counts);
+        }
+    });
+    
+    const level = { tiles: [], enemies: [], blocks: [], width: 0 };
+    
+    // Find ground line (line with # symbols)
+    const groundLineIndex = asciiLines.findIndex(line => line.includes('#'));
+    console.log('Ground line found at index:', groundLineIndex);
+    
+    if (groundLineIndex === -1) {
+        console.warn('No ground line found!');
+        return level;
+    }
+    
+    const groundLine = asciiLines[groundLineIndex];
+    console.log('Ground line content:', `"${groundLine.substring(0, 100)}..."`);
+    
+    const width = groundLine.length;
+    level.width = width;
+    console.log('Level width:', width);
+    
+    // Initialize tiles array
+    level.tiles = new Array(width).fill('G');
+    
+    // Check enemy line (line above ground)
+    const enemyLineIndex = groundLineIndex - 1;
+    if (enemyLineIndex >= 0) {
+        const enemyLine = asciiLines[enemyLineIndex];
+        console.log('Enemy line content:', `"${enemyLine.substring(0, 100)}..."`);
+        
+        // Look for enemies and other elements
+        for (let x = 0; x < width && x < enemyLine.length; x++) {
+            if (enemyLine[x] === 'G') {
+                level.enemies.push({x: x * 16, type: 'goomba'});
+                console.log('Found Goomba at position', x);
+            }
+            if (enemyLine[x] === 'K') {
+                level.enemies.push({x: x * 16, type: 'koopa'});
+                console.log('Found Koopa at position', x);
+            }
+            if (enemyLine[x] === 'P') {
+                level.tiles[x] = 'p'; // Pipe
+                console.log('Found Pipe at position', x);
+            }
+            if (enemyLine[x] === 'F') {
+                // Flag position - we'll handle this in the level initialization
+                console.log('Found Flag at position', x);
+            }
+        }
+    }
+    
+    // Process ground line for pits
+    for (let x = 0; x < width; x++) {
+        if (groundLine[x] === 'X') {
+            level.tiles[x] = 'P'; // Pit
+            console.log('Found Pit at position', x);
+        }
+    }
+    
+    // Check for blocks in upper lines
+    console.log(`Checking for blocks in lines 0 to ${groundLineIndex - 2} (ground is at ${groundLineIndex})`);
+    for (let y = 0; y < groundLineIndex - 1; y++) {
+        const blockLine = asciiLines[y];
+        console.log(`Block line ${y} content:`, `"${blockLine.substring(0, 100)}..."`);
+        
+        // Count blocks in this line
+        const bCount = (blockLine.match(/B/g) || []).length;
+        const qCount = (blockLine.match(/\?/g) || []).length;
+        if (bCount > 0 || qCount > 0) {
+            console.log(`  Line ${y} has ${bCount} B's and ${qCount} ?'s`);
+        }
+        
+        for (let x = 0; x < width && x < blockLine.length; x++) {
+            if (blockLine[x] === '?') {
+                const content = Math.random() > 0.6 ? 'mushroom' : Math.random() > 0.3 ? 'coin' : 'fireflower';
+                level.blocks.push({
+                    x: x * 16, 
+                    y: 272,
+                    type: 'question', 
+                    content
+                });
+                console.log('Found Question block at position', x, y);
+            }
+            if (blockLine[x] === 'B') {
+                level.blocks.push({
+                    x: x * 16, 
+                    y: 272,
+                    type: 'brick'
+                });
+                console.log('Found Brick at position', x, y);
+            }
+        }
+    }
+    
+    console.log('Final converted level:', {
+        width: level.width,
+        enemies: level.enemies.length,
+        blocks: level.blocks.length
+    });
+    
+    return level;
+};
+
+// Load ASCII maps from files
+
+
+// Fallback map creator
+const createFallbackMap = (level) => {
+    const themes = { '1-1': 'overworld', '1-2': 'underground', '1-3': 'trees', '1-4': 'castle' };
+    return {
+        width: 100,
+        theme: themes[level],
+        tiles: Array(100).fill('G'),
+        enemies: [
+            {x: 300, type: 'goomba'}, {x: 600, type: 'koopa'}, {x: 900, type: 'goomba'}
+        ],
+        blocks: [
+            {x: 400, y: 208, type: 'question', content: 'coin'},
+            {x: 500, y: 208, type: 'brick'},
+            {x: 700, y: 208, type: 'question', content: 'mushroom'}
+        ]
+    };
+};
+
 const LevelMapper = {
     GROUND_Y: 370,
     GROUND_HEIGHT: 30,
+    TILE_SIZE: 16,
+    levels: null, // Will be loaded asynchronously
+    
+    async init() {
+        this.levels = await loadASCIIMaps();
+        console.log('LevelMapper.levels loaded:', Object.keys(this.levels));
+        console.log('Level 1-1 details:', this.levels['1-1']);
+    },
+    
     createFromMap: (mapData) => {
         const level = { platforms: [], blocks: [], pits: [], enemies: [], coins: [] };
         let currentGroundStart = null;
         let currentGroundWidth = 0;
         
         for (let x = 0; x < mapData.width; x++) {
-            const tileX = x * 32;
+            const tileX = x * LevelMapper.TILE_SIZE;
             const tile = mapData.tiles[x];
             
             if (tile === 'G') {
                 if (currentGroundStart === null) {
                     currentGroundStart = tileX;
-                    currentGroundWidth = 32;
+                    currentGroundWidth = LevelMapper.TILE_SIZE;
                 } else {
-                    currentGroundWidth += 32;
+                    currentGroundWidth += LevelMapper.TILE_SIZE;
                 }
             } else {
                 if (currentGroundStart !== null) {
@@ -227,11 +381,11 @@ const LevelMapper = {
                     currentGroundStart = null;
                 }
                 if (tile === 'P') {
-                    level.pits.push({ x: tileX, width: 32 });
+                    level.pits.push({ x: tileX, width: LevelMapper.TILE_SIZE }); // Single tile width pits
                 } else if (tile === 'p') {
                     level.platforms.push({
                         x: tileX, y: LevelMapper.GROUND_Y - 50,
-                        width: 32, height: 50 + LevelMapper.GROUND_HEIGHT, type: 'pipe'
+                        width: LevelMapper.TILE_SIZE * 2, height: 50 + LevelMapper.GROUND_HEIGHT, type: 'pipe'
                     });
                 }
             }
@@ -244,22 +398,17 @@ const LevelMapper = {
             });
         }
         return level;
-    },
-    levels: {
-        '1-1': {
-            width: 64,
-            tiles: [
-                'G','G','G','G','G','G','G','G','G','G','G','G','G','G','G','G',
-                'P','P','p','G','G','G','G','G','G','P','P','p',
-                'G','G','G','G','G','G','G','G','G','G','G','G','G','G','G','G',
-                'G','G','G','G','G','G','G','G','G','G','G','G','G','G','G','G'
-            ]
-        }
     }
 };
 
-function createMarioGame(settings) {
+async function createMarioGame(settings) {
     const gameArea = document.getElementById('game-area');
+    
+    // Use only level 1-1 for now
+    
+    // Use only level 1-1 - no level maps array needed
+    
+    console.log('Mario game starting with single level 1-1');
     
     const canvas = document.createElement('canvas');
     canvas.width = 800;
@@ -268,20 +417,6 @@ function createMarioGame(settings) {
     
     const ctx = canvas.getContext('2d');
     
-    // Use the new level mapping system
-    const levelMaps = [
-        LevelMapper.levels['1-1'],
-        {
-            width: 48,
-            tiles: [
-                'G','G','G','G','G','G','G','G','G','G','G','G',
-                'P','P','p','G','G','G','G','P','P','p','G','G',
-                'G','G','G','G','G','G','G','G','G','G','G','G',
-                'G','G','G','G','G','G','G','G','G','G','G','G'
-            ]
-        }
-    ];
-
     let game = {
         player: { 
             x: 50, y: 300, width: 20, height: 30, 
@@ -296,45 +431,131 @@ function createMarioGame(settings) {
         coins: [],
         particles: [],
         pits: [],
-        currentLevel: 0,
+        currentLevel: 0, // Always use level 1-1
         levelsCompleted: 0,
-        levelsToWin: settings.levelsToWin || 3,
+        levelsToWin: 1, // Only one level for now
         levelWidth: 2000,
         gameOver: false,
         won: false,
         gameStarted: false,
-        keys: {}
+        keys: {},
+        currentTheme: 'overworld'
     };
     
-    function initializeLevel() {
-        const mapData = levelMaps[game.currentLevel];
-        const layout = LevelMapper.createFromMap(mapData);
+    async function initializeLevel() {
+        console.log('initializeLevel called - loading mario-1-1-map.txt specifically');
+        try {
+            const response = await fetch('./mario-1-1-map.txt');
+            console.log('Fetch response:', response.status);
+            const mapText = await response.text();
+            console.log('Map text length:', mapText.length, 'first 100 chars:', mapText.substring(0, 100));
+            console.log('Last 200 chars:', mapText.substring(mapText.length - 200));
+            
+            // Show raw lines before filtering
+            const rawLines = mapText.split('\n');
+            console.log('Raw lines count:', rawLines.length);
+            console.log('Last 3 raw lines:');
+            for (let i = Math.max(0, rawLines.length - 3); i < rawLines.length; i++) {
+                console.log(`Raw line ${i}: "${rawLines[i]}" (length: ${rawLines[i].length})`);
+            }
+            
+            const layout = parseASCIIMap(mapText);
+            
+            game.platforms = layout.platforms;
+            game.blocks = layout.blocks;
+            game.enemies = layout.enemies;
+            game.flag = layout.flag;
+            game.player.x = layout.startX;
+            game.player.y = layout.startY;
+        } catch (error) {
+            console.error('Failed to load map:', error);
+            console.log('Using fallback level');
+            // Fallback to basic level
+            game.platforms = [{x: 0, y: 350, width: 2000, height: 50}];
+            game.blocks = [];
+            game.enemies = [];
+            game.flag = {x: 1800, y: 200, width: 35, height: 150};
+        }
+    }
+    
+    function parseASCIIMap(mapText) {
+        const rawLines = mapText.split('\n');
+        console.log('Before filtering - raw lines:', rawLines.length);
         
-        game.platforms = [...layout.platforms];
-        game.blocks = [...layout.blocks];
-        game.powerUps = [];
-        game.pits = [...layout.pits];
+        const lines = rawLines.filter(line => !line.startsWith('# ') && line.length > 0);
+        console.log('After filtering - kept lines:', lines.length);
         
-        // Add some enemies and blocks for gameplay
-        game.enemies = [
-            {x: 300, y: 340, width: 20, height: 20, vx: -0.5, type: 'goomba', alive: true, animFrame: 0, animTimer: 0},
-            {x: 700, y: 340, width: 20, height: 24, vx: -1, type: 'koopa', alive: true, animFrame: 0, animTimer: 0, state: 'walking'},
-            {x: 1200, y: 340, width: 20, height: 20, vx: -0.5, type: 'goomba', alive: true, animFrame: 0, animTimer: 0}
-        ];
+        // Show which lines were filtered out
+        rawLines.forEach((line, i) => {
+            if (line.startsWith('#')) {
+                console.log(`Filtered out line ${i}: "${line.substring(0, 50)}..."`);
+            }
+        });
         
-        // Add some blocks
-        game.blocks = [
-            {x: 832, y: 272, width: 32, height: 32, type: 'question', content: 'coin'},
-            {x: 864, y: 272, width: 32, height: 32, type: 'brick'},
-            {x: 896, y: 272, width: 32, height: 32, type: 'question', content: 'mushroom'}
-        ];
+        const platforms = [];
+        const blocks = [];
+        const enemies = [];
+        let flag = null;
+        let startX = 50, startY = 300;
         
-        game.coins = [];
-        game.levelWidth = mapData.width * 32;
-        game.flag = { x: game.levelWidth - 100, y: 200, width: 10, height: 150 };
-        game.player.x = 50;
-        game.player.y = 300;
-        game.camera.x = 0;
+        const tileSize = 20;
+        
+        for (let y = 0; y < lines.length; y++) {
+            const line = lines[y];
+            for (let x = 0; x < line.length; x++) {
+                const char = line[x];
+                const worldX = x * tileSize;
+                const worldY = y * tileSize; // Direct mapping: row 0 = y:0, row 19 = y:380
+                
+                switch (char) {
+                    case '#':
+                        platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize});
+                        break;
+                    case '?':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false});
+                        break;
+                    case 'B':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'brick', hit: false});
+                        break;
+                    case 'G':
+                        enemies.push({x: worldX, y: worldY, width: 20, height: 18, vx: -1, type: 'goomba', alive: true, onGround: false});
+                        break;
+                    case 'K':
+                        enemies.push({x: worldX, y: worldY, width: 20, height: 20, vx: -1, type: 'koopa', alive: true, state: 'walking', onGround: false});
+                        break;
+                    case 'M':
+                        startX = worldX;
+                        startY = worldY;
+                        break;
+                    case 'F':
+                        flag = {x: worldX, y: worldY, width: 35, height: 150};
+                        break;
+                }
+            }
+        }
+        
+        console.log('Parsed platforms:', platforms.length, 'blocks:', blocks.length);
+        console.log('Map has', lines.length, 'rows - should be 20');
+        
+        // Debug: Show grid contents for first 100 positions
+        console.log('Grid contents (first 100 positions):');
+        for (let y = 0; y < Math.min(lines.length, 5); y++) {
+            const line = lines[y];
+            console.log(`Row ${y} (y=${y * 20}):`, line.substring(0, 50));
+        }
+        
+        // Show bottom rows specifically
+        console.log('Bottom rows:');
+        for (let y = Math.max(0, lines.length - 3); y < lines.length; y++) {
+            const line = lines[y];
+            const hashCount = (line.match(/#/g) || []).length;
+            console.log(`Row ${y} (y=${y * 20}): "${line.substring(0, 50)}" - ${hashCount} # chars`);
+        }
+        
+        // Show all platforms with their positions
+        console.log('All platforms:', platforms.map(p => ({x: p.x, y: p.y, char: 'from #'})));
+        
+        return {platforms, blocks, enemies, flag, startX, startY};
     }
     
     
@@ -431,7 +652,7 @@ function createMarioGame(settings) {
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
         } else {
-            game.currentLevel = (game.currentLevel + 1) % levelMaps.length;
+            // Always reload level 1-1 for now
             initializeLevel();
         }
     }
@@ -532,6 +753,21 @@ function createMarioGame(settings) {
                 }
             }
         });
+        
+        // Check if Mario fell into a pit (below screen)
+        if (game.player.y > 450) {
+            game.player.lives--;
+            if (game.player.lives <= 0) {
+                game.gameOver = true;
+            } else {
+                // Respawn Mario
+                game.player.x = 50;
+                game.player.y = 300;
+                game.player.vx = 0;
+                game.player.vy = 0;
+                game.camera.x = 0;
+            }
+        }
         
         game.camera.x = Math.max(0, game.player.x - 300);
     }
@@ -742,9 +978,22 @@ function createMarioGame(settings) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        // Theme-based backgrounds
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#87CEEB');
-        gradient.addColorStop(1, '#98FB98');
+        if (game.currentTheme === 'underground') {
+            gradient.addColorStop(0, '#000000');
+            gradient.addColorStop(1, '#1a1a1a');
+        } else if (game.currentTheme === 'castle') {
+            gradient.addColorStop(0, '#2F2F2F');
+            gradient.addColorStop(1, '#000000');
+        } else if (game.currentTheme === 'trees') {
+            gradient.addColorStop(0, '#4169E1');
+            gradient.addColorStop(1, '#228B22');
+        } else {
+            // Overworld
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+        }
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -963,6 +1212,5 @@ function createMarioGame(settings) {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     
-    initializeLevel();
-    gameLoop();
+    initializeLevel().then(() => gameLoop());
 }
