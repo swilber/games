@@ -252,9 +252,14 @@ function createFroggerGame(settings) {
         ctx.fillRect(game.frog.x, game.frog.y - game.frog.size/2, game.frog.size, game.frog.size);
         
         // Draw UI
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(45, 51, 100, 20);
         ctx.fillStyle = '#fff';
         ctx.font = '16px Arial';
-        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 10, 25);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 55, 53);
+        ctx.textBaseline = 'alphabetic'; // Reset to default
         
         if (game.won) {
             ctx.fillStyle = 'rgba(0,0,0,0.8)';
