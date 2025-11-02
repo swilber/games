@@ -512,10 +512,25 @@ async function createMarioGame(settings) {
                         platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize});
                         break;
                     case '?':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false});
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'coin'});
                         break;
                     case 'B':
                         blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'brick', hit: false});
+                        break;
+                    case 'P':
+                        // Skip individual P processing - will be handled in group processing below
+                        break;
+                    case 'C':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'coin'});
+                        break;
+                    case 'M':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'mushroom'});
+                        break;
+                    case 'F':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'fireflower'});
+                        break;
+                    case 'S':
+                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'star'});
                         break;
                     case 'G':
                         enemies.push({x: worldX, y: worldY, width: 20, height: 18, vx: -1, type: 'goomba', alive: true, onGround: false});
@@ -523,13 +538,60 @@ async function createMarioGame(settings) {
                     case 'K':
                         enemies.push({x: worldX, y: worldY, width: 20, height: 20, vx: -1, type: 'koopa', alive: true, state: 'walking', onGround: false});
                         break;
-                    case 'M':
+                    case '@':
                         startX = worldX;
                         startY = worldY;
                         break;
-                    case 'F':
-                        flag = {x: worldX, y: worldY, width: 35, height: 150};
+                    case '&':
+                        // Find the ground level below this position
+                        let groundY = worldY;
+                        for (let checkY = y; checkY < lines.length; checkY++) {
+                            if (lines[checkY] && lines[checkY][x] === '#') {
+                                groundY = checkY * tileSize;
+                                break;
+                            }
+                        }
+                        flag = {x: worldX, y: groundY - (10 * tileSize), width: 35, height: 10 * tileSize};
                         break;
+                }
+            }
+        }
+        
+        // Process connected P groups into single pipes
+        const processedPs = new Set();
+        for (let y = 0; y < lines.length; y++) {
+            const line = lines[y];
+            for (let x = 0; x < line.length; x++) {
+                if (line[x] === 'P' && !processedPs.has(`${x},${y}`)) {
+                    // Find the bounds of this connected P group
+                    let minX = x, maxX = x, minY = y, maxY = y;
+                    const toCheck = [{x, y}];
+                    const groupPs = new Set();
+                    
+                    while (toCheck.length > 0) {
+                        const {x: cx, y: cy} = toCheck.pop();
+                        const key = `${cx},${cy}`;
+                        if (groupPs.has(key) || cy >= lines.length || cx >= lines[cy].length || lines[cy][cx] !== 'P') continue;
+                        
+                        groupPs.add(key);
+                        processedPs.add(key);
+                        minX = Math.min(minX, cx);
+                        maxX = Math.max(maxX, cx);
+                        minY = Math.min(minY, cy);
+                        maxY = Math.max(maxY, cy);
+                        
+                        // Check adjacent cells
+                        toCheck.push({x: cx+1, y: cy}, {x: cx-1, y: cy}, {x: cx, y: cy+1}, {x: cx, y: cy-1});
+                    }
+                    
+                    // Create single pipe for this group
+                    platforms.push({
+                        x: minX * tileSize,
+                        y: minY * tileSize,
+                        width: (maxX - minX + 1) * tileSize,
+                        height: (maxY - minY + 1) * tileSize,
+                        type: 'pipe'
+                    });
                 }
             }
         }
@@ -1003,8 +1065,21 @@ async function createMarioGame(settings) {
         // Platforms
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
+                // Pipe body - green
                 ctx.fillStyle = '#228B22';
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Pipe rim (top edge) - lighter green
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
+                
+                // Pipe highlights
+                ctx.fillStyle = '#90EE90';
+                ctx.fillRect(platform.x + 2, platform.y, 2, platform.height);
+                
+                // Pipe shadows
+                ctx.fillStyle = '#006400';
+                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
             } else {
                 ctx.fillStyle = '#8B4513';
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -1021,9 +1096,9 @@ async function createMarioGame(settings) {
                 ctx.fillRect(block.x, block.y, block.width, block.height);
                 if (block.content) {
                     ctx.fillStyle = '#000';
-                    ctx.font = '20px Arial';
+                    ctx.font = '16px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText('?', block.x + 16, block.y + 22);
+                    ctx.fillText('?', block.x + block.width/2, block.y + block.height/2 + 5);
                     ctx.textAlign = 'left';
                 }
             }
