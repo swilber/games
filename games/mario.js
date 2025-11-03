@@ -1664,19 +1664,6 @@ async function createMarioGame(settings) {
         // Use shared collision detection
         handlePlatformCollision(game.player);
         
-        // Move player with moving platforms if standing on one
-        if (game.player.onGround) {
-            game.platforms.forEach(platform => {
-                if (platform.moving &&
-                    game.player.x < platform.x + platform.width &&
-                    game.player.x + game.player.width > platform.x &&
-                    Math.abs((game.player.y + game.player.height) - platform.y) < 2) {
-                    // Player is standing on this moving platform
-                    game.player.y += platform.vy;
-                }
-            });
-        }
-        
         // Check collision with blocks separately
         game.blocks.forEach(block => {
             if (game.player.x < block.x + block.width &&
@@ -1792,6 +1779,21 @@ async function createMarioGame(settings) {
         
         game.platforms.forEach(platform => {
             if (platform.moving) {
+                // Move Mario with platform BEFORE moving the platform
+                if (game.player.onGround &&
+                    game.player.x < platform.x + platform.width &&
+                    game.player.x + game.player.width > platform.x &&
+                    Math.abs((game.player.y + game.player.height) - platform.y) < 3) {
+                    
+                    if (platform.vy > 0) {
+                        // Down-moving platform: set Mario's velocity to match platform
+                        game.player.vy = platform.vy;
+                    } else {
+                        // Up-moving platform: move Mario directly
+                        game.player.y += platform.vy;
+                    }
+                }
+                
                 platform.y += platform.vy;
                 
                 // Wrap around screen edges
