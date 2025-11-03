@@ -420,7 +420,7 @@ async function createMarioGame(settings) {
     
     let game = {
         player: { 
-            x: 50, y: 300, width: 20, height: 30, 
+            x: 50, y: 300, width: 16, height: 16, 
             vx: 0, vy: 0, onGround: false, 
             lives: 3, score: 0, powerState: 'small',
             facingRight: true, shootCooldown: 0
@@ -434,9 +434,9 @@ async function createMarioGame(settings) {
         particles: [],
         fireballs: [],
         pits: [],
-        currentLevel: 0, // Always use level 1-1
+        currentLevel: 1, // Start with level 1-1
         levelsCompleted: 0,
-        levelsToWin: 1, // Only one level for now
+        levelsToWin: 2, // Two levels now
         levelWidth: 4000,
         gameOver: false,
         won: false,
@@ -448,9 +448,13 @@ async function createMarioGame(settings) {
     
     async function initializeLevel() {
         try {
-            const response = await fetch('./games/mario/mario-1-1-map.txt');
+            const mapFile = game.currentLevel === 1 ? 'mario-1-1-map.txt' : 'mario-1-2-map.txt';
+            const response = await fetch(`./games/mario/${mapFile}`);
             const mapText = await response.text();
             const layout = parseASCIIMap(mapText);
+            
+            // Set theme based on level
+            game.currentTheme = game.currentLevel === 1 ? 'overworld' : 'underground';
             
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
@@ -647,9 +651,11 @@ async function createMarioGame(settings) {
                 
                 if (powerUp.type === 'mushroom') {
                     game.player.powerState = 'big';
+                    game.player.width = 20;
                     game.player.height = 32;
                 } else if (powerUp.type === 'fireflower') {
                     game.player.powerState = 'fire';
+                    game.player.width = 20;
                     game.player.height = 32;
                 }
                 game.player.score += 1000;
@@ -799,7 +805,8 @@ async function createMarioGame(settings) {
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
         } else {
-            // Always reload level 1-1 for now
+            // Progress to next level
+            game.currentLevel = game.levelsCompleted + 1;
             initializeLevel();
         }
     }
@@ -1131,8 +1138,9 @@ async function createMarioGame(settings) {
                     if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
                         // Downgrade to small Mario
                         game.player.powerState = 'small';
-                        game.player.height = 30;
-                        game.player.y += 2; // Adjust position for smaller size
+                        game.player.width = 16;
+                        game.player.height = 16;
+                        game.player.y += 16; // Adjust position for smaller size
                         
                         // Add invincibility frames
                         game.player.invincible = true;
@@ -1163,9 +1171,6 @@ async function createMarioGame(settings) {
     function checkWin() {
         if (game.player.x + game.player.width > game.flag.x) {
             nextLevel();
-            if (game.won) {
-                setTimeout(() => showQuestionDialog('mario'), 1000);
-            }
         }
     }
     
@@ -1173,23 +1178,25 @@ async function createMarioGame(settings) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Theme-based backgrounds
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
         if (game.currentTheme === 'underground') {
-            gradient.addColorStop(0, '#000000');
-            gradient.addColorStop(1, '#1a1a1a');
-        } else if (game.currentTheme === 'castle') {
-            gradient.addColorStop(0, '#2F2F2F');
-            gradient.addColorStop(1, '#000000');
-        } else if (game.currentTheme === 'trees') {
-            gradient.addColorStop(0, '#4169E1');
-            gradient.addColorStop(1, '#228B22');
+            ctx.fillStyle = '#000000'; // Solid black for underground like SMB 1-2
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         } else {
-            // Overworld
-            gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(1, '#98FB98');
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            if (game.currentTheme === 'castle') {
+                gradient.addColorStop(0, '#2F2F2F');
+                gradient.addColorStop(1, '#000000');
+            } else if (game.currentTheme === 'trees') {
+                gradient.addColorStop(0, '#4169E1');
+                gradient.addColorStop(1, '#228B22');
+            } else {
+                // Overworld
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(1, '#98FB98');
+            }
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.save();
         ctx.translate(-game.camera.x, 0);
@@ -1213,12 +1220,15 @@ async function createMarioGame(settings) {
                 ctx.fillStyle = '#006400';
                 ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
             } else {
-                // SMB 1-1 ground - slightly lighter brown than bricks
-                ctx.fillStyle = '#A0522D';
+                // Ground colors - darker for underground theme
+                const groundColor = game.currentTheme === 'underground' ? '#4A4A4A' : '#A0522D';
+                const veinColor = game.currentTheme === 'underground' ? '#2F2F2F' : '#8B4513';
+                
+                ctx.fillStyle = groundColor;
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
                 // Granite-like continuous veining lines
-                ctx.fillStyle = '#8B4513';
+                ctx.fillStyle = veinColor;
                 
                 // Horizontal veins
                 for (let y = platform.y + 2; y < platform.y + platform.height; y += 6) {
@@ -1241,12 +1251,17 @@ async function createMarioGame(settings) {
         // Blocks
         game.blocks.forEach(block => {
             if (block.type === 'brick') {
-                // Brick base color - orange/brown
-                ctx.fillStyle = '#CD853F';
+                // Brick colors - blueish-greenish for underground theme
+                const brickColor = game.currentTheme === 'underground' ? '#4682B4' : '#CD853F';
+                const mortarColor = game.currentTheme === 'underground' ? '#2F4F4F' : '#8B4513';
+                const highlightColor = game.currentTheme === 'underground' ? '#87CEEB' : '#DEB887';
+                
+                // Brick base color
+                ctx.fillStyle = brickColor;
                 ctx.fillRect(block.x, block.y, block.width, block.height);
                 
-                // Brick pattern - darker lines
-                ctx.fillStyle = '#8B4513';
+                // Brick pattern - mortar lines
+                ctx.fillStyle = mortarColor;
                 // Horizontal mortar lines
                 ctx.fillRect(block.x, block.y + 6, block.width, 1);
                 ctx.fillRect(block.x, block.y + 13, block.width, 1);
@@ -1257,11 +1272,16 @@ async function createMarioGame(settings) {
                 ctx.fillRect(block.x + 10, block.y + 14, 1, 6);
                 
                 // Brick highlights
-                ctx.fillStyle = '#DEB887';
+                ctx.fillStyle = highlightColor;
                 ctx.fillRect(block.x, block.y, block.width, 1);
                 ctx.fillRect(block.x, block.y, 1, block.height);
             } else if (block.type === 'question') {
-                ctx.fillStyle = block.content ? '#FFD700' : '#8B4513';
+                // Question block colors - darker for underground theme
+                const questionColor = game.currentTheme === 'underground' ? 
+                    (block.content ? '#8B4513' : '#654321') : 
+                    (block.content ? '#FFD700' : '#8B4513');
+                
+                ctx.fillStyle = questionColor;
                 ctx.fillRect(block.x, block.y, block.width, block.height);
                 if (block.content) {
                     ctx.fillStyle = '#000';
@@ -1382,7 +1402,8 @@ async function createMarioGame(settings) {
         });
         
         // Flag
-        ctx.fillStyle = '#000';
+        const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
+        ctx.fillStyle = flagPoleColor;
         ctx.fillRect(game.flag.x, game.flag.y, 5, game.flag.height);
         ctx.fillStyle = '#FF0000';
         ctx.fillRect(game.flag.x + 5, game.flag.y, 30, 20);
@@ -1443,7 +1464,7 @@ async function createMarioGame(settings) {
         
         if (game.gameOver && e.code === 'KeyR') {
             game.player = { 
-                x: 50, y: 300, width: 20, height: 30, 
+                x: 50, y: 300, width: 16, height: 16, 
                 vx: 0, vy: 0, onGround: false, 
                 lives: 3, score: 0, powerState: 'small'
             };
