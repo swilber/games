@@ -536,8 +536,6 @@ async function createMarioGame(settings) {
     
     // Use only level 1-1 - no level maps array needed
     
-    console.log('Mario game starting with single level 1-1');
-    
     const canvas = document.createElement('canvas');
     canvas.width = 800;
     canvas.height = 400;
@@ -595,7 +593,7 @@ async function createMarioGame(settings) {
                 platforms: layout.platforms.length,
                 blocks: layout.blocks.length, 
                 enemies: layout.enemies.length,
-                enemyTypes: layout.enemies.map(e => e.type)
+                coins: layout.coins.length
             });
             
             // Set theme based on level
@@ -610,7 +608,6 @@ async function createMarioGame(settings) {
             game.player.y = layout.startY;
         } catch (error) {
             console.error('Failed to load map:', error);
-            console.log('Using fallback level');
             // Fallback to basic level
             game.platforms = [{x: 0, y: 350, width: 2000, height: 50}];
             game.blocks = [];
@@ -670,7 +667,6 @@ async function createMarioGame(settings) {
                         platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'tree'});
                         break;
                     case 'G':
-                        console.log('Found Goomba at', x, y, worldX, worldY);
                         // Position Goomba exactly on ground level
                         let goombaGroundY = worldY;
                         for (let checkY = y; checkY < lines.length; checkY++) {
@@ -682,7 +678,6 @@ async function createMarioGame(settings) {
                         enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', alive: true, onGround: true});
                         break;
                     case 'K':
-                        console.log('Found Koopa at', x, y, worldX, worldY);
                         // Position Koopa exactly on ground level  
                         let koopaGroundY = worldY;
                         for (let checkY = y; checkY < lines.length; checkY++) {
@@ -838,29 +833,13 @@ async function createMarioGame(settings) {
         });
     }
     
-    async function resetLevel() {
+    function resetLevel() {
         // Store current lives count
         const currentLives = game.player.lives;
         
-        // Reload the entire level fresh
-        await initializeLevel();
-        
-        // Restore the lives count (since initializeLevel resets everything)
-        game.player.lives = currentLives;
-        
-        // Reset Mario to small state at starting position
-        game.player.powerState = 'small';
-        game.player.width = 16;
-        game.player.height = 16;
-        game.player.x = 50;
-        game.player.y = 300;
-        game.player.vx = 0;
-        game.player.vy = 0;
-        game.player.onGround = false;
-        game.player.facingRight = true;
-        game.player.shootCooldown = 0;
-        game.player.invincibleTimer = 0;
-        game.camera.x = 0;
+        // Set flag to reload level on next frame
+        game.needsLevelReset = true;
+        game.livesToRestore = currentLives;
     }
     
     function checkPitCollision() {
@@ -1307,9 +1286,6 @@ async function createMarioGame(settings) {
                     
                     if (enemyBottom <= platformTop + 5) {
                         // Enemy is on top of platform, don't reverse direction
-                        if (game.frameCount % 60 === 0 && index > 5) {
-                            console.log(`Enemy ${index} on top of platform, not reversing`);
-                        }
                         return;
                     }
                     
@@ -1333,14 +1309,7 @@ async function createMarioGame(settings) {
                 }
             });
             
-            if (game.frameCount % 60 === 0 && enemy.x > 2000) {
-                console.log(`Enemy ${index} at x:${enemy.x} has ${platformCount} nearby platforms`);
-            }
-            
             if (hitWall) {
-                if (game.frameCount % 60 === 0) {
-                    console.log(`Enemy ${index} hit wall, reversing direction from vx:${enemy.vx} to vx:${-enemy.vx}`);
-                }
                 enemy.vx *= -1;
             }
             
@@ -1392,31 +1361,44 @@ async function createMarioGame(settings) {
                         game.player.score += 100;
                     }
                 } else {
-                    // Hit by enemy - handle power-up states
-                    if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
-                        // Downgrade to small Mario
-                        game.player.powerState = 'small';
-                        game.player.width = 16;
-                        game.player.height = 16;
-                        game.player.y += 16; // Adjust position for smaller size
-                        
-                        // Add invincibility frames
-                        game.player.invincible = true;
-                        game.player.invincibleTimer = 120; // 2 seconds at 60fps
-                        
-                        // Push Mario away from enemy
-                        if (game.player.x < enemy.x) {
-                            game.player.x -= 20;
-                        } else {
-                            game.player.x += 20;
-                        }
+                    // Hit by enemy - handle shell kicking or power-up states
+                    if (enemy.type === 'koopa' && enemy.state === 'shell') {
+                        // Kick the shell when running into it from the side
+                        enemy.state = 'shellMoving';
+                        enemy.vx = game.player.x < enemy.x ? 3 : -3; // Kick away from Mario
+                        game.player.score += 400;
+                    } else if (enemy.type === 'koopa' && enemy.state === 'shellMoving') {
+                        // Stop the moving shell when running into it
+                        enemy.state = 'shell';
+                        enemy.vx = 0;
+                        game.player.score += 100;
                     } else {
-                        // Small Mario loses a life
-                        game.player.lives--;
-                        if (game.player.lives <= 0) {
-                            game.gameOver = true;
+                        // Normal enemy collision - handle power-up states
+                        if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
+                            // Downgrade to small Mario
+                            game.player.powerState = 'small';
+                            game.player.width = 16;
+                            game.player.height = 16;
+                            game.player.y += 16; // Adjust position for smaller size
+                            
+                            // Add invincibility frames
+                            game.player.invincible = true;
+                            game.player.invincibleTimer = 120; // 2 seconds at 60fps
+                            
+                            // Push Mario away from enemy
+                            if (game.player.x < enemy.x) {
+                                game.player.x -= 20;
+                            } else {
+                                game.player.x += 20;
+                            }
                         } else {
-                            resetLevel();
+                            // Small Mario loses a life
+                            game.player.lives--;
+                            if (game.player.lives <= 0) {
+                                game.gameOver = true;
+                            } else {
+                                resetLevel();
+                            }
                         }
                     }
                 }
@@ -1820,6 +1802,33 @@ async function createMarioGame(settings) {
     }
     
     function gameLoop() {
+        // Handle level reset if needed
+        if (game.needsLevelReset) {
+            game.needsLevelReset = false;
+            initializeLevel().then(() => {
+                game.player.lives = game.livesToRestore;
+                // Reset Mario to small state at starting position
+                game.player.powerState = 'small';
+                game.player.width = 16;
+                game.player.height = 16;
+                game.player.x = 50;
+                game.player.y = 300;
+                game.player.vx = 0;
+                game.player.vy = 0;
+                game.player.onGround = false;
+                game.player.facingRight = true;
+                game.player.shootCooldown = 0;
+                game.player.invincibleTimer = 0;
+                game.camera.x = 0;
+                
+                // Continue game loop after reset
+                if (!game.gameOver && !game.won) {
+                    requestAnimationFrame(gameLoop);
+                }
+            });
+            return; // Skip this frame while resetting
+        }
+        
         game.frameCount++;
         updatePlayer();
         updateEnemies();
