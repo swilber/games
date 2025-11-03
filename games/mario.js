@@ -1765,8 +1765,7 @@ async function createMarioGame(settings) {
                     enemy.width = 20;
                     enemy.height = 32;
                     enemy.vx = 0; // Piranha plants don't move horizontally
-                    // Position piranha plant at the top of the pipe
-                    enemy.y = 320; // Above ground level where pipes typically are
+                    // Keep original Y position from map parsing
                 }
                 enemy.vy = 0;
                 enemy.state = EnemyBehaviors[enemy.type]?.defaultState || 'walking';
