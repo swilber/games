@@ -64,9 +64,9 @@ const convertASCIIToLevel = (asciiLines) => {
                 console.log('Found Koopa at position', x);
             }
             if (enemyLine[x] === 'p') {
-                level.enemies.push({x: x * 16, type: 'piranha'});
+                level.enemies.push({x: x * 16, y: 320, type: 'piranha'});
                 level.tiles[x] = 'p'; // Pipe with piranha
-                console.log('Found Piranha Plant at position', x);
+                console.log('Found Piranha Plant at position', x, 'y=320');
             }
             if (enemyLine[x] === 'P') {
                 level.tiles[x] = 'p'; // Regular pipe
@@ -1047,6 +1047,11 @@ async function createMarioGame(settings) {
                 const tooClose = distanceToPlayer < 48;
                 
                 enemy.timer++;
+                
+                // Debug logging
+                if (enemy.timer % 60 === 0) {
+                    console.log('Piranha state:', enemy.state, 'timer:', enemy.timer, 'distance:', distanceToPlayer, 'y:', enemy.y);
+                }
                 
                 if (enemy.state === 'hidden') {
                     enemy.y = enemy.hiddenY;
