@@ -1785,8 +1785,14 @@ async function createMarioGame(settings) {
                     game.player.x + game.player.width > platform.x &&
                     Math.abs((game.player.y + game.player.height) - platform.y) < 3) {
                     
-                    // Set Mario's velocity to match platform for both directions
-                    game.player.vy = platform.vy;
+                    if (platform.vy < 0) {
+                        // Up-moving platform: move Mario directly and reset velocity
+                        game.player.y += platform.vy;
+                        game.player.vy = 0;
+                    } else {
+                        // Down-moving platform: set Mario's velocity to match platform
+                        game.player.vy = platform.vy;
+                    }
                 }
                 
                 platform.y += platform.vy;
