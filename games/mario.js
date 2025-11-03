@@ -110,6 +110,7 @@ const SpriteRenderer = {
             const isFire = player.powerState === 'fire';
             const baseY = player.y;
             const isMoving = Math.abs(player.vx) > 0.1;
+            const isJumping = player.vy < -1 || !player.onGround; // Mario is jumping if not on ground
             const animFrame = Math.floor(Date.now() / 150) % 2; // Walking animation
             
             // NO CANVAS FLIPPING - handle direction manually
@@ -117,14 +118,14 @@ const SpriteRenderer = {
             // Mario's hat - red for normal, white for fire Mario
             ctx.fillStyle = isFire ? '#FFFFFF' : '#FF0000';
             if (isSmall) {
-                ctx.fillRect(player.x + 2, baseY, 12, 4);
+                ctx.fillRect(player.x + 2, baseY, 12, 4); // Back to original size
             } else {
                 ctx.fillRect(player.x + 2, baseY, 16, 6);
             }
             
             ctx.fillStyle = isFire ? '#CCCCCC' : '#CC0000';
             if (isSmall) {
-                ctx.fillRect(player.x + 3, baseY + 1, 10, 1); // Hat shadow
+                ctx.fillRect(player.x + 3, baseY + 1, 10, 1); // Hat shadow back to original
             } else {
                 ctx.fillRect(player.x + 3, baseY + 1, 14, 1);
             }
@@ -132,29 +133,29 @@ const SpriteRenderer = {
             // Face - peach color
             ctx.fillStyle = '#FFDBAC';
             if (isSmall) {
-                ctx.fillRect(player.x + 3, baseY + 3, 10, 4);
+                ctx.fillRect(player.x + 3, baseY + 3, 10, 4); // Back to original size
                 
-                // Profile logic: front when stopped, side when moving
-                if (Math.abs(player.vx) < 0.1) {
+                // Profile logic: front when stopped, side when moving/jumping
+                if (Math.abs(player.vx) < 0.1 && !isJumping) {
                     // Front facing - both eyes
                     ctx.fillStyle = '#000';
-                    ctx.fillRect(player.x + 5, baseY + 4, 1, 1);
-                    ctx.fillRect(player.x + 9, baseY + 4, 1, 1);
+                    ctx.fillRect(player.x + 5, baseY + 4, 1, 1); // Back to original
+                    ctx.fillRect(player.x + 9, baseY + 4, 1, 1); // Back to original
                     // Front mustache
                     ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(player.x + 6, baseY + 6, 4, 1);
+                    ctx.fillRect(player.x + 6, baseY + 6, 4, 1); // Back to original
                 } else if (player.facingRight) {
-                    // Moving right - side profile
+                    // Moving/jumping right - side profile
                     ctx.fillStyle = '#000';
-                    ctx.fillRect(player.x + 6, baseY + 4, 2, 2); // Single big eye on left
+                    ctx.fillRect(player.x + 6, baseY + 4, 2, 2); // Back to original
                     ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(player.x + 6, baseY + 6, 4, 2); // Side mustache
+                    ctx.fillRect(player.x + 6, baseY + 6, 4, 2); // Back to original
                 } else {
-                    // Moving left - side profile
+                    // Moving/jumping left - side profile
                     ctx.fillStyle = '#000';
-                    ctx.fillRect(player.x + 8, baseY + 4, 2, 2); // Single big eye on right
+                    ctx.fillRect(player.x + 8, baseY + 4, 2, 2); // Back to original
                     ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(player.x + 6, baseY + 6, 4, 2); // Side mustache
+                    ctx.fillRect(player.x + 6, baseY + 6, 4, 2); // Back to original
                 }
             } else {
                 ctx.fillRect(player.x + 3, baseY + 5, 14, 6);
@@ -206,10 +207,23 @@ const SpriteRenderer = {
                 ctx.fillRect(player.x + 8, baseY + 15, 1, 1);
                 ctx.fillRect(player.x + 8, baseY + 18, 1, 1);
                 
-                // Gloves - white (bigger)
+                // Gloves - white (bigger) - jumping pose
                 ctx.fillStyle = '#FFF';
-                ctx.fillRect(player.x, baseY + 16, 3, 4);
-                ctx.fillRect(player.x + 17, baseY + 16, 3, 4);
+                if (isJumping) {
+                    if (player.facingRight) {
+                        // Jumping right - arms extended
+                        ctx.fillRect(player.x - 2, baseY + 14, 4, 4); // Left arm forward
+                        ctx.fillRect(player.x + 18, baseY + 18, 4, 4); // Right arm back
+                    } else {
+                        // Jumping left - arms extended opposite
+                        ctx.fillRect(player.x - 2, baseY + 18, 4, 4); // Left arm back
+                        ctx.fillRect(player.x + 18, baseY + 14, 4, 4); // Right arm forward
+                    }
+                } else {
+                    // Normal standing/walking pose
+                    ctx.fillRect(player.x, baseY + 16, 3, 4);
+                    ctx.fillRect(player.x + 17, baseY + 16, 3, 4);
+                }
                 
                 // Shoes - brown (bigger) with walking animation
                 ctx.fillStyle = '#8B4513';
@@ -228,50 +242,73 @@ const SpriteRenderer = {
                     ctx.fillRect(player.x + 14, baseY + 27, 6, 4);
                 }
             } else {
-                // Small Mario - just overalls (fit within 16px height)
+                // Small Mario - just overalls (fit within 16px height) - back to original
                 ctx.fillStyle = isFire ? '#FFFFFF' : '#0066CC';
-                ctx.fillRect(player.x + 2, baseY + 4, 12, 6);
+                ctx.fillRect(player.x + 2, baseY + 4, 12, 6); // Back to original
                 
-                // Small gloves
+                // Small gloves - back to original with jumping poses
                 ctx.fillStyle = '#FFF';
-                ctx.fillRect(player.x + 1, baseY + 6, 2, 2);
-                ctx.fillRect(player.x + 13, baseY + 6, 2, 2);
+                if (isJumping) {
+                    if (player.facingRight) {
+                        // Jumping right - right arm above head, left arm at body
+                        ctx.fillRect(player.x + 10, baseY - 1, 2, 2); // Right arm above head (scaled down)
+                        ctx.fillRect(player.x + 3, baseY + 6, 2, 2); // Left arm at body (scaled down)
+                    } else {
+                        // Jumping left - left arm above head, right arm at body
+                        ctx.fillRect(player.x + 4, baseY - 1, 2, 2); // Left arm above head (scaled down)
+                        ctx.fillRect(player.x + 11, baseY + 6, 2, 2); // Right arm at body (scaled down)
+                    }
+                } else {
+                    // Normal standing/walking pose
+                    ctx.fillRect(player.x + 1, baseY + 6, 2, 2); // Back to original
+                    ctx.fillRect(player.x + 13, baseY + 6, 2, 2); // Back to original
+                }
                 
-                // Small shoes - at bottom of collision box with walking animation
+                // Small shoes - jumping poses with leg positions (scaled down)
                 ctx.fillStyle = '#8B4513';
-                if (isMoving) {
+                if (isJumping) {
+                    if (player.facingRight) {
+                        // Jumping right - front leg forward, back leg down and back
+                        ctx.fillRect(player.x + 13, baseY + 10, 4, 2); // Front leg forward (scaled down)
+                        ctx.fillRect(player.x + 1, baseY + 14, 4, 2); // Back leg down and back (scaled down)
+                    } else {
+                        // Jumping left - front leg forward, back leg down and back
+                        ctx.fillRect(player.x + 1, baseY + 10, 4, 2); // Front leg forward (scaled down)
+                        ctx.fillRect(player.x + 13, baseY + 14, 4, 2); // Back leg down and back (scaled down)
+                    }
+                } else if (isMoving) {
                     // Walking animation - alternate foot positions (more visible)
                     if (animFrame === 0) {
-                        ctx.fillRect(player.x + 2, baseY + 13, 4, 2);
-                        ctx.fillRect(player.x + 10, baseY + 11, 4, 2);
+                        ctx.fillRect(player.x + 2, baseY + 13, 4, 2); // Back to original size
+                        ctx.fillRect(player.x + 10, baseY + 11, 4, 2); // Back to original size
                     } else {
-                        ctx.fillRect(player.x + 2, baseY + 11, 4, 2);
-                        ctx.fillRect(player.x + 10, baseY + 13, 4, 2);
+                        ctx.fillRect(player.x + 2, baseY + 11, 4, 2); // Back to original size
+                        ctx.fillRect(player.x + 10, baseY + 13, 4, 2); // Back to original size
                     }
                 } else {
                     // Standing still - both feet level
-                    ctx.fillRect(player.x + 2, baseY + 12, 4, 2);
-                    ctx.fillRect(player.x + 10, baseY + 12, 4, 2);
+                    ctx.fillRect(player.x + 2, baseY + 12, 4, 2); // Back to original size
+                    ctx.fillRect(player.x + 10, baseY + 12, 4, 2); // Back to original size
                 }
             }
             
             // FINAL PROFILE DRAWING - draw over everything else
-            if (Math.abs(player.vx) >= 0.1) {
+            if (Math.abs(player.vx) >= 0.1 || isJumping) {
                 if (player.facingRight) {
-                    // Nose for right facing - realistic peach color
+                    // Bigger nose for right facing
                     ctx.fillStyle = '#FFDBAC';
                     if (isSmall) {
-                        ctx.fillRect(player.x + 12, baseY + 5, 2, 1);
+                        ctx.fillRect(player.x + 12, baseY + 3, 3, 2); // Back to original scale, adjusted position
                     } else {
-                        ctx.fillRect(player.x + 16, baseY + 8, 2, 1);
+                        ctx.fillRect(player.x + 16, baseY + 7, 4, 3);
                     }
                 } else {
-                    // Nose for left facing - realistic peach color
+                    // Bigger nose for left facing
                     ctx.fillStyle = '#FFDBAC';
                     if (isSmall) {
-                        ctx.fillRect(player.x + 2, baseY + 5, 2, 1);
+                        ctx.fillRect(player.x + 1, baseY + 3, 3, 2); // Back to original scale, adjusted position
                     } else {
-                        ctx.fillRect(player.x + 2, baseY + 8, 2, 1);
+                        ctx.fillRect(player.x, baseY + 7, 4, 3);
                     }
                 }
             }
