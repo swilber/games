@@ -833,6 +833,31 @@ async function createMarioGame(settings) {
         });
     }
     
+    async function resetLevel() {
+        // Store current lives count
+        const currentLives = game.player.lives;
+        
+        // Reload the entire level fresh
+        await initializeLevel();
+        
+        // Restore the lives count (since initializeLevel resets everything)
+        game.player.lives = currentLives;
+        
+        // Reset Mario to small state at starting position
+        game.player.powerState = 'small';
+        game.player.width = 16;
+        game.player.height = 16;
+        game.player.x = 50;
+        game.player.y = 300;
+        game.player.vx = 0;
+        game.player.vy = 0;
+        game.player.onGround = false;
+        game.player.facingRight = true;
+        game.player.shootCooldown = 0;
+        game.player.invincibleTimer = 0;
+        game.camera.x = 0;
+    }
+    
     function checkPitCollision() {
         game.pits.forEach(pit => {
             if (game.player.x + game.player.width > pit.x && 
@@ -1103,12 +1128,7 @@ async function createMarioGame(settings) {
             if (game.player.lives <= 0) {
                 game.gameOver = true;
             } else {
-                // Respawn Mario
-                game.player.x = 50;
-                game.player.y = 300;
-                game.player.vx = 0;
-                game.player.vy = 0;
-                game.camera.x = 0;
+                resetLevel();
             }
         }
         
@@ -1391,9 +1411,7 @@ async function createMarioGame(settings) {
                         if (game.player.lives <= 0) {
                             game.gameOver = true;
                         } else {
-                            // Reset position
-                            game.player.x = Math.max(50, game.player.x - 100);
-                            game.player.vx = 0;
+                            resetLevel();
                         }
                     }
                 }
