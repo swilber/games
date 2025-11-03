@@ -526,13 +526,28 @@ async function createMarioGame(settings) {
                     }
                 }
             } else if (platform.type === 'tree') {
-                // Tree platform rendering
-                ctx.fillStyle = ThemeSystem.getColor('ground');
+                // Tree platform rendering - green leafy appearance
+                ctx.fillStyle = '#228B22'; // Green tree color
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
-                // Tree shadow
-                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
-                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2);
+                // Darker green shadow/depth
+                ctx.fillStyle = '#006400'; // Dark green
+                ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                
+                // Light green highlights for leaves
+                ctx.fillStyle = '#32CD32'; // Lime green highlights
+                ctx.fillRect(platform.x + 2, platform.y, platform.width - 4, 2);
+                ctx.fillRect(platform.x, platform.y + 2, 2, platform.height - 5);
+                
+                // Add some leaf texture with small dark spots
+                ctx.fillStyle = '#006400';
+                for (let x = 0; x < platform.width; x += 8) {
+                    for (let y = 0; y < platform.height - 3; y += 6) {
+                        if ((x + y) % 16 === 0) { // Scattered pattern
+                            ctx.fillRect(platform.x + x + 2, platform.y + y + 2, 2, 2);
+                        }
+                    }
+                }
             } else if (platform.type === 'block') {
                 // 3D block platform with highlights and shadows
                 ctx.fillStyle = ThemeSystem.getColor('ground');
@@ -548,13 +563,23 @@ async function createMarioGame(settings) {
                 ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
                 ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
             } else {
-                // Regular ground platform
-                ctx.fillStyle = ThemeSystem.getColor('ground');
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                
-                // Ground shadow
-                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
-                ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                // Regular ground platform - use brown overworld colors in trees theme
+                if (platform.type === 'ground' && ThemeSystem.current?.name === 'Tree Tops') {
+                    ctx.fillStyle = '#8B4513'; // Brown like overworld
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Brown shadow
+                    ctx.fillStyle = '#654321'; // Dark brown like overworld
+                    ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                } else {
+                    // Regular ground platform
+                    ctx.fillStyle = ThemeSystem.getColor('ground');
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Ground shadow
+                    ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                    ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                }
             }
         },
         
