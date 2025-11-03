@@ -339,8 +339,8 @@ async function createMarioGame(settings) {
             name: 'Tree Tops',
             colors: {
                 sky: '#5C94FC', // Baby blue like overworld
-                ground: '#8B4513', // Brown like overworld
-                groundShadow: '#654321', // Dark brown like overworld
+                ground: '#228B22', // Green tree platforms (original)
+                groundShadow: '#006400', // Dark green tree platforms (original)
                 pipe: '#00FF00',
                 pipeShadow: '#00AA00',
                 brick: '#CC6600', // Orange like overworld
@@ -348,6 +348,7 @@ async function createMarioGame(settings) {
                 question: '#FFD700',
                 questionShadow: '#CC9900',
                 cloud: '#FFFFFF',
+                cloudShadow: '#CCCCCC', // Gray for cloud shading
                 bush: '#90EE90', // Light green
                 hill: '#228B22'  // Darker green
             },
@@ -429,7 +430,6 @@ async function createMarioGame(settings) {
                 });
             } else if (ThemeSystem.current?.name === 'Tree Tops') {
                 // More clouds at different levels for sky theme
-                ctx.fillStyle = ThemeSystem.getColor('cloud');
                 
                 // High clouds
                 const highClouds = [100, 320, 540, 760, 980, 1200, 1420, 1640, 1860];
@@ -437,9 +437,17 @@ async function createMarioGame(settings) {
                     const cloudX = x - (game.camera?.x || 0) * 0.3; // Slower parallax for distance
                     const cloudY = 40 + (i % 2) * 15;
                     
-                    ctx.fillRect(cloudX, cloudY, 50, 15);
-                    ctx.fillRect(cloudX + 8, cloudY - 8, 34, 15);
-                    ctx.fillRect(cloudX + 16, cloudY - 16, 18, 15);
+                    // White cloud body
+                    ctx.fillStyle = ThemeSystem.getColor('cloud');
+                    ctx.fillRect(cloudX, cloudY, 40, 12);
+                    ctx.fillRect(cloudX + 6, cloudY - 6, 28, 12);
+                    ctx.fillRect(cloudX + 12, cloudY - 12, 16, 12);
+                    
+                    // Gray cloud shadow (bottom)
+                    ctx.fillStyle = ThemeSystem.getColor('cloudShadow');
+                    ctx.fillRect(cloudX, cloudY + 8, 40, 4);
+                    ctx.fillRect(cloudX + 6, cloudY + 2, 28, 4);
+                    ctx.fillRect(cloudX + 12, cloudY - 4, 16, 4);
                 });
                 
                 // Mid-level clouds
@@ -448,9 +456,17 @@ async function createMarioGame(settings) {
                     const cloudX = x - (game.camera?.x || 0) * 0.4;
                     const cloudY = 120 + (i % 3) * 20;
                     
-                    ctx.fillRect(cloudX, cloudY, 60, 18);
-                    ctx.fillRect(cloudX + 10, cloudY - 10, 40, 18);
-                    ctx.fillRect(cloudX + 20, cloudY - 18, 20, 18);
+                    // White cloud body
+                    ctx.fillStyle = ThemeSystem.getColor('cloud');
+                    ctx.fillRect(cloudX, cloudY, 48, 14);
+                    ctx.fillRect(cloudX + 8, cloudY - 8, 32, 14);
+                    ctx.fillRect(cloudX + 16, cloudY - 14, 16, 14);
+                    
+                    // Gray cloud shadow (bottom)
+                    ctx.fillStyle = ThemeSystem.getColor('cloudShadow');
+                    ctx.fillRect(cloudX, cloudY + 10, 48, 4);
+                    ctx.fillRect(cloudX + 8, cloudY + 2, 32, 4);
+                    ctx.fillRect(cloudX + 16, cloudY - 6, 16, 4);
                 });
                 
                 // Lower clouds
@@ -459,9 +475,17 @@ async function createMarioGame(settings) {
                     const cloudX = x - (game.camera?.x || 0) * 0.5;
                     const cloudY = 200 + (i % 2) * 25;
                     
-                    ctx.fillRect(cloudX, cloudY, 70, 20);
-                    ctx.fillRect(cloudX + 12, cloudY - 12, 46, 20);
-                    ctx.fillRect(cloudX + 24, cloudY - 20, 22, 20);
+                    // White cloud body
+                    ctx.fillStyle = ThemeSystem.getColor('cloud');
+                    ctx.fillRect(cloudX, cloudY, 56, 16);
+                    ctx.fillRect(cloudX + 10, cloudY - 10, 36, 16);
+                    ctx.fillRect(cloudX + 18, cloudY - 16, 20, 16);
+                    
+                    // Gray cloud shadow (bottom)
+                    ctx.fillStyle = ThemeSystem.getColor('cloudShadow');
+                    ctx.fillRect(cloudX, cloudY + 12, 56, 4);
+                    ctx.fillRect(cloudX + 10, cloudY + 2, 36, 4);
+                    ctx.fillRect(cloudX + 18, cloudY - 8, 20, 4);
                 });
             }
         },
