@@ -532,14 +532,51 @@ const LevelMapper = {
 async function createMarioGame(settings) {
     const gameArea = document.getElementById('game-area');
     
-    // Use only level 1-1 for now
+    // Debug mode - show level selection menu
+    if (settings && settings.debug) {
+        const levelSelector = document.createElement('div');
+        levelSelector.style.cssText = 'text-align: center; padding: 20px; background: #000; color: #fff;';
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Debug: Select Level';
+        title.style.color = '#fff';
+        levelSelector.appendChild(title);
+        
+        const levels = [
+            { id: 1, name: 'Level 1-1 (Overworld)', theme: 'overworld' },
+            { id: 2, name: 'Level 1-2 (Underground)', theme: 'underground' },
+            { id: 3, name: 'Level 1-3 (Trees)', theme: 'trees' }
+        ];
+        
+        levels.forEach(level => {
+            const button = document.createElement('button');
+            button.textContent = level.name;
+            button.style.cssText = 'margin: 10px; padding: 10px 20px; font-size: 16px; background: #333; color: #fff; border: 2px solid #666; cursor: pointer;';
+            button.onmouseover = () => button.style.background = '#555';
+            button.onmouseout = () => button.style.background = '#333';
+            button.onclick = () => {
+                gameArea.removeChild(levelSelector);
+                startMarioGame(level.id);
+            };
+            levelSelector.appendChild(button);
+        });
+        
+        gameArea.appendChild(levelSelector);
+        return;
+    }
     
-    // Use only level 1-1 - no level maps array needed
+    // Normal mode - start with level 3 (current default)
+    startMarioGame(3);
     
-    const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 400;
-    canvas.style.border = '2px solid #000';
+    function startMarioGame(levelId) {
+        // Use only level 1-1 for now
+        
+        // Use only level 1-1 - no level maps array needed
+    
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 400;
+        canvas.style.border = '2px solid #000';
     
     const ctx = canvas.getContext('2d');
     
@@ -559,7 +596,7 @@ async function createMarioGame(settings) {
         particles: [],
         fireballs: [],
         pits: [],
-        currentLevel: 3, // Start with level 1-3 for testing
+        currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
         levelsToWin: 3, // Three levels now
         levelWidth: 4000,
@@ -569,6 +606,144 @@ async function createMarioGame(settings) {
         keys: {},
         currentTheme: 'overworld',
         frameCount: 0
+    };
+    
+    // Theme System - centralized theme configuration
+    const Themes = {
+        overworld: {
+            name: 'Overworld',
+            colors: {
+                sky: '#5C94FC',
+                ground: '#8B4513',
+                groundShadow: '#654321',
+                pipe: '#00FF00',
+                pipeShadow: '#00AA00',
+                brick: '#CC6600',
+                brickShadow: '#994400',
+                question: '#FFD700',
+                questionShadow: '#CC9900'
+            },
+            sprites: {
+                platform: 'grass',
+                background: 'hills'
+            }
+        },
+        
+        underground: {
+            name: 'Underground',
+            colors: {
+                sky: '#000000',
+                ground: '#654321',
+                groundShadow: '#432818',
+                pipe: '#00AA00',
+                pipeShadow: '#007700',
+                brick: '#8B4513',
+                brickShadow: '#654321',
+                question: '#FFD700',
+                questionShadow: '#CC9900'
+            },
+            sprites: {
+                platform: 'brick',
+                background: 'cave'
+            }
+        },
+        
+        trees: {
+            name: 'Tree Tops',
+            colors: {
+                sky: '#87CEEB',
+                ground: '#228B22',
+                groundShadow: '#006400',
+                pipe: '#00FF00',
+                pipeShadow: '#00AA00',
+                brick: '#8B4513',
+                brickShadow: '#654321',
+                question: '#FFD700',
+                questionShadow: '#CC9900'
+            },
+            sprites: {
+                platform: 'tree',
+                background: 'sky'
+            }
+        }
+    };
+    
+    // Theme utilities
+    const ThemeSystem = {
+        current: null,
+        
+        setTheme: (themeName) => {
+            ThemeSystem.current = Themes[themeName] || Themes.overworld;
+        },
+        
+        getColor: (colorName) => {
+            return ThemeSystem.current?.colors[colorName] || '#FF00FF'; // Magenta for missing colors
+        },
+        
+        renderBackground: (ctx, canvas) => {
+            // Sky background
+            ctx.fillStyle = ThemeSystem.getColor('sky');
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        },
+        
+        renderPlatform: (ctx, platform) => {
+            if (platform.type === 'tree') {
+                // Tree platform rendering
+                ctx.fillStyle = ThemeSystem.getColor('ground');
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Tree shadow
+                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2);
+            } else {
+                // Regular ground platform
+                ctx.fillStyle = ThemeSystem.getColor('ground');
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Ground shadow
+                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+            }
+        },
+        
+        renderBlock: (ctx, block) => {
+            if (block.type === 'question') {
+                if (!block.hit) {
+                    // Question block
+                    ctx.fillStyle = ThemeSystem.getColor('question');
+                    ctx.fillRect(block.x, block.y, block.width, block.height);
+                    
+                    // Question block shadow
+                    ctx.fillStyle = ThemeSystem.getColor('questionShadow');
+                    ctx.fillRect(block.x, block.y + block.height - 3, block.width, 3);
+                    
+                    // Question mark
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(block.x + 7, block.y + 4, 6, 2);
+                    ctx.fillRect(block.x + 9, block.y + 6, 2, 6);
+                    ctx.fillRect(block.x + 7, block.y + 12, 6, 2);
+                    ctx.fillRect(block.x + 9, block.y + 16, 2, 2);
+                } else {
+                    // Used block (darker)
+                    ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                    ctx.fillRect(block.x, block.y, block.width, block.height);
+                }
+            } else if (block.type === 'brick') {
+                // Brick block
+                ctx.fillStyle = ThemeSystem.getColor('brick');
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+                
+                // Brick shadow
+                ctx.fillStyle = ThemeSystem.getColor('brickShadow');
+                ctx.fillRect(block.x, block.y + block.height - 3, block.width, 3);
+                
+                // Brick pattern
+                ctx.fillStyle = ThemeSystem.getColor('brickShadow');
+                ctx.fillRect(block.x + 2, block.y + 2, 16, 1);
+                ctx.fillRect(block.x + 2, block.y + 10, 16, 1);
+                ctx.fillRect(block.x + 10, block.y + 6, 1, 4);
+            }
+        }
     };
     
     // Map Character Definitions - defines what each ASCII character creates
@@ -835,6 +1010,7 @@ async function createMarioGame(settings) {
             
             // Set theme based on level
             game.currentTheme = theme;
+            ThemeSystem.setTheme(theme);
             
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
@@ -1518,15 +1694,12 @@ async function createMarioGame(settings) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Theme-based backgrounds
-        if (game.currentTheme === 'underground') {
-            ctx.fillStyle = '#000000'; // Solid black for underground like SMB 1-2
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        } else if (game.currentTheme === 'trees') {
-            ctx.fillStyle = '#4169E1'; // Lighter blue sky for SMB 1-3
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Add sparse clouds
+        // Use theme system for background
+        ThemeSystem.renderBackground(ctx, canvas);
+        
+        // Add theme-specific background elements
+        if (game.currentTheme === 'trees') {
+            // Add sparse clouds for tree theme
             ctx.fillStyle = '#FFFFFF';
             const cloudPositions = [150, 400, 650, 900, 1200, 1500, 1800];
             cloudPositions.forEach(x => {
@@ -1535,18 +1708,6 @@ async function createMarioGame(settings) {
                 ctx.fillRect(x - game.camera.x + 10, 70, 40, 20);
                 ctx.fillRect(x - game.camera.x + 20, 60, 20, 20);
             });
-        } else {
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            if (game.currentTheme === 'castle') {
-                gradient.addColorStop(0, '#2F2F2F');
-                gradient.addColorStop(1, '#000000');
-            } else {
-                // Overworld
-                gradient.addColorStop(0, '#87CEEB');
-                gradient.addColorStop(1, '#98FB98');
-            }
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         
         ctx.save();
@@ -1602,7 +1763,7 @@ async function createMarioGame(settings) {
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
                 // Pipe body - green
-                ctx.fillStyle = '#228B22';
+                ctx.fillStyle = ThemeSystem.getColor('pipe');
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
                 // Pipe rim (top edge) - lighter green
@@ -1614,123 +1775,17 @@ async function createMarioGame(settings) {
                 ctx.fillRect(platform.x + 2, platform.y, 2, platform.height);
                 
                 // Pipe shadows
-                ctx.fillStyle = '#006400';
+                ctx.fillStyle = ThemeSystem.getColor('pipeShadow');
                 ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
-            } else if (platform.type === 'tree') {
-                // Tree leaves (platform) - light green for jumping platforms
-                ctx.fillStyle = '#90EE90';
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                
-                // Leaf texture - lighter green highlights
-                ctx.fillStyle = '#98FB98';
-                ctx.fillRect(platform.x + 2, platform.y + 2, 4, 4);
-                ctx.fillRect(platform.x + 8, platform.y + 4, 3, 3);
-                ctx.fillRect(platform.x + 14, platform.y + 2, 4, 4);
-                ctx.fillRect(platform.x + 4, platform.y + 8, 3, 3);
-                ctx.fillRect(platform.x + 12, platform.y + 10, 4, 4);
-                
-                // Medium green shadows for depth
-                ctx.fillStyle = '#32CD32';
-                ctx.fillRect(platform.x + 1, platform.y + 6, 2, 2);
-                ctx.fillRect(platform.x + 10, platform.y + 1, 2, 2);
-                ctx.fillRect(platform.x + 16, platform.y + 8, 2, 2);
             } else {
-                // Ground colors - theme-based
-                let groundColor, veinColor;
-                if (game.currentTheme === 'underground') {
-                    groundColor = '#4A4A4A';
-                    veinColor = '#2F2F2F';
-                } else if (game.currentTheme === 'trees') {
-                    groundColor = '#8B4513'; // Darker brown for nighttime
-                    veinColor = '#654321';
-                } else {
-                    groundColor = '#A0522D'; // Normal overworld
-                    veinColor = '#8B4513';
-                }
-                
-                ctx.fillStyle = groundColor;
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                
-                // Granite-like continuous veining lines
-                ctx.fillStyle = veinColor;
-                
-                // Horizontal veins
-                for (let y = platform.y + 2; y < platform.y + platform.height; y += 6) {
-                    for (let x = platform.x; x < platform.x + platform.width; x += 3) {
-                        ctx.fillRect(x, y, 2, 1);
-                    }
-                }
-                
-                // Diagonal veins
-                for (let x = platform.x; x < platform.x + platform.width; x += 8) {
-                    for (let y = platform.y; y < platform.y + platform.height; y++) {
-                        if ((x + y) % 4 === 0) {
-                            ctx.fillRect(x + (y % 3), y, 1, 1);
-                        }
-                    }
-                }
+                // Use theme system for platform rendering
+                ThemeSystem.renderPlatform(ctx, platform);
             }
         });
         
         // Blocks
         game.blocks.forEach(block => {
-            if (block.type === 'brick') {
-                // Brick colors - theme-based
-                let brickColor, mortarColor, highlightColor;
-                if (game.currentTheme === 'underground') {
-                    brickColor = '#4682B4'; // Blueish-greenish
-                    mortarColor = '#2F4F4F';
-                    highlightColor = '#87CEEB';
-                } else if (game.currentTheme === 'trees') {
-                    brickColor = '#B8860B'; // Darker gold for nighttime
-                    mortarColor = '#8B4513';
-                    highlightColor = '#DAA520';
-                } else {
-                    brickColor = '#CD853F'; // Normal overworld
-                    mortarColor = '#8B4513';
-                    highlightColor = '#DEB887';
-                }
-                
-                // Brick base color
-                ctx.fillStyle = brickColor;
-                ctx.fillRect(block.x, block.y, block.width, block.height);
-                
-                // Brick pattern - mortar lines
-                ctx.fillStyle = mortarColor;
-                // Horizontal mortar lines
-                ctx.fillRect(block.x, block.y + 6, block.width, 1);
-                ctx.fillRect(block.x, block.y + 13, block.width, 1);
-                // Vertical mortar lines (offset pattern)
-                ctx.fillRect(block.x + 10, block.y, 1, 6);
-                ctx.fillRect(block.x + 5, block.y + 7, 1, 6);
-                ctx.fillRect(block.x + 15, block.y + 7, 1, 6);
-                ctx.fillRect(block.x + 10, block.y + 14, 1, 6);
-                
-                // Brick highlights
-                ctx.fillStyle = highlightColor;
-                ctx.fillRect(block.x, block.y, block.width, 1);
-                ctx.fillRect(block.x, block.y, 1, block.height);
-            } else if (block.type === 'question') {
-                // Question block colors - theme-based
-                let questionColor;
-                if (game.currentTheme === 'underground') {
-                    questionColor = block.content ? '#8B4513' : '#654321';
-                } else if (game.currentTheme === 'trees') {
-                    questionColor = block.content ? '#DAA520' : '#8B4513'; // Darker gold for nighttime
-                } else {
-                    questionColor = block.content ? '#FFD700' : '#8B4513'; // Normal overworld
-                }
-                
-                ctx.fillStyle = questionColor;
-                ctx.fillRect(block.x, block.y, block.width, block.height);
-                if (block.content) {
-                    ctx.fillStyle = '#000';
-                    ctx.font = '16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('?', block.x + block.width/2, block.y + block.height/2 + 5);
-                    ctx.textAlign = 'left';
-                }
-            }
+            ThemeSystem.renderBlock(ctx, block);
         });
         
         // Power-ups
@@ -1973,4 +2028,5 @@ async function createMarioGame(settings) {
     document.addEventListener('keyup', handleKeyUp);
     
     initializeLevel().then(() => gameLoop());
-}
+    } // End startMarioGame function
+} // End createMarioGame function

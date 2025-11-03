@@ -288,7 +288,11 @@ async function initializeLevel() {
             createMaze3DGame(await getDifficulty('maze3d'));
             break;
         case 'mario':
-            createMarioGame(await getDifficulty('mario'));
+            const marioSettings = await getDifficulty('mario');
+            // Enable debug mode only if ?debug=true is in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            marioSettings.debug = urlParams.get('debug') === 'true';
+            createMarioGame(marioSettings);
             break;
         case 'donkeykong':
             createDonkeyKongGame(await getDifficulty('donkeykong'));
