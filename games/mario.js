@@ -1052,8 +1052,14 @@ async function createMarioGame(settings) {
             
             movement: (enemy) => {
                 if (!enemy.timer) enemy.timer = 0;
-                if (!enemy.baseY) enemy.baseY = enemy.y;
-                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 16; // Smaller distance
+                if (!enemy.baseY) {
+                    enemy.baseY = enemy.y; // Use the initial Y position as base
+                    console.log('Setting piranha baseY to:', enemy.baseY);
+                }
+                if (!enemy.hiddenY) {
+                    enemy.hiddenY = enemy.baseY + 20; // Hide 20 pixels below base
+                    console.log('Setting piranha hiddenY to:', enemy.hiddenY);
+                }
                 
                 const distanceToPlayer = Math.abs(game.player.x - enemy.x);
                 const tooClose = distanceToPlayer < 48;
