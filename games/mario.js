@@ -1257,7 +1257,7 @@ async function createMarioGame(settings) {
                     // Create single piranha for this pipe group if it has 'p' characters
                     if (hasPiranha) {
                         const centerX = (minX + maxX) / 2;
-                        const piranhaY = minY * tileSize - 16;
+                        const piranhaY = minY * tileSize - 36; // Stick out more from pipe
                         enemies.push({
                             x: centerX * tileSize, 
                             y: piranhaY,
