@@ -1172,42 +1172,22 @@ async function createMarioGame(settings) {
             defaultState: 'flying',
             
             movement: (enemy) => {
-                if (!enemy.centerY) enemy.centerY = enemy.y;
-                if (!enemy.flyDirection) enemy.flyDirection = -1; // Start flying up
+                if (!enemy.topY) enemy.topY = enemy.y; // 'k' position is top of flight
+                if (!enemy.flyDirection) enemy.flyDirection = 1; // Start flying down
                 if (!enemy.flySpeed) enemy.flySpeed = 1;
-                if (!enemy.initialFlight) enemy.initialFlight = true;
                 
                 // Move vertically
                 enemy.y += enemy.flyDirection * enemy.flySpeed;
                 
-                // Check flight limits based on current state
-                const distanceFromCenter = enemy.y - enemy.centerY;
+                // Check flight limits (6 cells = 120 pixels total range)
+                const distanceFromTop = enemy.y - enemy.topY;
                 
-                if (enemy.initialFlight) {
-                    // First flight: go up 3 cells (60 pixels)
-                    if (distanceFromCenter <= -60) {
-                        enemy.flyDirection = 1; // Start going down
-                        enemy.initialFlight = false;
-                        console.log('Parakoopa finished initial flight, now going down');
-                    }
-                } else {
-                    // Normal flight: alternate between limits
-                    if (enemy.flyDirection === -1 && distanceFromCenter <= -120) {
-                        // Flying up and reached top limit, start flying down
-                        enemy.flyDirection = 1;
-                        console.log('Parakoopa hit top limit, going down');
-                    } else if (enemy.flyDirection === 1 && distanceFromCenter >= 60) {
-                        // Flying down and reached bottom limit, start flying up
-                        enemy.flyDirection = -1;
-                        console.log('Parakoopa hit bottom limit, going up');
-                    }
-                }
-                
-                // Debug logging
-                if (enemy.debugTimer === undefined) enemy.debugTimer = 0;
-                enemy.debugTimer++;
-                if (enemy.debugTimer % 60 === 0) {
-                    console.log('Parakoopa: y=', enemy.y, 'centerY=', enemy.centerY, 'distance=', distanceFromCenter, 'direction=', enemy.flyDirection);
+                if (enemy.flyDirection === 1 && distanceFromTop >= 120) {
+                    // Flying down and reached bottom limit (6 cells), start flying up
+                    enemy.flyDirection = -1;
+                } else if (enemy.flyDirection === -1 && distanceFromTop <= 0) {
+                    // Flying up and reached top limit, start flying down
+                    enemy.flyDirection = 1;
                 }
             },
             
