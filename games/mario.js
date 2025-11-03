@@ -1677,6 +1677,9 @@ async function createMarioGame(settings) {
         const prevY = entity.y - entity.vy;
         
         game.platforms.forEach(platform => {
+            // Skip moving platforms - they're handled separately
+            if (platform.moving) return;
+            
             // Check if entity is currently overlapping platform
             if (entity.x < platform.x + platform.width &&
                 entity.x + entity.width > platform.x &&
@@ -2008,27 +2011,32 @@ async function createMarioGame(settings) {
         
         game.platforms.forEach(platform => {
             if (platform.moving) {
-                // Move Mario with platform BEFORE moving the platform
-                const marioOnPlatform = game.player.onGround &&
-                    game.player.x < platform.x + platform.width &&
+                // Check if Mario is on this moving platform
+                const marioOnPlatform = 
                     game.player.x + game.player.width > platform.x &&
-                    Math.abs((game.player.y + game.player.height) - platform.y) < 5;
+                    game.player.x < platform.x + platform.width &&
+                    game.player.y + game.player.height >= platform.y - 2 &&
+                    game.player.y + game.player.height <= platform.y + 8;
                 
                 if (marioOnPlatform) {
-                    if (platform.vy && platform.vy < 0) {
-                        // Up-moving platform: move Mario directly and reset velocity
-                        game.player.y += platform.vy;
+                    // Mario is on this platform - override gravity
+                    game.player.onGround = true;
+                    game.player.y = platform.y - game.player.height;
+                    
+                    // Move Mario with platform
+                    if (platform.vy) {
+                        if (platform.vy < 0) {
+                            // Moving up
+                            game.player.y += platform.vy;
+                            game.player.vy = 0;
+                        } else {
+                            // Moving down
+                            game.player.vy = platform.vy;
+                        }
+                    } else {
                         game.player.vy = 0;
-                    } else if (platform.vy && platform.vy > 0) {
-                        // Down-moving platform: set Mario's velocity to match platform
-                        game.player.vy = platform.vy;
-                    } else if (platform.vy === 0) {
-                        // Platform not moving vertically, keep Mario on platform
-                        game.player.vy = 0;
-                        game.player.y = platform.y - game.player.height;
                     }
                     
-                    // Move Mario horizontally with horizontal platforms
                     if (platform.vx) {
                         game.player.x += platform.vx;
                     }
