@@ -1170,24 +1170,34 @@ async function createMarioGame(settings) {
         parakoopa: {
             states: ['flying'],
             defaultState: 'flying',
-            flightRange: 6 * 20, // 6 cells * 20 pixels per cell (configurable)
             
             movement: (enemy) => {
                 if (!enemy.centerY) enemy.centerY = enemy.y;
                 if (!enemy.flyDirection) enemy.flyDirection = -1; // Start flying up
                 if (!enemy.flySpeed) enemy.flySpeed = 1;
+                if (!enemy.initialFlight) enemy.initialFlight = true;
                 
                 // Move vertically
                 enemy.y += enemy.flyDirection * enemy.flySpeed;
                 
-                // Check if reached flight limits
+                // Check flight limits based on current state
                 const distanceFromCenter = enemy.y - enemy.centerY;
-                if (distanceFromCenter <= -EnemyBehaviors.parakoopa.flightRange / 2) {
-                    // Reached top, start flying down
-                    enemy.flyDirection = 1;
-                } else if (distanceFromCenter >= EnemyBehaviors.parakoopa.flightRange / 2) {
-                    // Reached bottom, start flying up
-                    enemy.flyDirection = -1;
+                
+                if (enemy.initialFlight) {
+                    // First flight: go up 3 cells (60 pixels)
+                    if (distanceFromCenter <= -60) {
+                        enemy.flyDirection = 1; // Start going down
+                        enemy.initialFlight = false;
+                    }
+                } else {
+                    // Normal flight: 6 cells (120 pixels) in each direction
+                    if (distanceFromCenter <= -120) {
+                        // Reached top limit, start flying down
+                        enemy.flyDirection = 1;
+                    } else if (distanceFromCenter >= 120) {
+                        // Reached bottom limit, start flying up
+                        enemy.flyDirection = -1;
+                    }
                 }
             },
             
@@ -1985,15 +1995,15 @@ async function createMarioGame(settings) {
                 enemy.animTimer = 0;
             }
             
-            // Add gravity to enemies (except piranha plants)
-            if (enemy.type !== 'piranha') {
+            // Add gravity to enemies (except piranha plants and parakoopas)
+            if (enemy.type !== 'piranha' && enemy.type !== 'parakoopa') {
                 if (!enemy.vy) enemy.vy = 0;
                 enemy.vy += 0.3; // Gravity
                 enemy.y += enemy.vy;
             }
             
-            // Use shared collision detection for ground (except piranha plants)
-            if (enemy.type !== 'piranha') {
+            // Use shared collision detection for ground (except piranha plants and parakoopas)
+            if (enemy.type !== 'piranha' && enemy.type !== 'parakoopa') {
                 handlePlatformCollision(enemy);
             }
             
