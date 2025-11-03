@@ -211,13 +211,13 @@ const SpriteRenderer = {
                 ctx.fillStyle = '#FFF';
                 if (isJumping) {
                     if (player.facingRight) {
-                        // Jumping right - arms extended
-                        ctx.fillRect(player.x - 2, baseY + 14, 4, 4); // Left arm forward
-                        ctx.fillRect(player.x + 18, baseY + 18, 4, 4); // Right arm back
+                        // Jumping right - right arm up (front), left arm down (back)
+                        ctx.fillRect(player.x + 18, baseY + 12, 4, 4); // Right arm up (front)
+                        ctx.fillRect(player.x - 2, baseY + 18, 4, 4); // Left arm down (back)
                     } else {
-                        // Jumping left - arms extended opposite
-                        ctx.fillRect(player.x - 2, baseY + 18, 4, 4); // Left arm back
-                        ctx.fillRect(player.x + 18, baseY + 14, 4, 4); // Right arm forward
+                        // Jumping left - left arm up (front), right arm down (back)
+                        ctx.fillRect(player.x - 2, baseY + 12, 4, 4); // Left arm up (front)
+                        ctx.fillRect(player.x + 18, baseY + 18, 4, 4); // Right arm down (back)
                     }
                 } else {
                     // Normal standing/walking pose
@@ -225,9 +225,19 @@ const SpriteRenderer = {
                     ctx.fillRect(player.x + 17, baseY + 16, 3, 4);
                 }
                 
-                // Shoes - brown (bigger) with walking animation
+                // Shoes - brown (bigger) with walking and jumping animation
                 ctx.fillStyle = '#8B4513';
-                if (isMoving) {
+                if (isJumping) {
+                    if (player.facingRight) {
+                        // Jumping right - right leg up (front), left leg down (back)
+                        ctx.fillRect(player.x + 14, baseY + 24, 6, 4); // Right leg up (front)
+                        ctx.fillRect(player.x, baseY + 29, 6, 4); // Left leg down (back)
+                    } else {
+                        // Jumping left - left leg up (front), right leg down (back)
+                        ctx.fillRect(player.x, baseY + 24, 6, 4); // Left leg up (front)
+                        ctx.fillRect(player.x + 14, baseY + 29, 6, 4); // Right leg down (back)
+                    }
+                } else if (isMoving) {
                     // Walking animation - alternate foot positions
                     if (animFrame === 0) {
                         ctx.fillRect(player.x, baseY + 27, 6, 4);
@@ -577,9 +587,16 @@ async function createMarioGame(settings) {
                 theme = 'trees';
             }
             
-            const response = await fetch(`./games/mario/${mapFile}`);
+            const response = await fetch(`./games/mario/${mapFile}?v=${Date.now()}`);
             const mapText = await response.text();
             const layout = parseASCIIMap(mapText);
+            
+            console.log(`Level ${game.currentLevel} loaded:`, {
+                platforms: layout.platforms.length,
+                blocks: layout.blocks.length, 
+                enemies: layout.enemies.length,
+                enemyTypes: layout.enemies.map(e => e.type)
+            });
             
             // Set theme based on level
             game.currentTheme = theme;
@@ -648,6 +665,7 @@ async function createMarioGame(settings) {
                         platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'tree'});
                         break;
                     case 'G':
+                        console.log('Found Goomba at', x, y, worldX, worldY);
                         // Position Goomba exactly on ground level
                         let goombaGroundY = worldY;
                         for (let checkY = y; checkY < lines.length; checkY++) {
@@ -659,6 +677,7 @@ async function createMarioGame(settings) {
                         enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', alive: true, onGround: true});
                         break;
                     case 'K':
+                        console.log('Found Koopa at', x, y, worldX, worldY);
                         // Position Koopa exactly on ground level  
                         let koopaGroundY = worldY;
                         for (let checkY = y; checkY < lines.length; checkY++) {
