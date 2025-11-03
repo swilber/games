@@ -603,6 +603,8 @@ async function createMarioGame(settings) {
             },
             
             piranha: (ctx, enemy) => {
+                console.log('Rendering piranha at:', enemy.x, enemy.y, 'state:', enemy.state);
+                
                 // DEBUG: Draw bright yellow rectangle to show piranha bounds
                 ctx.fillStyle = '#FFFF00';
                 ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
@@ -1949,6 +1951,8 @@ async function createMarioGame(settings) {
         // Platforms
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
+                console.log('Rendering pipe at:', platform.x, platform.y, platform.width, platform.height);
+                
                 // Pipe body - green (TEMPORARILY INVISIBLE FOR DEBUGGING)
                 // ctx.fillStyle = ThemeSystem.getColor('pipe');
                 // ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
