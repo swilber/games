@@ -1232,25 +1232,21 @@ async function createMarioGame(settings) {
             const line = lines[y];
             for (let x = 0; x < line.length; x++) {
                 if ((line[x] === 'P' || line[x] === 'p') && !processedPs.has(`${x},${y}`)) {
-                    // Check if this is a piranha plant pipe
-                    if (line[x] === 'p') {
-                        enemies.push({
-                            x: x * tileSize, 
-                            y: y * tileSize - 32, // Position above the pipe
-                            type: 'piranha'
-                        });
-                        console.log('Found Piranha Plant in main map at', x, y);
-                    }
-                    
                     // Find the bounds of this connected P group
                     let minX = x, maxX = x, minY = y, maxY = y;
                     const toCheck = [{x, y}];
                     const groupPs = new Set();
+                    let hasPiranha = false;
                     
                     while (toCheck.length > 0) {
                         const {x: cx, y: cy} = toCheck.pop();
                         const key = `${cx},${cy}`;
                         if (groupPs.has(key) || cy >= lines.length || cx >= lines[cy].length || (lines[cy][cx] !== 'P' && lines[cy][cx] !== 'p')) continue;
+                        
+                        // Check if this pipe has a piranha
+                        if (lines[cy][cx] === 'p') {
+                            hasPiranha = true;
+                        }
                         
                         groupPs.add(key);
                         processedPs.add(key);
@@ -1261,6 +1257,17 @@ async function createMarioGame(settings) {
                         
                         // Check adjacent cells
                         toCheck.push({x: cx+1, y: cy}, {x: cx-1, y: cy}, {x: cx, y: cy+1}, {x: cx, y: cy-1});
+                    }
+                    
+                    // Create single piranha for this pipe group if it has 'p' characters
+                    if (hasPiranha) {
+                        const centerX = (minX + maxX) / 2;
+                        enemies.push({
+                            x: centerX * tileSize, 
+                            y: minY * tileSize - 32, // Position above the pipe
+                            type: 'piranha'
+                        });
+                        console.log('Found Piranha Plant for pipe group at center', centerX, minY);
                     }
                     
                     // Create single pipe for this group
