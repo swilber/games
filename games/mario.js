@@ -604,6 +604,7 @@ async function createMarioGame(settings) {
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
             game.enemies = layout.enemies;
+            game.coins = layout.coins || [];
             game.flag = layout.flag;
             game.player.x = layout.startX;
             game.player.y = layout.startY;
@@ -624,6 +625,7 @@ async function createMarioGame(settings) {
         const platforms = [];
         const blocks = [];
         const enemies = [];
+        const coins = [];
         let flag = null;
         let startX = 50, startY = 300;
         
@@ -651,6 +653,9 @@ async function createMarioGame(settings) {
                         break;
                     case 'C':
                         blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'coin'});
+                        break;
+                    case 'c':
+                        coins.push({x: worldX, y: worldY, width: tileSize, height: tileSize, collected: false});
                         break;
                     case 'M':
                         blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'mushroom'});
@@ -746,7 +751,7 @@ async function createMarioGame(settings) {
             }
         }
         
-        return {platforms, blocks, enemies, flag, startX, startY};
+        return {platforms, blocks, enemies, coins, flag, startX, startY};
     }
     
     
@@ -1419,6 +1424,20 @@ async function createMarioGame(settings) {
         });
     }
     
+    function checkCoinCollection() {
+        game.coins.forEach(coin => {
+            if (!coin.collected &&
+                game.player.x < coin.x + coin.width &&
+                game.player.x + game.player.width > coin.x &&
+                game.player.y < coin.y + coin.height &&
+                game.player.y + game.player.height > coin.y) {
+                
+                coin.collected = true;
+                game.player.score += 200;
+            }
+        });
+    }
+    
     function checkWin() {
         if (game.player.x + game.player.width > game.flag.x) {
             nextLevel();
@@ -1714,6 +1733,17 @@ async function createMarioGame(settings) {
             }
         });
         
+        // Coins
+        game.coins.forEach(coin => {
+            if (!coin.collected) {
+                // Draw oval-shaped yellow coin
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(coin.x + 6, coin.y + 4, 8, 12); // Taller oval shape
+                ctx.fillStyle = '#FFA500';
+                ctx.fillRect(coin.x + 8, coin.y + 6, 4, 8); // Taller inner oval
+            }
+        });
+        
         // Fireballs
         game.fireballs.forEach(fireball => {
             ctx.fillStyle = '#FF4500';
@@ -1797,6 +1827,7 @@ async function createMarioGame(settings) {
         updateFireballs();
         updateParticles();
         checkPitCollision();
+        checkCoinCollection();
         checkWin();
         render();
         
