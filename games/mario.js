@@ -431,21 +431,23 @@ async function createMarioGame(settings) {
                 
                 // Lighter pink highlight on top and left
                 ctx.fillStyle = '#FFB6C1'; // Light pink
-                ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
-                ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
+                ctx.fillRect(platform.x, platform.y, platform.width, 1); // Top highlight
+                ctx.fillRect(platform.x, platform.y, 1, platform.height); // Left highlight
                 
                 // Darker pink shadow on bottom and right
                 ctx.fillStyle = '#C71585'; // Medium violet red
-                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
-                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+                ctx.fillRect(platform.x, platform.y + platform.height - 1, platform.width, 1); // Bottom shadow
+                ctx.fillRect(platform.x + platform.width - 1, platform.y, 1, platform.height); // Right shadow
                 
-                // Black holes through the girder
+                // Black holes - exactly 2 per platform
                 ctx.fillStyle = '#000000';
-                const holeSize = 4;
-                const spacing = 6;
-                for (let i = 0; i < platform.width - holeSize; i += spacing) {
-                    ctx.fillRect(platform.x + 2 + i, platform.y + platform.height/2 - holeSize/2, holeSize, holeSize);
-                }
+                const holeSize = 2;
+                const hole1X = platform.x + 4;
+                const hole2X = platform.x + 14;
+                const holeY = platform.y + platform.height/2 - holeSize/2;
+                
+                ctx.fillRect(hole1X, holeY, holeSize, holeSize);
+                ctx.fillRect(hole2X, holeY, holeSize, holeSize);
             } else if (platform.type === 'tree') {
                 // Tree platform rendering
                 ctx.fillStyle = ThemeSystem.getColor('ground');
@@ -869,15 +871,19 @@ async function createMarioGame(settings) {
     // Map Object Factories - creates game objects from character definitions
     const MapObjectFactories = {
         platform: (def, x, y, tileSize) => {
-            const platform = { x, y, width: tileSize, height: tileSize, type: def.variant };
+            let platform;
             
             // Add movement properties for moving platforms
             if (def.variant === 'moving_up') {
+                platform = { x, y, width: tileSize, height: 8, type: def.variant }; // Thinner
                 platform.vy = -1; // Move up
                 platform.moving = true;
             } else if (def.variant === 'moving_down') {
+                platform = { x, y, width: tileSize, height: 8, type: def.variant }; // Thinner
                 platform.vy = 1; // Move down
                 platform.moving = true;
+            } else {
+                platform = { x, y, width: tileSize, height: tileSize, type: def.variant };
             }
             
             return platform;
