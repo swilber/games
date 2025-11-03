@@ -1188,16 +1188,26 @@ async function createMarioGame(settings) {
                     if (distanceFromCenter <= -60) {
                         enemy.flyDirection = 1; // Start going down
                         enemy.initialFlight = false;
+                        console.log('Parakoopa finished initial flight, now going down');
                     }
                 } else {
-                    // Normal flight: alternate between 6 cells up and down
+                    // Normal flight: alternate between limits
                     if (enemy.flyDirection === -1 && distanceFromCenter <= -120) {
                         // Flying up and reached top limit, start flying down
                         enemy.flyDirection = 1;
+                        console.log('Parakoopa hit top limit, going down');
                     } else if (enemy.flyDirection === 1 && distanceFromCenter >= 60) {
-                        // Flying down and reached bottom limit (3 cells below center), start flying up
+                        // Flying down and reached bottom limit, start flying up
                         enemy.flyDirection = -1;
+                        console.log('Parakoopa hit bottom limit, going up');
                     }
+                }
+                
+                // Debug logging
+                if (enemy.debugTimer === undefined) enemy.debugTimer = 0;
+                enemy.debugTimer++;
+                if (enemy.debugTimer % 60 === 0) {
+                    console.log('Parakoopa: y=', enemy.y, 'centerY=', enemy.centerY, 'distance=', distanceFromCenter, 'direction=', enemy.flyDirection);
                 }
             },
             
