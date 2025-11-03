@@ -107,17 +107,18 @@ const SpriteRenderer = {
     player: {
         mario: (ctx, player) => {
             const isSmall = player.powerState === 'small';
+            const isFire = player.powerState === 'fire';
             const baseY = isSmall ? player.y + 8 : player.y; // Adjust for size difference
             
-            // Mario's hat - red with proper shading
-            ctx.fillStyle = '#FF0000';
+            // Mario's hat - red for normal, white for fire Mario
+            ctx.fillStyle = isFire ? '#FFFFFF' : '#FF0000';
             if (isSmall) {
                 ctx.fillRect(player.x + 2, baseY, 12, 4);
             } else {
                 ctx.fillRect(player.x + 2, baseY, 16, 6);
             }
             
-            ctx.fillStyle = '#CC0000';
+            ctx.fillStyle = isFire ? '#CCCCCC' : '#CC0000';
             if (isSmall) {
                 ctx.fillRect(player.x + 3, baseY + 1, 10, 1); // Hat shadow
             } else {
@@ -153,7 +154,7 @@ const SpriteRenderer = {
             
             if (!isSmall) {
                 // Big Mario - overalls and shirt
-                ctx.fillStyle = '#0066CC'; // Blue overalls
+                ctx.fillStyle = isFire ? '#FFFFFF' : '#0066CC'; // White overalls for fire Mario
                 ctx.fillRect(player.x + 2, baseY + 11, 16, 12);
                 
                 // Red shirt showing through
@@ -161,7 +162,7 @@ const SpriteRenderer = {
                 ctx.fillRect(player.x + 7, baseY + 14, 6, 8);
                 
                 // Overall straps
-                ctx.fillStyle = '#0066CC';
+                ctx.fillStyle = isFire ? '#FFFFFF' : '#0066CC';
                 ctx.fillRect(player.x + 4, baseY + 9, 3, 4);
                 ctx.fillRect(player.x + 13, baseY + 9, 3, 4);
                 
@@ -421,7 +422,8 @@ async function createMarioGame(settings) {
         player: { 
             x: 50, y: 300, width: 20, height: 30, 
             vx: 0, vy: 0, onGround: false, 
-            lives: 3, score: 0, powerState: 'small'
+            lives: 3, score: 0, powerState: 'small',
+            facingRight: true, shootCooldown: 0
         },
         camera: { x: 0 },
         platforms: [],
@@ -430,6 +432,7 @@ async function createMarioGame(settings) {
         enemies: [],
         coins: [],
         particles: [],
+        fireballs: [],
         pits: [],
         currentLevel: 0, // Always use level 1-1
         levelsCompleted: 0,
@@ -595,8 +598,10 @@ async function createMarioGame(settings) {
     
     function updatePowerUps() {
         game.powerUps.forEach((powerUp, index) => {
-            // Horizontal movement
-            powerUp.x += powerUp.vx;
+            // Only move non-fire flower power-ups
+            if (powerUp.type !== 'fireflower') {
+                // Horizontal movement
+                powerUp.x += powerUp.vx;
             
             // Add gravity
             if (!powerUp.vy) powerUp.vy = 0;
@@ -632,6 +637,7 @@ async function createMarioGame(settings) {
             if (powerUp.x <= 0 || powerUp.x >= game.levelWidth - powerUp.width) {
                 powerUp.vx *= -1;
             }
+            }
             
             // Player collision
             if (game.player.x < powerUp.x + powerUp.width &&
@@ -641,6 +647,9 @@ async function createMarioGame(settings) {
                 
                 if (powerUp.type === 'mushroom') {
                     game.player.powerState = 'big';
+                    game.player.height = 32;
+                } else if (powerUp.type === 'fireflower') {
+                    game.player.powerState = 'fire';
                     game.player.height = 32;
                 }
                 game.player.score += 1000;
@@ -722,6 +731,69 @@ async function createMarioGame(settings) {
         });
     }
     
+    function updateFireballs() {
+        game.fireballs.forEach((fireball, index) => {
+            // Move fireball
+            fireball.x += fireball.vx;
+            fireball.y += fireball.vy;
+            
+            // Add gravity
+            fireball.vy += 0.2;
+            
+            // Bounce off ground and walls
+            [...game.platforms, ...game.blocks].forEach(solid => {
+                if (fireball.x < solid.x + solid.width &&
+                    fireball.x + fireball.width > solid.x &&
+                    fireball.y < solid.y + solid.height &&
+                    fireball.y + fireball.height > solid.y) {
+                    
+                    const overlapLeft = (fireball.x + fireball.width) - solid.x;
+                    const overlapRight = (solid.x + solid.width) - fireball.x;
+                    const overlapTop = (fireball.y + fireball.height) - solid.y;
+                    const overlapBottom = (solid.y + solid.height) - fireball.y;
+                    
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                    
+                    // Ground bounce (hitting from above)
+                    if (minOverlap === overlapTop && fireball.vy > 0) {
+                        fireball.y = solid.y - fireball.height;
+                        fireball.vy = -3; // Bounce
+                        fireball.bounces++;
+                    }
+                    // Wall collision from right
+                    else if (minOverlap === overlapLeft && fireball.vx > 0) {
+                        fireball.x = solid.x - fireball.width;
+                        fireball.vx *= -1; // Reverse direction
+                    }
+                    // Wall collision from left
+                    else if (minOverlap === overlapRight && fireball.vx < 0) {
+                        fireball.x = solid.x + solid.width;
+                        fireball.vx *= -1; // Reverse direction
+                    }
+                }
+            });
+            
+            // Hit enemies
+            game.enemies.forEach(enemy => {
+                if (enemy.alive &&
+                    fireball.x < enemy.x + enemy.width &&
+                    fireball.x + fireball.width > enemy.x &&
+                    fireball.y < enemy.y + enemy.height &&
+                    fireball.y + fireball.height > enemy.y) {
+                    
+                    enemy.alive = false;
+                    game.player.score += 100;
+                    game.fireballs.splice(index, 1);
+                }
+            });
+            
+            // Remove fireball if it bounced too many times or went off screen
+            if (fireball.bounces > fireball.maxBounces || fireball.x < -50 || fireball.x > 5000 || fireball.y > 500) {
+                game.fireballs.splice(index, 1);
+            }
+        });
+    }
+    
     function nextLevel() {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
@@ -745,8 +817,10 @@ async function createMarioGame(settings) {
         
         if (game.keys['ArrowLeft'] || game.keys['KeyA']) {
             game.player.vx = Math.max(game.player.vx - 0.5, -5);
+            game.player.facingRight = false;
         } else if (game.keys['ArrowRight'] || game.keys['KeyD']) {
             game.player.vx = Math.min(game.player.vx + 0.5, 5);
+            game.player.facingRight = true;
         } else {
             game.player.vx *= 0.8;
         }
@@ -754,6 +828,29 @@ async function createMarioGame(settings) {
         if ((game.keys['ArrowUp'] || game.keys['KeyW'] || game.keys['Space']) && game.player.onGround) {
             game.player.vy = -12;
             game.player.onGround = false;
+        }
+        
+        // Shooting fireballs (fire Mario only)
+        if ((game.keys['KeyX'] || game.keys['KeyZ']) && game.player.powerState === 'fire') {
+            // Prevent rapid fire - only shoot if key was just pressed
+            if (!game.player.shootCooldown) {
+                game.fireballs.push({
+                    x: game.player.x + (game.player.facingRight ? game.player.width : -10),
+                    y: game.player.y + 10,
+                    vx: game.player.facingRight ? 3 : -3,
+                    vy: -1,
+                    width: 8,
+                    height: 8,
+                    bounces: 0,
+                    maxBounces: 3
+                });
+                game.player.shootCooldown = 15; // Cooldown frames
+            }
+        }
+        
+        // Update shoot cooldown
+        if (game.player.shootCooldown > 0) {
+            game.player.shootCooldown--;
         }
         
         game.player.vy += 0.5;
@@ -862,10 +959,18 @@ async function createMarioGame(settings) {
                     height: 16
                 });
             } else {
+                // Determine power-up type based on Mario's current state
+                let powerUpType = block.content;
+                if (block.content === 'fireflower' && game.player.powerState === 'small') {
+                    powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
+                }
+                
                 game.powerUps.push({
                     x: block.x, y: block.y - 32,
                     width: 32, height: 32,
-                    type: block.content, vx: 1, vy: 0
+                    type: powerUpType, 
+                    vx: powerUpType === 'fireflower' ? 0 : 1, // Fire flowers don't move
+                    vy: 0
                 });
             }
             block.content = null;
@@ -1239,6 +1344,14 @@ async function createMarioGame(settings) {
             }
         });
         
+        // Fireballs
+        game.fireballs.forEach(fireball => {
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(fireball.x, fireball.y, fireball.width, fireball.height);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(fireball.x + 1, fireball.y + 1, fireball.width - 2, fireball.height - 2);
+        });
+        
         // Player (with invincibility flashing)
         if (!game.player.invincible || Math.floor(Date.now() / 100) % 2 === 0) {
             SpriteRenderer.player.mario(ctx, game.player);
@@ -1310,6 +1423,7 @@ async function createMarioGame(settings) {
         updatePlayer();
         updateEnemies();
         updatePowerUps();
+        updateFireballs();
         updateParticles();
         checkPitCollision();
         checkWin();
