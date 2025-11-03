@@ -603,18 +603,6 @@ async function createMarioGame(settings) {
             },
             
             piranha: (ctx, enemy) => {
-                console.log('Rendering piranha at:', enemy.x, enemy.y, 'state:', enemy.state);
-                
-                // DEBUG: Draw bright yellow rectangle to show piranha bounds
-                ctx.fillStyle = '#FFFF00';
-                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-                
-                // DEBUG: Draw state text
-                ctx.fillStyle = '#000000';
-                ctx.font = '12px Arial';
-                ctx.fillText(`State: ${enemy.state}`, enemy.x, enemy.y - 5);
-                ctx.fillText(`Y: ${Math.round(enemy.y)} Base: ${Math.round(enemy.baseY || 0)} Hidden: ${Math.round(enemy.hiddenY || 0)}`, enemy.x, enemy.y - 20);
-                
                 // Piranha Plant - green stem with red spotted head
                 
                 // Stem (always visible part)
@@ -1052,24 +1040,13 @@ async function createMarioGame(settings) {
             
             movement: (enemy) => {
                 if (!enemy.timer) enemy.timer = 0;
-                if (!enemy.baseY) {
-                    enemy.baseY = enemy.y; // Use the initial Y position as base
-                    console.log('Setting piranha baseY to:', enemy.baseY);
-                }
-                if (!enemy.hiddenY) {
-                    enemy.hiddenY = enemy.baseY + 20; // Hide 20 pixels below base
-                    console.log('Setting piranha hiddenY to:', enemy.hiddenY);
-                }
+                if (!enemy.baseY) enemy.baseY = enemy.y;
+                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 20;
                 
                 const distanceToPlayer = Math.abs(game.player.x - enemy.x);
                 const tooClose = distanceToPlayer < 48;
                 
                 enemy.timer++;
-                
-                // Debug logging
-                if (enemy.timer % 60 === 0) {
-                    console.log('Piranha state:', enemy.state, 'timer:', enemy.timer, 'distance:', distanceToPlayer, 'y:', enemy.y);
-                }
                 
                 if (enemy.state === 'hidden') {
                     enemy.y = enemy.hiddenY;
@@ -1281,14 +1258,12 @@ async function createMarioGame(settings) {
                     if (hasPiranha) {
                         const centerX = (minX + maxX) / 2;
                         const piranhaY = minY * tileSize - 16;
-                        console.log('PIRANHA DEBUG: minX=', minX, 'maxX=', maxX, 'minY=', minY, 'tileSize=', tileSize, 'calculated Y=', piranhaY);
                         enemies.push({
                             x: centerX * tileSize, 
                             y: piranhaY,
                             type: 'piranha',
                             alive: true
                         });
-                        console.log('Found Piranha Plant for pipe group at center', centerX, 'minY:', minY, 'calculated Y:', piranhaY);
                     }
                     
                     // Create single pipe for this group
@@ -1958,25 +1933,21 @@ async function createMarioGame(settings) {
         // Platforms
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
-                console.log('Rendering pipe at:', platform.x, platform.y, platform.width, platform.height);
+                // Pipe body - green
+                ctx.fillStyle = ThemeSystem.getColor('pipe');
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
-                // Pipe body - green (TEMPORARILY INVISIBLE FOR DEBUGGING)
-                // ctx.fillStyle = ThemeSystem.getColor('pipe');
-                // ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                // Pipe rim (top edge) - lighter green
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
                 
-                // Draw red outline instead to show pipe bounds
-                ctx.strokeStyle = '#FF0000';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                // Pipe highlights
+                ctx.fillStyle = '#90EE90';
+                ctx.fillRect(platform.x + 2, platform.y, 2, platform.height);
                 
-                // DEBUG: Show pipe coordinates
-                ctx.fillStyle = '#000000';
-                ctx.font = '10px Arial';
-                ctx.fillText(`Pipe Y: ${platform.y}`, platform.x, platform.y - 10);
-                
-                // Pipe rim (top edge) - lighter green (ALSO INVISIBLE)
-                // ctx.fillStyle = '#32CD32';
-                // ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
+                // Pipe shadows
+                ctx.fillStyle = ThemeSystem.getColor('pipeShadow');
+                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
                 
                 // Pipe highlights
                 ctx.fillStyle = '#90EE90';
@@ -2064,23 +2035,8 @@ async function createMarioGame(settings) {
         game.enemies.forEach(enemy => {
             if (enemy.alive) {
                 SpriteRenderer.enemies[enemy.type](ctx, enemy);
-            } else {
-                // DEBUG: Show dead enemies too
-                ctx.fillStyle = '#FF0000';
-                ctx.fillRect(enemy.x, enemy.y, 20, 20);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '10px Arial';
-                ctx.fillText('DEAD', enemy.x, enemy.y + 10);
             }
         });
-        
-        // DEBUG: Log enemy count every 2 seconds
-        if (game.frameCount % 120 === 0) {
-            console.log('Total enemies:', game.enemies.length);
-            game.enemies.forEach((enemy, i) => {
-                console.log(`Enemy ${i}: type=${enemy.type}, alive=${enemy.alive}, x=${enemy.x}, y=${enemy.y}`);
-            });
-        }
         
         // Coins
         game.coins.forEach(coin => {
