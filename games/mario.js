@@ -1061,13 +1061,10 @@ async function createMarioGame(settings) {
                         enemy.state = 'visible';
                         enemy.timer = 0;
                     }
-                    if (tooClose) {
-                        enemy.state = 'retreating';
-                        enemy.timer = 0;
-                    }
+                    // Don't check tooClose during emerging - let it complete
                 } else if (enemy.state === 'visible') {
                     enemy.y = enemy.baseY;
-                    if (tooClose || enemy.timer > 120) {
+                    if (enemy.timer > 120) { // Only check timer, not distance
                         enemy.state = 'retreating';
                         enemy.timer = 0;
                     }
@@ -1078,6 +1075,7 @@ async function createMarioGame(settings) {
                         enemy.state = 'hidden';
                         enemy.timer = 0;
                     }
+                    // Don't check tooClose during retreating - let it complete
                 }
             },
             
