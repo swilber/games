@@ -953,24 +953,6 @@ async function createMarioGame(settings) {
                 platform = { x, y, width: tileSize, height: 8, type: def.variant }; // Thinner
                 platform.vy = 1; // Move down
                 platform.moving = true;
-            } else if (def.variant === 'vertical_moving') {
-                platform = { x, y, width: tileSize, height: 8, type: def.variant };
-                platform.topY = y; // W marks the top position
-                platform.bottomY = y + (8 * tileSize); // 8 cells down
-                platform.vy = 1; // Start moving down
-                platform.moving = true;
-                // Random starting position between top and bottom
-                const randomOffset = Math.random() * (8 * tileSize);
-                platform.y = platform.topY + randomOffset;
-            } else if (def.variant === 'horizontal_moving') {
-                platform = { x, y, width: tileSize, height: 8, type: def.variant };
-                platform.leftX = x; // Z marks the left position
-                platform.rightX = x + (8 * tileSize); // 8 cells right
-                platform.vx = 1; // Start moving right
-                platform.moving = true;
-                // Random starting position between left and right
-                const randomOffset = Math.random() * (8 * tileSize);
-                platform.x = platform.leftX + randomOffset;
             } else {
                 platform = { x, y, width: tileSize, height: tileSize, type: def.variant };
             }
@@ -1485,6 +1467,87 @@ async function createMarioGame(settings) {
                         width: (maxX - minX + 1) * tileSize,
                         height: (maxY - minY + 1) * tileSize,
                         type: 'pipe'
+                    });
+                }
+            }
+        }
+        
+        // Process connected W and Z groups into single moving platforms
+        const processedWs = new Set();
+        const processedZs = new Set();
+        
+        for (let y = 0; y < lines.length; y++) {
+            const line = lines[y];
+            for (let x = 0; x < line.length; x++) {
+                // Process W groups (vertical moving platforms)
+                if (line[x] === 'W' && !processedWs.has(`${x},${y}`)) {
+                    let minX = x, maxX = x, minY = y, maxY = y;
+                    const toCheck = [{x, y}];
+                    const groupWs = new Set();
+                    
+                    while (toCheck.length > 0) {
+                        const {x: cx, y: cy} = toCheck.pop();
+                        const key = `${cx},${cy}`;
+                        if (groupWs.has(key) || cy >= lines.length || cx >= lines[cy].length || lines[cy][cx] !== 'W') continue;
+                        
+                        groupWs.add(key);
+                        processedWs.add(key);
+                        minX = Math.min(minX, cx);
+                        maxX = Math.max(maxX, cx);
+                        minY = Math.min(minY, cy);
+                        maxY = Math.max(maxY, cy);
+                        
+                        toCheck.push({x: cx+1, y: cy}, {x: cx-1, y: cy}, {x: cx, y: cy+1}, {x: cx, y: cy-1});
+                    }
+                    
+                    // Create single vertical moving platform
+                    const randomOffset = Math.random() * (8 * tileSize);
+                    platforms.push({
+                        x: minX * tileSize,
+                        y: minY * tileSize + randomOffset,
+                        width: (maxX - minX + 1) * tileSize,
+                        height: 8,
+                        type: 'vertical_moving',
+                        topY: minY * tileSize,
+                        bottomY: minY * tileSize + (8 * tileSize),
+                        vy: 1,
+                        moving: true
+                    });
+                }
+                
+                // Process Z groups (horizontal moving platforms)
+                if (line[x] === 'Z' && !processedZs.has(`${x},${y}`)) {
+                    let minX = x, maxX = x, minY = y, maxY = y;
+                    const toCheck = [{x, y}];
+                    const groupZs = new Set();
+                    
+                    while (toCheck.length > 0) {
+                        const {x: cx, y: cy} = toCheck.pop();
+                        const key = `${cx},${cy}`;
+                        if (groupZs.has(key) || cy >= lines.length || cx >= lines[cy].length || lines[cy][cx] !== 'Z') continue;
+                        
+                        groupZs.add(key);
+                        processedZs.add(key);
+                        minX = Math.min(minX, cx);
+                        maxX = Math.max(maxX, cx);
+                        minY = Math.min(minY, cy);
+                        maxY = Math.max(maxY, cy);
+                        
+                        toCheck.push({x: cx+1, y: cy}, {x: cx-1, y: cy}, {x: cx, y: cy+1}, {x: cx, y: cy-1});
+                    }
+                    
+                    // Create single horizontal moving platform
+                    const randomOffset = Math.random() * (8 * tileSize);
+                    platforms.push({
+                        x: minX * tileSize + randomOffset,
+                        y: minY * tileSize,
+                        width: (maxX - minX + 1) * tileSize,
+                        height: 8,
+                        type: 'horizontal_moving',
+                        leftX: minX * tileSize,
+                        rightX: minX * tileSize + (8 * tileSize),
+                        vx: 1,
+                        moving: true
                     });
                 }
             }
