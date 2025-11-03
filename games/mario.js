@@ -603,7 +603,7 @@ async function createMarioGame(settings) {
             },
             
             piranha: (ctx, enemy) => {
-                // Piranha Plant - green stem with red spotted head
+                // Piranha Plant - green stem with red head, upward-facing mouth
                 
                 // Stem (always visible part)
                 ctx.fillStyle = '#228B22'; // Green stem
@@ -611,35 +611,59 @@ async function createMarioGame(settings) {
                 
                 // Only draw head if not fully hidden
                 if (enemy.state !== 'hidden' || enemy.y < enemy.hiddenY) {
-                    // Head - red with white spots
+                    const mouthOpen = Math.floor(Date.now() / 300) % 2 === 0; // Animate mouth
+                    
+                    // Head - red with darker outline
                     ctx.fillStyle = '#DC143C'; // Dark red head
-                    ctx.fillRect(enemy.x + 4, enemy.y + 4, 12, 12); // Main head
+                    ctx.fillRect(enemy.x + 2, enemy.y + 2, 16, 14); // Main head (wider, shorter)
+                    
+                    // Head outline - darker red
+                    ctx.fillStyle = '#8B0000';
+                    ctx.fillRect(enemy.x + 2, enemy.y + 2, 16, 1); // Top
+                    ctx.fillRect(enemy.x + 2, enemy.y + 15, 16, 1); // Bottom
+                    ctx.fillRect(enemy.x + 2, enemy.y + 3, 1, 12); // Left
+                    ctx.fillRect(enemy.x + 17, enemy.y + 3, 1, 12); // Right
+                    
+                    // Two leaves on sides
+                    ctx.fillStyle = '#228B22'; // Green leaves
+                    ctx.fillRect(enemy.x, enemy.y + 6, 3, 6); // Left leaf
+                    ctx.fillRect(enemy.x + 17, enemy.y + 6, 3, 6); // Right leaf
+                    
+                    // Leaf details
+                    ctx.fillStyle = '#006400'; // Dark green
+                    ctx.fillRect(enemy.x, enemy.y + 7, 1, 4); // Left leaf vein
+                    ctx.fillRect(enemy.x + 19, enemy.y + 7, 1, 4); // Right leaf vein
+                    
+                    // Mouth - upward facing, animated
+                    if (mouthOpen) {
+                        // Open mouth - black opening
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(enemy.x + 4, enemy.y + 4, 12, 8); // Mouth opening
+                        
+                        // White teeth around mouth edge
+                        ctx.fillStyle = '#FFFFFF';
+                        // Top teeth
+                        ctx.fillRect(enemy.x + 5, enemy.y + 4, 2, 2);
+                        ctx.fillRect(enemy.x + 8, enemy.y + 4, 2, 2);
+                        ctx.fillRect(enemy.x + 11, enemy.y + 4, 2, 2);
+                        ctx.fillRect(enemy.x + 14, enemy.y + 4, 2, 2);
+                        // Bottom teeth
+                        ctx.fillRect(enemy.x + 5, enemy.y + 10, 2, 2);
+                        ctx.fillRect(enemy.x + 8, enemy.y + 10, 2, 2);
+                        ctx.fillRect(enemy.x + 11, enemy.y + 10, 2, 2);
+                        ctx.fillRect(enemy.x + 14, enemy.y + 10, 2, 2);
+                    } else {
+                        // Closed mouth - just a line
+                        ctx.fillStyle = '#8B0000';
+                        ctx.fillRect(enemy.x + 4, enemy.y + 8, 12, 1); // Mouth line
+                    }
                     
                     // White spots on head
                     ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
-                    ctx.fillRect(enemy.x + 12, enemy.y + 8, 2, 2);
-                    ctx.fillRect(enemy.x + 8, enemy.y + 12, 2, 2);
-                    
-                    // Mouth - black opening with teeth
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(enemy.x + 6, enemy.y + 10, 8, 4); // Mouth opening
-                    
-                    // White teeth
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillRect(enemy.x + 7, enemy.y + 10, 1, 2);
-                    ctx.fillRect(enemy.x + 9, enemy.y + 10, 1, 2);
-                    ctx.fillRect(enemy.x + 11, enemy.y + 10, 1, 2);
-                    ctx.fillRect(enemy.x + 13, enemy.y + 10, 1, 2);
-                    
-                    // Eyes - yellow with black pupils
-                    ctx.fillStyle = '#FFFF00';
-                    ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
-                    ctx.fillRect(enemy.x + 12, enemy.y + 6, 2, 2);
-                    
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(enemy.x + 7, enemy.y + 7, 1, 1);
-                    ctx.fillRect(enemy.x + 13, enemy.y + 7, 1, 1);
+                    ctx.fillRect(enemy.x + 4, enemy.y + 3, 2, 1);
+                    ctx.fillRect(enemy.x + 14, enemy.y + 3, 2, 1);
+                    ctx.fillRect(enemy.x + 6, enemy.y + 13, 2, 1);
+                    ctx.fillRect(enemy.x + 12, enemy.y + 13, 2, 1);
                 }
             }
         },
