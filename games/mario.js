@@ -611,7 +611,7 @@ async function createMarioGame(settings) {
                 ctx.fillStyle = '#000000';
                 ctx.font = '12px Arial';
                 ctx.fillText(`State: ${enemy.state}`, enemy.x, enemy.y - 5);
-                ctx.fillText(`Y: ${Math.round(enemy.y)}`, enemy.x, enemy.y - 20);
+                ctx.fillText(`Y: ${Math.round(enemy.y)} Base: ${Math.round(enemy.baseY || 0)} Hidden: ${Math.round(enemy.hiddenY || 0)}`, enemy.x, enemy.y - 20);
                 
                 // Piranha Plant - green stem with red spotted head
                 
@@ -1957,6 +1957,11 @@ async function createMarioGame(settings) {
                 ctx.strokeStyle = '#FF0000';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // DEBUG: Show pipe coordinates
+                ctx.fillStyle = '#000000';
+                ctx.font = '10px Arial';
+                ctx.fillText(`Pipe Y: ${platform.y}`, platform.x, platform.y - 10);
                 
                 // Pipe rim (top edge) - lighter green (ALSO INVISIBLE)
                 // ctx.fillStyle = '#32CD32';
