@@ -2360,16 +2360,29 @@ async function createMarioGame(settings) {
             
             processedTrees.add(key);
             
-            // Draw tree top with shaded bumps
+            // Draw tree top with rounded corners
             const treeWidth = maxX - minX;
+            const cornerRadius = 6;
             
-            // Darker green tree top
+            // Main tree top rectangle (excluding corners)
             ctx.fillStyle = '#228B22'; // Darker green
-            ctx.fillRect(minX, treeY, treeWidth, platform.height);
+            ctx.fillRect(minX + cornerRadius, treeY, treeWidth - (cornerRadius * 2), platform.height);
+            
+            // Left rounded corner
+            for (let i = 0; i < cornerRadius; i++) {
+                const height = Math.sqrt(cornerRadius * cornerRadius - (cornerRadius - i - 1) * (cornerRadius - i - 1));
+                ctx.fillRect(minX + i, treeY + cornerRadius - height, 1, height);
+            }
+            
+            // Right rounded corner
+            for (let i = 0; i < cornerRadius; i++) {
+                const height = Math.sqrt(cornerRadius * cornerRadius - i * i);
+                ctx.fillRect(maxX - cornerRadius + i, treeY + cornerRadius - height, 1, height);
+            }
             
             // Even darker green shadow at bottom
             ctx.fillStyle = '#006400'; // Dark green shadow
-            ctx.fillRect(minX, treeY + platform.height - 4, treeWidth, 4);
+            ctx.fillRect(minX + cornerRadius, treeY + platform.height - 4, treeWidth - (cornerRadius * 2), 4);
             
             // Create shaded half-circle bumps hanging down from the bottom
             const bumpRadius = 6;
