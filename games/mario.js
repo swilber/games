@@ -1275,7 +1275,8 @@ async function createMarioGame(settings) {
                         enemies.push({
                             x: centerX * tileSize, 
                             y: minY * tileSize - 32, // Position above the pipe
-                            type: 'piranha'
+                            type: 'piranha',
+                            alive: true
                         });
                         console.log('Found Piranha Plant for pipe group at center', centerX, minY);
                     }
