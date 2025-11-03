@@ -1226,7 +1226,7 @@ async function createMarioGame(settings) {
         for (let y = 0; y < lines.length; y++) {
             const line = lines[y];
             for (let x = 0; x < line.length; x++) {
-                if (line[x] === 'P' && !processedPs.has(`${x},${y}`)) {
+                if ((line[x] === 'P' || line[x] === 'p') && !processedPs.has(`${x},${y}`)) {
                     // Find the bounds of this connected P group
                     let minX = x, maxX = x, minY = y, maxY = y;
                     const toCheck = [{x, y}];
@@ -1235,7 +1235,7 @@ async function createMarioGame(settings) {
                     while (toCheck.length > 0) {
                         const {x: cx, y: cy} = toCheck.pop();
                         const key = `${cx},${cy}`;
-                        if (groupPs.has(key) || cy >= lines.length || cx >= lines[cy].length || lines[cy][cx] !== 'P') continue;
+                        if (groupPs.has(key) || cy >= lines.length || cx >= lines[cy].length || (lines[cy][cx] !== 'P' && lines[cy][cx] !== 'p')) continue;
                         
                         groupPs.add(key);
                         processedPs.add(key);
