@@ -526,28 +526,8 @@ async function createMarioGame(settings) {
                     }
                 }
             } else if (platform.type === 'tree') {
-                // Tree platform rendering - green leafy appearance
-                ctx.fillStyle = '#228B22'; // Green tree color
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                
-                // Darker green shadow/depth
-                ctx.fillStyle = '#006400'; // Dark green
-                ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
-                
-                // Light green highlights for leaves
-                ctx.fillStyle = '#32CD32'; // Lime green highlights
-                ctx.fillRect(platform.x + 2, platform.y, platform.width - 4, 2);
-                ctx.fillRect(platform.x, platform.y + 2, 2, platform.height - 5);
-                
-                // Add some leaf texture with small dark spots
-                ctx.fillStyle = '#006400';
-                for (let x = 0; x < platform.width; x += 8) {
-                    for (let y = 0; y < platform.height - 3; y += 6) {
-                        if ((x + y) % 16 === 0) { // Scattered pattern
-                            ctx.fillRect(platform.x + x + 2, platform.y + y + 2, 2, 2);
-                        }
-                    }
-                }
+                // Tree platforms are rendered in the main render function as grouped objects
+                // Skip individual rendering here
             } else if (platform.type === 'block') {
                 // 3D block platform with highlights and shadows
                 ctx.fillStyle = ThemeSystem.getColor('ground');
@@ -2380,9 +2360,36 @@ async function createMarioGame(settings) {
             
             processedTrees.add(key);
             
-            // Draw single trunk for this tree group (middle n-2 cells)
+            // Draw tree top with rounded bumps
             const treeWidth = maxX - minX;
-            const trunkWidth = Math.max(8, treeWidth - 40); // n-2 cells (2 cells = 40px)
+            
+            // Light green tree top
+            ctx.fillStyle = '#90EE90'; // Light green
+            ctx.fillRect(minX, treeY, treeWidth, platform.height);
+            
+            // Darker green shadow at bottom
+            ctx.fillStyle = '#228B22'; // Darker green shadow
+            ctx.fillRect(minX, treeY + platform.height - 4, treeWidth, 4);
+            
+            // Create rounded bumps at the bottom
+            ctx.fillStyle = '#90EE90'; // Light green for bumps
+            const bumpSize = 8;
+            const bumpSpacing = 12;
+            for (let x = minX; x < maxX - bumpSize; x += bumpSpacing) {
+                // Draw semi-circle bump
+                for (let i = 0; i < bumpSize; i++) {
+                    const radius = bumpSize / 2;
+                    const centerX = x + radius;
+                    const centerY = treeY + platform.height;
+                    const distance = Math.abs(i - radius);
+                    const height = Math.sqrt(radius * radius - distance * distance);
+                    
+                    ctx.fillRect(x + i, centerY - height, 1, height);
+                }
+            }
+            
+            // Draw single trunk for this tree group (middle section)
+            const trunkWidth = Math.max(8, treeWidth - 40); // Narrower trunk
             const trunkX = minX + (treeWidth - trunkWidth) / 2;
             
             // Tree trunk
