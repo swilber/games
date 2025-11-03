@@ -801,10 +801,14 @@ async function createMarioGame(settings) {
                 
                 if (powerUp.type === 'mushroom') {
                     game.player.powerState = 'big';
+                    game.player.y -= 16; // Move Mario up to prevent falling through platform
                     game.player.width = 20;
                     game.player.height = 32;
                 } else if (powerUp.type === 'fireflower') {
                     game.player.powerState = 'fire';
+                    if (game.player.height === 16) { // Only adjust if currently small
+                        game.player.y -= 16; // Move Mario up to prevent falling through platform
+                    }
                     game.player.width = 20;
                     game.player.height = 32;
                 }
