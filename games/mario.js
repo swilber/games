@@ -1381,6 +1381,9 @@ async function createMarioGame(settings) {
                 const worldX = x * tileSize;
                 const worldY = y * tileSize;
                 
+                // Skip W and Z characters - they're handled by grouping logic later
+                if (char === 'W' || char === 'Z') continue;
+                
                 const charDef = MapCharacters[char];
                 if (!charDef) continue; // Skip unknown characters
                 
