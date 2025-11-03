@@ -425,19 +425,27 @@ async function createMarioGame(settings) {
         
         renderPlatform: (ctx, platform) => {
             if (platform.type === 'moving_up' || platform.type === 'moving_down') {
-                // Pink moving platform
+                // Pink girder with holes
                 ctx.fillStyle = '#FF69B4'; // Hot pink
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
-                // Lighter pink highlight
+                // Lighter pink highlight on top and left
                 ctx.fillStyle = '#FFB6C1'; // Light pink
                 ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
                 ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
                 
-                // Darker pink shadow
+                // Darker pink shadow on bottom and right
                 ctx.fillStyle = '#C71585'; // Medium violet red
                 ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
                 ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+                
+                // Black holes through the girder
+                ctx.fillStyle = '#000000';
+                const holeSize = 4;
+                const spacing = 6;
+                for (let i = 0; i < platform.width - holeSize; i += spacing) {
+                    ctx.fillRect(platform.x + 2 + i, platform.y + platform.height/2 - holeSize/2, holeSize, holeSize);
+                }
             } else if (platform.type === 'tree') {
                 // Tree platform rendering
                 ctx.fillStyle = ThemeSystem.getColor('ground');
