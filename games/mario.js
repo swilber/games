@@ -2047,8 +2047,23 @@ async function createMarioGame(settings) {
         game.enemies.forEach(enemy => {
             if (enemy.alive) {
                 SpriteRenderer.enemies[enemy.type](ctx, enemy);
+            } else {
+                // DEBUG: Show dead enemies too
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(enemy.x, enemy.y, 20, 20);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '10px Arial';
+                ctx.fillText('DEAD', enemy.x, enemy.y + 10);
             }
         });
+        
+        // DEBUG: Log enemy count every 2 seconds
+        if (game.frameCount % 120 === 0) {
+            console.log('Total enemies:', game.enemies.length);
+            game.enemies.forEach((enemy, i) => {
+                console.log(`Enemy ${i}: type=${enemy.type}, alive=${enemy.alive}, x=${enemy.x}, y=${enemy.y}`);
+            });
+        }
         
         // Coins
         game.coins.forEach(coin => {
