@@ -65,10 +65,11 @@ const convertASCIIToLevel = (asciiLines) => {
             }
             if (enemyLine[x] === 'p') {
                 level.enemies.push({x: x * 16, type: 'piranha'});
+                level.tiles[x] = 'p'; // Pipe with piranha
                 console.log('Found Piranha Plant at position', x);
             }
             if (enemyLine[x] === 'P') {
-                level.tiles[x] = 'p'; // Pipe
+                level.tiles[x] = 'p'; // Regular pipe
                 console.log('Found Pipe at position', x);
             }
             if (enemyLine[x] === 'F') {
