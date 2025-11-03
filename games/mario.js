@@ -1274,13 +1274,15 @@ async function createMarioGame(settings) {
                     // Create single piranha for this pipe group if it has 'p' characters
                     if (hasPiranha) {
                         const centerX = (minX + maxX) / 2;
+                        const piranhaY = minY * tileSize - 16;
+                        console.log('PIRANHA DEBUG: minX=', minX, 'maxX=', maxX, 'minY=', minY, 'tileSize=', tileSize, 'calculated Y=', piranhaY);
                         enemies.push({
                             x: centerX * tileSize, 
-                            y: minY * tileSize - 16, // Position at top of pipe (minY is the pipe's top)
+                            y: piranhaY,
                             type: 'piranha',
                             alive: true
                         });
-                        console.log('Found Piranha Plant for pipe group at center', centerX, 'minY:', minY, 'calculated Y:', minY * tileSize - 16);
+                        console.log('Found Piranha Plant for pipe group at center', centerX, 'minY:', minY, 'calculated Y:', piranhaY);
                     }
                     
                     // Create single pipe for this group
