@@ -428,7 +428,8 @@ async function createMarioGame(settings) {
         },
         
         renderPlatform: (ctx, platform) => {
-            if (platform.type === 'moving_up' || platform.type === 'moving_down') {
+            if (platform.type === 'moving_up' || platform.type === 'moving_down' || 
+                platform.type === 'vertical_moving' || platform.type === 'horizontal_moving') {
                 // Pink girder with holes
                 ctx.fillStyle = '#FF69B4'; // Hot pink
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -930,6 +931,8 @@ async function createMarioGame(settings) {
         'P': { type: 'pipe', variant: 'standard' },
         '^': { type: 'platform', variant: 'moving_up' },
         'v': { type: 'platform', variant: 'moving_down' },
+        'W': { type: 'platform', variant: 'vertical_moving' },
+        'Z': { type: 'platform', variant: 'horizontal_moving' },
         '@': { type: 'spawn', variant: 'player' },
         '&': { type: 'flag', variant: 'standard' },
         'X': { type: 'pit', variant: 'standard' },
@@ -950,6 +953,24 @@ async function createMarioGame(settings) {
                 platform = { x, y, width: tileSize, height: 8, type: def.variant }; // Thinner
                 platform.vy = 1; // Move down
                 platform.moving = true;
+            } else if (def.variant === 'vertical_moving') {
+                platform = { x, y, width: tileSize, height: 8, type: def.variant };
+                platform.topY = y; // W marks the top position
+                platform.bottomY = y + (8 * tileSize); // 8 cells down
+                platform.vy = 1; // Start moving down
+                platform.moving = true;
+                // Random starting position between top and bottom
+                const randomOffset = Math.random() * (8 * tileSize);
+                platform.y = platform.topY + randomOffset;
+            } else if (def.variant === 'horizontal_moving') {
+                platform = { x, y, width: tileSize, height: 8, type: def.variant };
+                platform.leftX = x; // Z marks the left position
+                platform.rightX = x + (8 * tileSize); // 8 cells right
+                platform.vx = 1; // Start moving right
+                platform.moving = true;
+                // Random starting position between left and right
+                const randomOffset = Math.random() * (8 * tileSize);
+                platform.x = platform.leftX + randomOffset;
             } else {
                 platform = { x, y, width: tileSize, height: tileSize, type: def.variant };
             }
@@ -1922,30 +1943,59 @@ async function createMarioGame(settings) {
         game.platforms.forEach(platform => {
             if (platform.moving) {
                 // Move Mario with platform BEFORE moving the platform
-                if (game.player.onGround &&
+                const marioOnPlatform = game.player.onGround &&
                     game.player.x < platform.x + platform.width &&
                     game.player.x + game.player.width > platform.x &&
-                    Math.abs((game.player.y + game.player.height) - platform.y) < 3) {
-                    
+                    Math.abs((game.player.y + game.player.height) - platform.y) < 3;
+                
+                if (marioOnPlatform) {
                     if (platform.vy < 0) {
                         // Up-moving platform: move Mario directly and reset velocity
                         game.player.y += platform.vy;
                         game.player.vy = 0;
-                    } else {
+                    } else if (platform.vy > 0) {
                         // Down-moving platform: set Mario's velocity to match platform
                         game.player.vy = platform.vy;
                     }
+                    
+                    // Move Mario horizontally with horizontal platforms
+                    if (platform.vx) {
+                        game.player.x += platform.vx;
+                    }
                 }
                 
-                platform.y += platform.vy;
-                
-                // Wrap around screen edges
-                if (platform.vy < 0 && platform.y < -platform.height) {
-                    // Moving up, wrap to bottom
-                    platform.y = 400;
-                } else if (platform.vy > 0 && platform.y > 400) {
-                    // Moving down, wrap to top
-                    platform.y = -platform.height;
+                // Move platform based on type
+                if (platform.type === 'moving_up' || platform.type === 'moving_down') {
+                    // Original girder platforms - wrap around screen
+                    platform.y += platform.vy;
+                    
+                    if (platform.vy < 0 && platform.y < -platform.height) {
+                        platform.y = 400;
+                    } else if (platform.vy > 0 && platform.y > 400) {
+                        platform.y = -platform.height;
+                    }
+                } else if (platform.type === 'vertical_moving') {
+                    // W platforms - bounce between top and bottom
+                    platform.y += platform.vy;
+                    
+                    if (platform.vy > 0 && platform.y >= platform.bottomY) {
+                        platform.y = platform.bottomY;
+                        platform.vy = -1; // Start moving up
+                    } else if (platform.vy < 0 && platform.y <= platform.topY) {
+                        platform.y = platform.topY;
+                        platform.vy = 1; // Start moving down
+                    }
+                } else if (platform.type === 'horizontal_moving') {
+                    // Z platforms - bounce between left and right
+                    platform.x += platform.vx;
+                    
+                    if (platform.vx > 0 && platform.x >= platform.rightX) {
+                        platform.x = platform.rightX;
+                        platform.vx = -1; // Start moving left
+                    } else if (platform.vx < 0 && platform.x <= platform.leftX) {
+                        platform.x = platform.leftX;
+                        platform.vx = 1; // Start moving right
+                    }
                 }
             }
         });
