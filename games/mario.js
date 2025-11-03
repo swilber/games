@@ -63,6 +63,10 @@ const convertASCIIToLevel = (asciiLines) => {
                 level.enemies.push({x: x * 16, type: 'koopa'});
                 console.log('Found Koopa at position', x);
             }
+            if (enemyLine[x] === 'k') {
+                level.enemies.push({x: x * 16, type: 'parakoopa'});
+                console.log('Found Parakoopa at position', x);
+            }
             if (enemyLine[x] === 'p') {
                 level.enemies.push({x: x * 16, y: 320, type: 'piranha'});
                 level.tiles[x] = 'p'; // Pipe with piranha
@@ -626,6 +630,69 @@ async function createMarioGame(settings) {
                 }
             },
             
+            parakoopa: (ctx, enemy) => {
+                // Theme-aware Parakoopa colors (same as koopa)
+                let shellColor, bodyColor, shadowColor;
+                if (ThemeSystem.current?.name === 'Underground') {
+                    shellColor = '#4682B4'; // Blue-green shell
+                    bodyColor = '#5F9EA0'; // Blue-green body
+                    shadowColor = '#2F4F4F'; // Dark blue-green
+                } else {
+                    shellColor = '#228B22'; // Normal green shell
+                    bodyColor = '#FFDBAC'; // Normal peach body
+                    shadowColor = '#006400'; // Normal dark green
+                }
+                
+                // Shell with head and feet (always walking state for parakoopa)
+                ctx.fillStyle = shellColor;
+                ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 10); // Main shell
+                
+                // Yellow shell trim
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 1);  // Top edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 19, 16, 1);  // Bottom edge
+                ctx.fillRect(enemy.x + 2, enemy.y + 11, 1, 8);   // Left edge
+                ctx.fillRect(enemy.x + 17, enemy.y + 11, 1, 8);  // Right edge
+                
+                // Shell pattern
+                ctx.fillStyle = shadowColor;
+                ctx.fillRect(enemy.x + 6, enemy.y + 13, 2, 2);
+                ctx.fillRect(enemy.x + 12, enemy.y + 13, 2, 2);
+                ctx.fillRect(enemy.x + 9, enemy.y + 16, 2, 2);
+                
+                // Head
+                ctx.fillStyle = bodyColor;
+                ctx.fillRect(enemy.x + 6, enemy.y + 4, 8, 6); // Head
+                
+                // Eyes
+                ctx.fillStyle = '#000';
+                ctx.fillRect(enemy.x + 7, enemy.y + 5, 1, 1);
+                ctx.fillRect(enemy.x + 10, enemy.y + 5, 1, 1);
+                
+                // Wings - animated
+                const wingFlap = Math.floor(Date.now() / 150) % 2;
+                ctx.fillStyle = '#FFFFFF'; // White wings
+                if (wingFlap === 0) {
+                    // Wings up
+                    ctx.fillRect(enemy.x + 1, enemy.y + 2, 3, 6); // Left wing
+                    ctx.fillRect(enemy.x + 16, enemy.y + 2, 3, 6); // Right wing
+                } else {
+                    // Wings down
+                    ctx.fillRect(enemy.x + 1, enemy.y + 6, 3, 6); // Left wing
+                    ctx.fillRect(enemy.x + 16, enemy.y + 6, 3, 6); // Right wing
+                }
+                
+                // Wing outlines
+                ctx.fillStyle = '#000000';
+                if (wingFlap === 0) {
+                    ctx.fillRect(enemy.x + 1, enemy.y + 2, 3, 1); // Left wing top
+                    ctx.fillRect(enemy.x + 16, enemy.y + 2, 3, 1); // Right wing top
+                } else {
+                    ctx.fillRect(enemy.x + 1, enemy.y + 11, 3, 1); // Left wing bottom
+                    ctx.fillRect(enemy.x + 16, enemy.y + 11, 3, 1); // Right wing bottom
+                }
+            },
+            
             piranha: (ctx, enemy) => {
                 // Piranha Plant - green stem with red head, upward-facing mouth
                 
@@ -858,6 +925,7 @@ async function createMarioGame(settings) {
         'B': { type: 'block', variant: 'brick' },
         'G': { type: 'enemy', variant: 'goomba' },
         'K': { type: 'enemy', variant: 'koopa' },
+        'k': { type: 'enemy', variant: 'parakoopa' },
         'c': { type: 'coin', variant: 'stationary' },
         'P': { type: 'pipe', variant: 'standard' },
         '^': { type: 'platform', variant: 'moving_up' },
@@ -1094,6 +1162,66 @@ async function createMarioGame(settings) {
                         } else {
                             resetLevel();
                         }
+                    }
+                }
+            }
+        },
+        
+        parakoopa: {
+            states: ['flying'],
+            defaultState: 'flying',
+            flightRange: 6 * 20, // 6 cells * 20 pixels per cell (configurable)
+            
+            movement: (enemy) => {
+                if (!enemy.centerY) enemy.centerY = enemy.y;
+                if (!enemy.flyDirection) enemy.flyDirection = -1; // Start flying up
+                if (!enemy.flySpeed) enemy.flySpeed = 1;
+                
+                // Move vertically
+                enemy.y += enemy.flyDirection * enemy.flySpeed;
+                
+                // Check if reached flight limits
+                const distanceFromCenter = enemy.y - enemy.centerY;
+                if (distanceFromCenter <= -EnemyBehaviors.parakoopa.flightRange / 2) {
+                    // Reached top, start flying down
+                    enemy.flyDirection = 1;
+                } else if (distanceFromCenter >= EnemyBehaviors.parakoopa.flightRange / 2) {
+                    // Reached bottom, start flying up
+                    enemy.flyDirection = -1;
+                }
+            },
+            
+            onStomp: (enemy, player) => {
+                // Convert to regular koopa when stomped
+                enemy.type = 'koopa';
+                enemy.state = 'walking';
+                enemy.vx = -1;
+                enemy.flyDirection = 0;
+                player.vy = -8;
+                player.score += 100;
+            },
+            
+            onSideHit: (enemy, player) => {
+                // Same as regular koopa side hit
+                if (player.powerState === 'big' || player.powerState === 'fire') {
+                    player.powerState = 'small';
+                    player.width = 16;
+                    player.height = 16;
+                    player.y += 16;
+                    player.invincible = true;
+                    player.invincibleTimer = 120;
+                    
+                    if (player.x < enemy.x) {
+                        player.x -= 20;
+                    } else {
+                        player.x += 20;
+                    }
+                } else {
+                    player.lives--;
+                    if (player.lives <= 0) {
+                        game.gameOver = true;
+                    } else {
+                        resetLevel();
                     }
                 }
             }
@@ -1839,6 +1967,10 @@ async function createMarioGame(settings) {
                     enemy.width = 20;
                     enemy.height = 20;
                     enemy.vx = -1;
+                } else if (enemy.type === 'parakoopa') {
+                    enemy.width = 20;
+                    enemy.height = 20;
+                    enemy.vx = 0; // No horizontal movement
                 } else if (enemy.type === 'piranha') {
                     enemy.width = 20;
                     enemy.height = 32;
