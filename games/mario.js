@@ -63,6 +63,10 @@ const convertASCIIToLevel = (asciiLines) => {
                 level.enemies.push({x: x * 16, type: 'koopa'});
                 console.log('Found Koopa at position', x);
             }
+            if (enemyLine[x] === 'p') {
+                level.enemies.push({x: x * 16, type: 'piranha'});
+                console.log('Found Piranha Plant at position', x);
+            }
             if (enemyLine[x] === 'P') {
                 level.tiles[x] = 'p'; // Pipe
                 console.log('Found Pipe at position', x);
@@ -595,6 +599,47 @@ async function createMarioGame(settings) {
                     ctx.fillRect(enemy.x + 7, enemy.y + 5, 1, 1);
                     ctx.fillRect(enemy.x + 10, enemy.y + 5, 1, 1);
                 }
+            },
+            
+            piranha: (ctx, enemy) => {
+                // Piranha Plant - green stem with red spotted head
+                
+                // Stem (always visible part)
+                ctx.fillStyle = '#228B22'; // Green stem
+                ctx.fillRect(enemy.x + 7, enemy.y + 16, 6, 16); // Vertical stem
+                
+                // Only draw head if not fully hidden
+                if (enemy.state !== 'hidden' || enemy.y < enemy.hiddenY) {
+                    // Head - red with white spots
+                    ctx.fillStyle = '#DC143C'; // Dark red head
+                    ctx.fillRect(enemy.x + 4, enemy.y + 4, 12, 12); // Main head
+                    
+                    // White spots on head
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
+                    ctx.fillRect(enemy.x + 12, enemy.y + 8, 2, 2);
+                    ctx.fillRect(enemy.x + 8, enemy.y + 12, 2, 2);
+                    
+                    // Mouth - black opening with teeth
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(enemy.x + 6, enemy.y + 10, 8, 4); // Mouth opening
+                    
+                    // White teeth
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(enemy.x + 7, enemy.y + 10, 1, 2);
+                    ctx.fillRect(enemy.x + 9, enemy.y + 10, 1, 2);
+                    ctx.fillRect(enemy.x + 11, enemy.y + 10, 1, 2);
+                    ctx.fillRect(enemy.x + 13, enemy.y + 10, 1, 2);
+                    
+                    // Eyes - yellow with black pupils
+                    ctx.fillStyle = '#FFFF00';
+                    ctx.fillRect(enemy.x + 6, enemy.y + 6, 2, 2);
+                    ctx.fillRect(enemy.x + 12, enemy.y + 6, 2, 2);
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(enemy.x + 7, enemy.y + 7, 1, 1);
+                    ctx.fillRect(enemy.x + 13, enemy.y + 7, 1, 1);
+                }
             }
         },
         
@@ -983,6 +1028,92 @@ async function createMarioGame(settings) {
                         } else {
                             resetLevel();
                         }
+                    }
+                }
+            }
+        },
+        
+        piranha: {
+            states: ['hidden', 'emerging', 'visible', 'retreating'],
+            defaultState: 'hidden',
+            
+            movement: (enemy) => {
+                if (!enemy.timer) enemy.timer = 0;
+                if (!enemy.baseY) enemy.baseY = enemy.y;
+                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 32;
+                
+                const distanceToPlayer = Math.abs(game.player.x - enemy.x);
+                const tooClose = distanceToPlayer < 48;
+                
+                enemy.timer++;
+                
+                if (enemy.state === 'hidden') {
+                    enemy.y = enemy.hiddenY;
+                    if (!tooClose && enemy.timer > 60) {
+                        enemy.state = 'emerging';
+                        enemy.timer = 0;
+                    }
+                } else if (enemy.state === 'emerging') {
+                    enemy.y = enemy.hiddenY - (enemy.timer * 2);
+                    if (enemy.y <= enemy.baseY) {
+                        enemy.y = enemy.baseY;
+                        enemy.state = 'visible';
+                        enemy.timer = 0;
+                    }
+                    if (tooClose) {
+                        enemy.state = 'retreating';
+                        enemy.timer = 0;
+                    }
+                } else if (enemy.state === 'visible') {
+                    enemy.y = enemy.baseY;
+                    if (tooClose || enemy.timer > 120) {
+                        enemy.state = 'retreating';
+                        enemy.timer = 0;
+                    }
+                } else if (enemy.state === 'retreating') {
+                    enemy.y = enemy.baseY + (enemy.timer * 2);
+                    if (enemy.y >= enemy.hiddenY) {
+                        enemy.y = enemy.hiddenY;
+                        enemy.state = 'hidden';
+                        enemy.timer = 0;
+                    }
+                }
+            },
+            
+            onStomp: (enemy, player) => {
+                // Piranha plants can't be stomped - damage player instead
+                if (player.powerState === 'big' || player.powerState === 'fire') {
+                    player.powerState = 'small';
+                    player.width = 16;
+                    player.height = 16;
+                    player.y += 16;
+                    player.invincible = true;
+                    player.invincibleTimer = 120;
+                } else {
+                    player.lives--;
+                    if (player.lives <= 0) {
+                        game.gameOver = true;
+                    } else {
+                        resetLevel();
+                    }
+                }
+            },
+            
+            onSideHit: (enemy, player) => {
+                // Same as stomp - piranha plants always damage
+                if (player.powerState === 'big' || player.powerState === 'fire') {
+                    player.powerState = 'small';
+                    player.width = 16;
+                    player.height = 16;
+                    player.y += 16;
+                    player.invincible = true;
+                    player.invincibleTimer = 120;
+                } else {
+                    player.lives--;
+                    if (player.lives <= 0) {
+                        game.gameOver = true;
+                    } else {
+                        resetLevel();
                     }
                 }
             }
@@ -1576,13 +1707,40 @@ async function createMarioGame(settings) {
         game.enemies.forEach((enemy, index) => {
             if (!enemy.alive) return;
             
-            // Add gravity to enemies
-            if (!enemy.vy) enemy.vy = 0;
-            enemy.vy += 0.3; // Gravity
-            enemy.y += enemy.vy;
+            // Initialize enemy properties if not set
+            if (!enemy.width) {
+                if (enemy.type === 'goomba') {
+                    enemy.width = 20;
+                    enemy.height = 18;
+                    enemy.vx = -1;
+                } else if (enemy.type === 'koopa') {
+                    enemy.width = 20;
+                    enemy.height = 20;
+                    enemy.vx = -1;
+                } else if (enemy.type === 'piranha') {
+                    enemy.width = 20;
+                    enemy.height = 32;
+                    enemy.vx = 0; // Piranha plants don't move horizontally
+                }
+                enemy.vy = 0;
+                enemy.state = EnemyBehaviors[enemy.type]?.defaultState || 'walking';
+                enemy.alive = true;
+                enemy.onGround = true;
+                enemy.animFrame = 0;
+                enemy.animTimer = 0;
+            }
             
-            // Use shared collision detection for ground
-            handlePlatformCollision(enemy);
+            // Add gravity to enemies (except piranha plants)
+            if (enemy.type !== 'piranha') {
+                if (!enemy.vy) enemy.vy = 0;
+                enemy.vy += 0.3; // Gravity
+                enemy.y += enemy.vy;
+            }
+            
+            // Use shared collision detection for ground (except piranha plants)
+            if (enemy.type !== 'piranha') {
+                handlePlatformCollision(enemy);
+            }
             
             // Remove enemies that fall too far (into pits)
             if (enemy.y > 500) {
