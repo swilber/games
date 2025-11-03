@@ -571,6 +571,164 @@ async function createMarioGame(settings) {
         frameCount: 0
     };
     
+    // Enemy Behavior System - defined after game object
+    const EnemyBehaviors = {
+        goomba: {
+            states: ['walking', 'dead'],
+            defaultState: 'walking',
+            
+            movement: (enemy) => {
+                if (enemy.state !== 'walking') return;
+                
+                // Check for pit ahead before moving
+                const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
+                const checkY = enemy.y + enemy.height + 20;
+                
+                let foundGround = false;
+                game.platforms.forEach(platform => {
+                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                        checkY >= platform.y && checkY <= platform.y + platform.height) {
+                        foundGround = true;
+                    }
+                });
+                
+                if (!foundGround) {
+                    enemy.vx = -enemy.vx;
+                }
+                
+                enemy.x += enemy.vx;
+            },
+            
+            onStomp: (enemy, player) => {
+                enemy.alive = false;
+                player.vy = -8;
+                player.score += 100;
+            },
+            
+            onSideHit: (enemy, player) => {
+                // Normal enemy collision - handle power-up states
+                if (player.powerState === 'big' || player.powerState === 'fire') {
+                    player.powerState = 'small';
+                    player.width = 16;
+                    player.height = 16;
+                    player.y += 16;
+                    player.invincible = true;
+                    player.invincibleTimer = 120;
+                    
+                    if (player.x < enemy.x) {
+                        player.x -= 20;
+                    } else {
+                        player.x += 20;
+                    }
+                } else {
+                    player.lives--;
+                    if (player.lives <= 0) {
+                        game.gameOver = true;
+                    } else {
+                        resetLevel();
+                    }
+                }
+            }
+        },
+        
+        koopa: {
+            states: ['walking', 'shell', 'shellMoving'],
+            defaultState: 'walking',
+            
+            movement: (enemy) => {
+                if (enemy.state === 'walking') {
+                    // Check for pit ahead before moving
+                    const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
+                    const checkY = enemy.y + enemy.height + 20;
+                    
+                    let foundGround = false;
+                    game.platforms.forEach(platform => {
+                        if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                            checkY >= platform.y && checkY <= platform.y + platform.height) {
+                            foundGround = true;
+                        }
+                    });
+                    
+                    if (!foundGround) {
+                        enemy.vx = -enemy.vx;
+                    }
+                    
+                    enemy.x += enemy.vx;
+                } else if (enemy.state === 'shell') {
+                    enemy.vx = 0;
+                } else if (enemy.state === 'shellMoving') {
+                    enemy.x += enemy.vx;
+                    // Moving shell can kill other enemies
+                    game.enemies.forEach(otherEnemy => {
+                        if (otherEnemy !== enemy && otherEnemy.alive &&
+                            enemy.x < otherEnemy.x + otherEnemy.width &&
+                            enemy.x + enemy.width > otherEnemy.x &&
+                            enemy.y < otherEnemy.y + otherEnemy.height &&
+                            enemy.y + enemy.height > otherEnemy.y) {
+                            otherEnemy.alive = false;
+                        }
+                    });
+                }
+            },
+            
+            onStomp: (enemy, player) => {
+                if (enemy.state === 'walking') {
+                    enemy.state = 'shell';
+                    enemy.vx = 0;
+                    enemy.height = 16;
+                    enemy.y += 4;
+                    player.vy = -8;
+                    player.score += 100;
+                } else if (enemy.state === 'shell') {
+                    enemy.state = 'shellMoving';
+                    enemy.vx = player.x < enemy.x ? 3 : -3;
+                    player.vy = -8;
+                    player.score += 400;
+                } else if (enemy.state === 'shellMoving') {
+                    enemy.state = 'shell';
+                    enemy.vx = 0;
+                    player.vy = -8;
+                    player.score += 100;
+                }
+            },
+            
+            onSideHit: (enemy, player) => {
+                if (enemy.state === 'shell') {
+                    enemy.state = 'shellMoving';
+                    enemy.vx = player.x < enemy.x ? 3 : -3;
+                    player.score += 400;
+                } else if (enemy.state === 'shellMoving') {
+                    enemy.state = 'shell';
+                    enemy.vx = 0;
+                    player.score += 100;
+                } else {
+                    // Walking koopa - normal collision
+                    if (player.powerState === 'big' || player.powerState === 'fire') {
+                        player.powerState = 'small';
+                        player.width = 16;
+                        player.height = 16;
+                        player.y += 16;
+                        player.invincible = true;
+                        player.invincibleTimer = 120;
+                        
+                        if (player.x < enemy.x) {
+                            player.x -= 20;
+                        } else {
+                            player.x += 20;
+                        }
+                    } else {
+                        player.lives--;
+                        if (player.lives <= 0) {
+                            game.gameOver = true;
+                        } else {
+                            resetLevel();
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
     async function initializeLevel() {
         try {
             let mapFile, theme;
@@ -675,7 +833,7 @@ async function createMarioGame(settings) {
                                 break;
                             }
                         }
-                        enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', alive: true, onGround: true});
+                        enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', state: 'walking', alive: true, onGround: true});
                         break;
                     case 'K':
                         // Position Koopa exactly on ground level  
@@ -1208,62 +1366,10 @@ async function createMarioGame(settings) {
                 return;
             }
             
-            // Handle Koopa states
-            if (enemy.type === 'koopa') {
-                if (enemy.state === 'walking') {
-                    // Check for pit ahead before moving
-                    const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
-                    const checkY = enemy.y + enemy.height + 20; // Look ahead and down
-                    
-                    let foundGround = false;
-                    game.platforms.forEach(platform => {
-                        if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                            checkY >= platform.y && checkY <= platform.y + platform.height) {
-                            foundGround = true;
-                        }
-                    });
-                    
-                    // If no ground ahead, turn around
-                    if (!foundGround) {
-                        enemy.vx = -enemy.vx;
-                    }
-                    
-                    enemy.x += enemy.vx;
-                } else if (enemy.state === 'shell') {
-                    // Shell is stationary
-                    enemy.vx = 0;
-                } else if (enemy.state === 'shellMoving') {
-                    enemy.x += enemy.vx;
-                    // Moving shell can kill other enemies
-                    game.enemies.forEach(otherEnemy => {
-                        if (otherEnemy !== enemy && otherEnemy.alive &&
-                            enemy.x < otherEnemy.x + otherEnemy.width &&
-                            enemy.x + enemy.width > otherEnemy.x &&
-                            enemy.y < otherEnemy.y + otherEnemy.height &&
-                            enemy.y + enemy.height > otherEnemy.y) {
-                            otherEnemy.alive = false;
-                        }
-                    });
-                }
-            } else {
-                // Regular enemy movement (Goomba) - check for pit ahead
-                const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
-                const checkY = enemy.y + enemy.height + 20; // Look ahead and down
-                
-                let foundGround = false;
-                game.platforms.forEach(platform => {
-                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                        checkY >= platform.y && checkY <= platform.y + platform.height) {
-                        foundGround = true;
-                    }
-                });
-                
-                // If no ground ahead, turn around
-                if (!foundGround) {
-                    enemy.vx = -enemy.vx;
-                }
-                
-                enemy.x += enemy.vx;
+            // Use behavior system for movement
+            const behavior = EnemyBehaviors[enemy.type];
+            if (behavior && behavior.movement) {
+                behavior.movement(enemy);
             }
             
             // Enemy collision with platforms and blocks (side collisions only) - AFTER movement
@@ -1331,75 +1437,16 @@ async function createMarioGame(settings) {
                 game.player.y + game.player.height > enemy.y) {
                 
                 if (game.player.vy > 0 && game.player.y < enemy.y) {
-                    // Jumping on enemy
-                    if (enemy.type === 'koopa') {
-                        if (enemy.state === 'walking') {
-                            // Koopa goes into shell
-                            enemy.state = 'shell';
-                            enemy.vx = 0;
-                            enemy.height = 16;
-                            enemy.y += 4; // Adjust position for smaller shell
-                            game.player.vy = -8;
-                            game.player.score += 100;
-                        } else if (enemy.state === 'shell') {
-                            // Kick the shell
-                            enemy.state = 'shellMoving';
-                            enemy.vx = game.player.x < enemy.x ? 3 : -3; // Kick away from Mario (slower speed)
-                            game.player.vy = -8;
-                            game.player.score += 400;
-                        } else if (enemy.state === 'shellMoving') {
-                            // Stop the moving shell
-                            enemy.state = 'shell';
-                            enemy.vx = 0;
-                            game.player.vy = -8;
-                            game.player.score += 100;
-                        }
-                    } else {
-                        // Goomba dies normally
-                        enemy.alive = false;
-                        game.player.vy = -8;
-                        game.player.score += 100;
+                    // Jumping on enemy - use behavior system
+                    const behavior = EnemyBehaviors[enemy.type];
+                    if (behavior && behavior.onStomp) {
+                        behavior.onStomp(enemy, game.player);
                     }
                 } else {
-                    // Hit by enemy - handle shell kicking or power-up states
-                    if (enemy.type === 'koopa' && enemy.state === 'shell') {
-                        // Kick the shell when running into it from the side
-                        enemy.state = 'shellMoving';
-                        enemy.vx = game.player.x < enemy.x ? 3 : -3; // Kick away from Mario
-                        game.player.score += 400;
-                    } else if (enemy.type === 'koopa' && enemy.state === 'shellMoving') {
-                        // Stop the moving shell when running into it
-                        enemy.state = 'shell';
-                        enemy.vx = 0;
-                        game.player.score += 100;
-                    } else {
-                        // Normal enemy collision - handle power-up states
-                        if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
-                            // Downgrade to small Mario
-                            game.player.powerState = 'small';
-                            game.player.width = 16;
-                            game.player.height = 16;
-                            game.player.y += 16; // Adjust position for smaller size
-                            
-                            // Add invincibility frames
-                            game.player.invincible = true;
-                            game.player.invincibleTimer = 120; // 2 seconds at 60fps
-                            
-                            // Push Mario away from enemy
-                            if (game.player.x < enemy.x) {
-                                game.player.x -= 20;
-                            } else {
-                                game.player.x += 20;
-                            }
-                        } else {
-                            // Small Mario loses a life
-                            game.player.lives--;
-                            if (game.player.lives <= 0) {
-                                game.gameOver = true;
-                            } else {
-                                resetLevel();
-                            }
-                        }
+                    // Hit by enemy - use behavior system
+                    const behavior = EnemyBehaviors[enemy.type];
+                    if (behavior && behavior.onSideHit) {
+                        behavior.onSideHit(enemy, game.player);
                     }
                 }
             }
