@@ -2360,31 +2360,36 @@ async function createMarioGame(settings) {
             
             processedTrees.add(key);
             
-            // Draw tree top with rounded bumps
+            // Draw tree top with shaded bumps
             const treeWidth = maxX - minX;
             
-            // Light green tree top
-            ctx.fillStyle = '#90EE90'; // Light green
+            // Darker green tree top
+            ctx.fillStyle = '#228B22'; // Darker green
             ctx.fillRect(minX, treeY, treeWidth, platform.height);
             
-            // Darker green shadow at bottom
-            ctx.fillStyle = '#228B22'; // Darker green shadow
+            // Even darker green shadow at bottom
+            ctx.fillStyle = '#006400'; // Dark green shadow
             ctx.fillRect(minX, treeY + platform.height - 4, treeWidth, 4);
             
-            // Create rounded bumps at the bottom
-            ctx.fillStyle = '#90EE90'; // Light green for bumps
-            const bumpSize = 8;
+            // Create shaded half-circle bumps at the bottom
+            const bumpRadius = 6;
             const bumpSpacing = 12;
-            for (let x = minX; x < maxX - bumpSize; x += bumpSpacing) {
-                // Draw semi-circle bump
-                for (let i = 0; i < bumpSize; i++) {
-                    const radius = bumpSize / 2;
-                    const centerX = x + radius;
-                    const centerY = treeY + platform.height;
-                    const distance = Math.abs(i - radius);
-                    const height = Math.sqrt(radius * radius - distance * distance);
+            for (let x = minX + bumpRadius; x < maxX - bumpRadius; x += bumpSpacing) {
+                const centerX = x;
+                const centerY = treeY + platform.height;
+                
+                // Draw half-circle bump with shading
+                for (let i = -bumpRadius; i <= bumpRadius; i++) {
+                    const height = Math.sqrt(bumpRadius * bumpRadius - i * i);
                     
-                    ctx.fillRect(x + i, centerY - height, 1, height);
+                    // Light green on top/left side of bump
+                    if (i <= 0) {
+                        ctx.fillStyle = '#32CD32'; // Light green highlight
+                    } else {
+                        ctx.fillStyle = '#006400'; // Dark green shadow
+                    }
+                    
+                    ctx.fillRect(centerX + i, centerY - height, 1, height);
                 }
             }
             
