@@ -814,6 +814,35 @@ async function createMarioGame(settings) {
     function checkBlockHit(block) {
         if (block.hit) return;
         
+        if (block.type === 'brick') {
+            // Only big Mario can break bricks
+            if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
+                // Brick explodes - create particle animation
+                for (let i = 0; i < 4; i++) {
+                    game.particles.push({
+                        x: block.x + (i % 2) * 10,
+                        y: block.y + Math.floor(i / 2) * 10,
+                        vx: (i % 2 === 0 ? -1 : 1) * (1 + Math.random()),
+                        vy: -2 - Math.random() * 2,
+                        width: 6,
+                        height: 6,
+                        life: 60,
+                        type: 'brick'
+                    });
+                }
+                
+                // Remove the brick
+                const blockIndex = game.blocks.indexOf(block);
+                if (blockIndex > -1) {
+                    game.blocks.splice(blockIndex, 1);
+                }
+                
+                game.player.score += 50;
+            }
+            // Small Mario just bounces off bricks (no explosion)
+            return;
+        }
+        
         block.hit = true;
         
         if (block.type === 'question' && block.content) {
@@ -886,11 +915,6 @@ async function createMarioGame(settings) {
             } else {
                 // Regular enemy movement
                 enemy.x += enemy.vx;
-                
-                // Debug: Check if enemy actually moved
-                if (game.frameCount % 60 === 0 && Math.abs(enemy.x - oldX) < 0.1) {
-                    console.log(`Enemy ${index} stuck! Old x:${oldX} New x:${enemy.x} vx:${enemy.vx} hitWall:${hitWall}`);
-                }
             }
             
             // Enemy collision with platforms and blocks (side collisions only) - AFTER movement
@@ -1235,6 +1259,12 @@ async function createMarioGame(settings) {
                 ctx.textAlign = 'center';
                 ctx.fillText('200', particle.x + particle.width/2, particle.y - 5);
                 ctx.textAlign = 'left';
+            } else if (particle.type === 'brick') {
+                // Render brick fragments
+                ctx.fillStyle = '#CD853F';
+                ctx.fillRect(particle.x, particle.y, particle.width, particle.height);
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(particle.x + 1, particle.y + 1, particle.width - 2, particle.height - 2);
             }
         });
         
