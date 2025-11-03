@@ -2012,16 +2012,20 @@ async function createMarioGame(settings) {
                 const marioOnPlatform = game.player.onGround &&
                     game.player.x < platform.x + platform.width &&
                     game.player.x + game.player.width > platform.x &&
-                    Math.abs((game.player.y + game.player.height) - platform.y) < 3;
+                    Math.abs((game.player.y + game.player.height) - platform.y) < 5;
                 
                 if (marioOnPlatform) {
-                    if (platform.vy < 0) {
+                    if (platform.vy && platform.vy < 0) {
                         // Up-moving platform: move Mario directly and reset velocity
                         game.player.y += platform.vy;
                         game.player.vy = 0;
-                    } else if (platform.vy > 0) {
+                    } else if (platform.vy && platform.vy > 0) {
                         // Down-moving platform: set Mario's velocity to match platform
                         game.player.vy = platform.vy;
+                    } else if (platform.vy === 0) {
+                        // Platform not moving vertically, keep Mario on platform
+                        game.player.vy = 0;
+                        game.player.y = platform.y - game.player.height;
                     }
                     
                     // Move Mario horizontally with horizontal platforms
