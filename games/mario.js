@@ -603,6 +603,16 @@ async function createMarioGame(settings) {
             },
             
             piranha: (ctx, enemy) => {
+                // DEBUG: Draw bright yellow rectangle to show piranha bounds
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // DEBUG: Draw state text
+                ctx.fillStyle = '#000000';
+                ctx.font = '12px Arial';
+                ctx.fillText(`State: ${enemy.state}`, enemy.x, enemy.y - 5);
+                ctx.fillText(`Y: ${Math.round(enemy.y)}`, enemy.x, enemy.y - 20);
+                
                 // Piranha Plant - green stem with red spotted head
                 
                 // Stem (always visible part)
@@ -1938,13 +1948,18 @@ async function createMarioGame(settings) {
         // Platforms
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
-                // Pipe body - green
-                ctx.fillStyle = ThemeSystem.getColor('pipe');
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                // Pipe body - green (TEMPORARILY INVISIBLE FOR DEBUGGING)
+                // ctx.fillStyle = ThemeSystem.getColor('pipe');
+                // ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 
-                // Pipe rim (top edge) - lighter green
-                ctx.fillStyle = '#32CD32';
-                ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
+                // Draw red outline instead to show pipe bounds
+                ctx.strokeStyle = '#FF0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Pipe rim (top edge) - lighter green (ALSO INVISIBLE)
+                // ctx.fillStyle = '#32CD32';
+                // ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
                 
                 // Pipe highlights
                 ctx.fillStyle = '#90EE90';
