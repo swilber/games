@@ -529,19 +529,36 @@ async function createMarioGame(settings) {
                 // Tree platforms are rendered in the main render function as grouped objects
                 // Skip individual rendering here
             } else if (platform.type === 'block') {
-                // 3D block platform with highlights and shadows
-                ctx.fillStyle = ThemeSystem.getColor('ground');
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                
-                // Light highlights on top and left (2px wide)
-                ctx.fillStyle = '#DEB887'; // Light brown highlight
-                ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
-                ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
-                
-                // Dark shadows on bottom and right (2px wide)
-                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
-                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
-                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+                // 3D block platform - use overworld colors in Tree Tops theme
+                if (ThemeSystem.current?.name === 'Tree Tops') {
+                    // Use overworld brown colors
+                    ctx.fillStyle = '#8B4513'; // Brown like overworld
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Light brown highlights on top and left
+                    ctx.fillStyle = '#DEB887'; // Light brown highlight
+                    ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
+                    ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
+                    
+                    // Dark brown shadows on bottom and right
+                    ctx.fillStyle = '#654321'; // Dark brown shadow
+                    ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
+                    ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+                } else {
+                    // Regular theme colors
+                    ctx.fillStyle = ThemeSystem.getColor('ground');
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Light highlights on top and left (2px wide)
+                    ctx.fillStyle = '#DEB887'; // Light brown highlight
+                    ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
+                    ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
+                    
+                    // Dark shadows on bottom and right (2px wide)
+                    ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                    ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
+                    ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+                }
             } else {
                 // Regular ground platform - use brown overworld colors in trees theme
                 if (platform.type === 'ground' && ThemeSystem.current?.name === 'Tree Tops') {
