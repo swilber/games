@@ -1051,7 +1051,7 @@ async function createMarioGame(settings) {
             movement: (enemy) => {
                 if (!enemy.timer) enemy.timer = 0;
                 if (!enemy.baseY) enemy.baseY = enemy.y;
-                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 32;
+                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 16; // Smaller distance
                 
                 const distanceToPlayer = Math.abs(game.player.x - enemy.x);
                 const tooClose = distanceToPlayer < 48;
@@ -1070,7 +1070,7 @@ async function createMarioGame(settings) {
                         enemy.timer = 0;
                     }
                 } else if (enemy.state === 'emerging') {
-                    enemy.y = enemy.hiddenY - (enemy.timer * 2);
+                    enemy.y = enemy.hiddenY - (enemy.timer * 1); // Slower movement
                     if (enemy.y <= enemy.baseY) {
                         enemy.y = enemy.baseY;
                         enemy.state = 'visible';
@@ -1087,7 +1087,7 @@ async function createMarioGame(settings) {
                         enemy.timer = 0;
                     }
                 } else if (enemy.state === 'retreating') {
-                    enemy.y = enemy.baseY + (enemy.timer * 2);
+                    enemy.y = enemy.baseY + (enemy.timer * 1); // Slower movement
                     if (enemy.y >= enemy.hiddenY) {
                         enemy.y = enemy.hiddenY;
                         enemy.state = 'hidden';
@@ -1274,7 +1274,7 @@ async function createMarioGame(settings) {
                         const centerX = (minX + maxX) / 2;
                         enemies.push({
                             x: centerX * tileSize, 
-                            y: minY * tileSize - 32, // Position above the pipe
+                            y: minY * tileSize - 16, // Position at top of pipe
                             type: 'piranha',
                             alive: true
                         });
