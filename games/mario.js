@@ -1232,6 +1232,16 @@ async function createMarioGame(settings) {
             const line = lines[y];
             for (let x = 0; x < line.length; x++) {
                 if ((line[x] === 'P' || line[x] === 'p') && !processedPs.has(`${x},${y}`)) {
+                    // Check if this is a piranha plant pipe
+                    if (line[x] === 'p') {
+                        enemies.push({
+                            x: x * tileSize, 
+                            y: y * tileSize - 32, // Position above the pipe
+                            type: 'piranha'
+                        });
+                        console.log('Found Piranha Plant in main map at', x, y);
+                    }
+                    
                     // Find the bounds of this connected P group
                     let minX = x, maxX = x, minY = y, maxY = y;
                     const toCheck = [{x, y}];
