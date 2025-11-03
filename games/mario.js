@@ -1838,6 +1838,11 @@ async function createMarioGame(settings) {
                 game.player.y < enemy.y + enemy.height &&
                 game.player.y + game.player.height > enemy.y) {
                 
+                // Skip collision for hidden piranha plants
+                if (enemy.type === 'piranha' && (enemy.state === 'hidden' || enemy.state === 'retreating')) {
+                    return;
+                }
+                
                 if (game.player.vy > 0 && game.player.y < enemy.y) {
                     // Jumping on enemy - use behavior system
                     const behavior = EnemyBehaviors[enemy.type];
@@ -1928,6 +1933,13 @@ async function createMarioGame(settings) {
             ctx.fillStyle = '#654321';
             ctx.fillRect(trunkX, treeY + platform.height, 2, 400 - (treeY + platform.height));
             ctx.fillRect(trunkX + trunkWidth - 2, treeY + platform.height, 2, 400 - (treeY + platform.height));
+        });
+        
+        // Piranha plants (render behind pipes)
+        game.enemies.forEach(enemy => {
+            if (enemy.alive && enemy.type === 'piranha') {
+                SpriteRenderer.enemies[enemy.type](ctx, enemy);
+            }
         });
         
         // Platforms
@@ -2031,9 +2043,9 @@ async function createMarioGame(settings) {
             }
         });
         
-        // Enemies
+        // Enemies (except piranha plants which are rendered behind pipes)
         game.enemies.forEach(enemy => {
-            if (enemy.alive) {
+            if (enemy.alive && enemy.type !== 'piranha') {
                 SpriteRenderer.enemies[enemy.type](ctx, enemy);
             }
         });
