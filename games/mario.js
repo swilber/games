@@ -424,7 +424,21 @@ async function createMarioGame(settings) {
         },
         
         renderPlatform: (ctx, platform) => {
-            if (platform.type === 'tree') {
+            if (platform.type === 'moving_up' || platform.type === 'moving_down') {
+                // Pink moving platform
+                ctx.fillStyle = '#FF69B4'; // Hot pink
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Lighter pink highlight
+                ctx.fillStyle = '#FFB6C1'; // Light pink
+                ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
+                ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
+                
+                // Darker pink shadow
+                ctx.fillStyle = '#C71585'; // Medium violet red
+                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
+                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
+            } else if (platform.type === 'tree') {
                 // Tree platform rendering
                 ctx.fillStyle = ThemeSystem.getColor('ground');
                 ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
@@ -836,6 +850,8 @@ async function createMarioGame(settings) {
         'K': { type: 'enemy', variant: 'koopa' },
         'c': { type: 'coin', variant: 'stationary' },
         'P': { type: 'pipe', variant: 'standard' },
+        '^': { type: 'platform', variant: 'moving_up' },
+        'v': { type: 'platform', variant: 'moving_down' },
         '@': { type: 'spawn', variant: 'player' },
         '&': { type: 'flag', variant: 'standard' },
         'X': { type: 'pit', variant: 'standard' },
@@ -844,9 +860,20 @@ async function createMarioGame(settings) {
     
     // Map Object Factories - creates game objects from character definitions
     const MapObjectFactories = {
-        platform: (def, x, y, tileSize) => ({
-            x, y, width: tileSize, height: tileSize, type: def.variant
-        }),
+        platform: (def, x, y, tileSize) => {
+            const platform = { x, y, width: tileSize, height: tileSize, type: def.variant };
+            
+            // Add movement properties for moving platforms
+            if (def.variant === 'moving_up') {
+                platform.vy = -1; // Move up
+                platform.moving = true;
+            } else if (def.variant === 'moving_down') {
+                platform.vy = 1; // Move down
+                platform.moving = true;
+            }
+            
+            return platform;
+        },
         
         block: (def, x, y, tileSize) => ({
             x, y, width: tileSize, height: tileSize, 
@@ -1742,6 +1769,25 @@ async function createMarioGame(settings) {
         }
     }
     
+    function updateMovingPlatforms() {
+        if (game.gameOver || game.won || !game.gameStarted) return;
+        
+        game.platforms.forEach(platform => {
+            if (platform.moving) {
+                platform.y += platform.vy;
+                
+                // Wrap around screen edges
+                if (platform.vy < 0 && platform.y < -platform.height) {
+                    // Moving up, wrap to bottom
+                    platform.y = 400;
+                } else if (platform.vy > 0 && platform.y > 400) {
+                    // Moving down, wrap to top
+                    platform.y = -platform.height;
+                }
+            }
+        });
+    }
+    
     function updateEnemies() {
         if (game.gameOver || game.won || !game.gameStarted) return;
         
@@ -2188,6 +2234,7 @@ async function createMarioGame(settings) {
         
         game.frameCount++;
         updatePlayer();
+        updateMovingPlatforms();
         updateEnemies();
         updatePowerUps();
         updateFireballs();
