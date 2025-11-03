@@ -571,6 +571,85 @@ async function createMarioGame(settings) {
         frameCount: 0
     };
     
+    // Map Character Definitions - defines what each ASCII character creates
+    const MapCharacters = {
+        '#': { type: 'platform', variant: 'ground' },
+        'T': { type: 'platform', variant: 'tree' },
+        '?': { type: 'block', variant: 'question', content: 'coin' },
+        'C': { type: 'block', variant: 'question', content: 'coin' },
+        'M': { type: 'block', variant: 'question', content: 'mushroom' },
+        'F': { type: 'block', variant: 'question', content: 'fireflower' },
+        'S': { type: 'block', variant: 'question', content: 'star' },
+        'B': { type: 'block', variant: 'brick' },
+        'G': { type: 'enemy', variant: 'goomba' },
+        'K': { type: 'enemy', variant: 'koopa' },
+        'c': { type: 'coin', variant: 'stationary' },
+        'P': { type: 'pipe', variant: 'standard' },
+        '@': { type: 'spawn', variant: 'player' },
+        '&': { type: 'flag', variant: 'standard' },
+        'X': { type: 'pit', variant: 'standard' },
+        '-': { type: 'empty', variant: 'sky' }
+    };
+    
+    // Map Object Factories - creates game objects from character definitions
+    const MapObjectFactories = {
+        platform: (def, x, y, tileSize) => ({
+            x, y, width: tileSize, height: tileSize, type: def.variant
+        }),
+        
+        block: (def, x, y, tileSize) => ({
+            x, y, width: tileSize, height: tileSize, 
+            type: def.variant, hit: false, content: def.content
+        }),
+        
+        enemy: (def, x, y, tileSize, lines) => {
+            const enemy = {
+                x, width: 20, vx: -1, vy: 0, 
+                type: def.variant, state: 'walking', alive: true, onGround: true
+            };
+            
+            // Position enemy on ground level
+            let groundY = y;
+            for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                if (lines[checkY] && lines[checkY][Math.floor(x / tileSize)] === '#') {
+                    groundY = checkY * tileSize - (def.variant === 'goomba' ? 18 : 20);
+                    break;
+                }
+            }
+            
+            enemy.y = groundY;
+            enemy.height = def.variant === 'goomba' ? 18 : 20;
+            return enemy;
+        },
+        
+        coin: (def, x, y, tileSize) => ({
+            x, y, width: tileSize, height: tileSize, collected: false
+        }),
+        
+        pipe: (def, x, y, tileSize) => {
+            // Will be processed in groups later
+            return null;
+        },
+        
+        flag: (def, x, y, tileSize, lines) => {
+            // Find ground level for flag placement
+            let groundY = y;
+            for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                if (lines[checkY] && lines[checkY][Math.floor(x / tileSize)] === '#') {
+                    groundY = checkY * tileSize;
+                    break;
+                }
+            }
+            return { x, y: groundY - (10 * tileSize), width: 35, height: 10 * tileSize };
+        },
+        
+        spawn: (def, x, y, tileSize) => ({ x, y }),
+        
+        pit: () => null, // Handled separately
+        
+        empty: () => null // Sky/empty space
+    };
+    
     // Enemy Behavior System - defined after game object
     const EnemyBehaviors = {
         goomba: {
@@ -786,80 +865,43 @@ async function createMarioGame(settings) {
         
         const tileSize = 20;
         
+        // Parse each character using the mapping system
         for (let y = 0; y < lines.length; y++) {
             const line = lines[y];
             for (let x = 0; x < line.length; x++) {
                 const char = line[x];
                 const worldX = x * tileSize;
-                const worldY = y * tileSize; // Direct mapping: row 0 = y:0, row 19 = y:380
+                const worldY = y * tileSize;
                 
-                switch (char) {
-                    case '#':
-                        platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize});
+                const charDef = MapCharacters[char];
+                if (!charDef) continue; // Skip unknown characters
+                
+                const factory = MapObjectFactories[charDef.type];
+                if (!factory) continue; // Skip if no factory
+                
+                const obj = factory(charDef, worldX, worldY, tileSize, lines);
+                if (!obj) continue; // Skip if factory returns null
+                
+                // Add to appropriate collection based on type
+                switch (charDef.type) {
+                    case 'platform':
+                        platforms.push(obj);
                         break;
-                    case '?':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'coin'});
+                    case 'block':
+                        blocks.push(obj);
                         break;
-                    case 'B':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'brick', hit: false});
+                    case 'enemy':
+                        enemies.push(obj);
                         break;
-                    case 'P':
-                        // Skip individual P processing - will be handled in group processing below
+                    case 'coin':
+                        coins.push(obj);
                         break;
-                    case 'C':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'coin'});
+                    case 'flag':
+                        flag = obj;
                         break;
-                    case 'c':
-                        coins.push({x: worldX, y: worldY, width: tileSize, height: tileSize, collected: false});
-                        break;
-                    case 'M':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'mushroom'});
-                        break;
-                    case 'F':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'fireflower'});
-                        break;
-                    case 'S':
-                        blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'star'});
-                        break;
-                    case 'T':
-                        platforms.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'tree'});
-                        break;
-                    case 'G':
-                        // Position Goomba exactly on ground level
-                        let goombaGroundY = worldY;
-                        for (let checkY = y; checkY < lines.length; checkY++) {
-                            if (lines[checkY] && lines[checkY][x] === '#') {
-                                goombaGroundY = checkY * tileSize - 18; // 18 is goomba height
-                                break;
-                            }
-                        }
-                        enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', state: 'walking', alive: true, onGround: true});
-                        break;
-                    case 'K':
-                        // Position Koopa exactly on ground level  
-                        let koopaGroundY = worldY;
-                        for (let checkY = y; checkY < lines.length; checkY++) {
-                            if (lines[checkY] && lines[checkY][x] === '#') {
-                                koopaGroundY = checkY * tileSize - 20; // 20 is koopa height
-                                break;
-                            }
-                        }
-                        enemies.push({x: worldX, y: koopaGroundY, width: 20, height: 20, vx: -1, vy: 0, type: 'koopa', alive: true, state: 'walking', onGround: true});
-                        break;
-                    case '@':
-                        startX = worldX;
-                        startY = worldY;
-                        break;
-                    case '&':
-                        // Find the ground level below this position
-                        let groundY = worldY;
-                        for (let checkY = y; checkY < lines.length; checkY++) {
-                            if (lines[checkY] && lines[checkY][x] === '#') {
-                                groundY = checkY * tileSize;
-                                break;
-                            }
-                        }
-                        flag = {x: worldX, y: groundY - (10 * tileSize), width: 35, height: 10 * tileSize};
+                    case 'spawn':
+                        startX = obj.x;
+                        startY = obj.y;
                         break;
                 }
             }
