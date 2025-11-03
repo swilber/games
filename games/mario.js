@@ -434,31 +434,19 @@ async function createMarioGame(settings) {
         currentLevel: 0, // Always use level 1-1
         levelsCompleted: 0,
         levelsToWin: 1, // Only one level for now
-        levelWidth: 2000,
+        levelWidth: 4000,
         gameOver: false,
         won: false,
         gameStarted: false,
         keys: {},
-        currentTheme: 'overworld'
+        currentTheme: 'overworld',
+        frameCount: 0
     };
     
     async function initializeLevel() {
-        console.log('initializeLevel called - loading mario-1-1-map.txt specifically');
         try {
             const response = await fetch('./games/mario/mario-1-1-map.txt');
-            console.log('Fetch response:', response.status);
             const mapText = await response.text();
-            console.log('Map text length:', mapText.length, 'first 100 chars:', mapText.substring(0, 100));
-            console.log('Last 200 chars:', mapText.substring(mapText.length - 200));
-            
-            // Show raw lines before filtering
-            const rawLines = mapText.split('\n');
-            console.log('Raw lines count:', rawLines.length);
-            console.log('Last 3 raw lines:');
-            for (let i = Math.max(0, rawLines.length - 3); i < rawLines.length; i++) {
-                console.log(`Raw line ${i}: "${rawLines[i]}" (length: ${rawLines[i].length})`);
-            }
-            
             const layout = parseASCIIMap(mapText);
             
             game.platforms = layout.platforms;
@@ -480,18 +468,7 @@ async function createMarioGame(settings) {
     
     function parseASCIIMap(mapText) {
         const rawLines = mapText.split('\n');
-        console.log('Before filtering - raw lines:', rawLines.length);
-        
         const lines = rawLines.filter(line => !line.startsWith('# ') && line.length > 0);
-        console.log('After filtering - kept lines:', lines.length);
-        
-        // Show which lines were filtered out
-        rawLines.forEach((line, i) => {
-            if (line.startsWith('#')) {
-                console.log(`Filtered out line ${i}: "${line.substring(0, 50)}..."`);
-            }
-        });
-        
         const platforms = [];
         const blocks = [];
         const enemies = [];
@@ -533,10 +510,26 @@ async function createMarioGame(settings) {
                         blocks.push({x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'question', hit: false, content: 'star'});
                         break;
                     case 'G':
-                        enemies.push({x: worldX, y: worldY, width: 20, height: 18, vx: -1, type: 'goomba', alive: true, onGround: false});
+                        // Position Goomba exactly on ground level
+                        let goombaGroundY = worldY;
+                        for (let checkY = y; checkY < lines.length; checkY++) {
+                            if (lines[checkY] && lines[checkY][x] === '#') {
+                                goombaGroundY = checkY * tileSize - 18; // 18 is goomba height
+                                break;
+                            }
+                        }
+                        enemies.push({x: worldX, y: goombaGroundY, width: 20, height: 18, vx: -1, vy: 0, type: 'goomba', alive: true, onGround: true});
                         break;
                     case 'K':
-                        enemies.push({x: worldX, y: worldY, width: 20, height: 20, vx: -1, type: 'koopa', alive: true, state: 'walking', onGround: false});
+                        // Position Koopa exactly on ground level  
+                        let koopaGroundY = worldY;
+                        for (let checkY = y; checkY < lines.length; checkY++) {
+                            if (lines[checkY] && lines[checkY][x] === '#') {
+                                koopaGroundY = checkY * tileSize - 20; // 20 is koopa height
+                                break;
+                            }
+                        }
+                        enemies.push({x: worldX, y: koopaGroundY, width: 20, height: 20, vx: -1, vy: 0, type: 'koopa', alive: true, state: 'walking', onGround: true});
                         break;
                     case '@':
                         startX = worldX;
@@ -595,27 +588,6 @@ async function createMarioGame(settings) {
                 }
             }
         }
-        
-        console.log('Parsed platforms:', platforms.length, 'blocks:', blocks.length);
-        console.log('Map has', lines.length, 'rows - should be 20');
-        
-        // Debug: Show grid contents for first 100 positions
-        console.log('Grid contents (first 100 positions):');
-        for (let y = 0; y < Math.min(lines.length, 5); y++) {
-            const line = lines[y];
-            console.log(`Row ${y} (y=${y * 20}):`, line.substring(0, 50));
-        }
-        
-        // Show bottom rows specifically
-        console.log('Bottom rows:');
-        for (let y = Math.max(0, lines.length - 3); y < lines.length; y++) {
-            const line = lines[y];
-            const hashCount = (line.match(/#/g) || []).length;
-            console.log(`Row ${y} (y=${y * 20}): "${line.substring(0, 50)}" - ${hashCount} # chars`);
-        }
-        
-        // Show all platforms with their positions
-        console.log('All platforms:', platforms.map(p => ({x: p.x, y: p.y, char: 'from #'})));
         
         return {platforms, blocks, enemies, flag, startX, startY};
     }
@@ -709,6 +681,47 @@ async function createMarioGame(settings) {
         });
     }
     
+    function handlePlatformCollision(entity) {
+        entity.onGround = false;
+        
+        game.platforms.forEach(platform => {
+            if (entity.x < platform.x + platform.width &&
+                entity.x + entity.width > platform.x &&
+                entity.y < platform.y + platform.height &&
+                entity.y + entity.height > platform.y) {
+                
+                const overlapLeft = (entity.x + entity.width) - platform.x;
+                const overlapRight = (platform.x + platform.width) - entity.x;
+                const overlapTop = (entity.y + entity.height) - platform.y;
+                const overlapBottom = (platform.y + platform.height) - entity.y;
+                
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                
+                // Landing on top
+                if (minOverlap === overlapTop && entity.vy >= 0) {
+                    entity.y = platform.y - entity.height;
+                    entity.vy = 0;
+                    entity.onGround = true;
+                }
+                // Hitting from below
+                else if (minOverlap === overlapBottom && entity.vy < 0) {
+                    entity.y = platform.y + platform.height;
+                    entity.vy = 0;
+                }
+                // Side collision from right
+                else if (minOverlap === overlapLeft && entity.vx > 0) {
+                    entity.x = platform.x - entity.width;
+                    if (entity.vx !== undefined) entity.vx = 0;
+                }
+                // Side collision from left
+                else if (minOverlap === overlapRight && entity.vx < 0) {
+                    entity.x = platform.x + platform.width;
+                    if (entity.vx !== undefined) entity.vx = 0;
+                }
+            }
+        });
+    }
+    
     function nextLevel() {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
@@ -749,44 +762,8 @@ async function createMarioGame(settings) {
         
         game.player.onGround = false;
         
-        // Check collision with platforms first
-        game.platforms.forEach(platform => {
-            if (game.player.x < platform.x + platform.width &&
-                game.player.x + game.player.width > platform.x &&
-                game.player.y < platform.y + platform.height &&
-                game.player.y + game.player.height > platform.y) {
-                
-                // Determine collision direction based on previous position
-                const overlapLeft = (game.player.x + game.player.width) - platform.x;
-                const overlapRight = (platform.x + platform.width) - game.player.x;
-                const overlapTop = (game.player.y + game.player.height) - platform.y;
-                const overlapBottom = (platform.y + platform.height) - game.player.y;
-                
-                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-                
-                // Landing on top
-                if (minOverlap === overlapTop && game.player.vy > 0) {
-                    game.player.y = platform.y - game.player.height;
-                    game.player.vy = 0;
-                    game.player.onGround = true;
-                }
-                // Hitting from below
-                else if (minOverlap === overlapBottom && game.player.vy < 0) {
-                    game.player.y = platform.y + platform.height;
-                    game.player.vy = 0;
-                }
-                // Side collision from right
-                else if (minOverlap === overlapLeft && game.player.vx > 0) {
-                    game.player.x = platform.x - game.player.width;
-                    game.player.vx = 0;
-                }
-                // Side collision from left
-                else if (minOverlap === overlapRight && game.player.vx < 0) {
-                    game.player.x = platform.x + platform.width;
-                    game.player.vx = 0;
-                }
-            }
-        });
+        // Use shared collision detection
+        handlePlatformCollision(game.player);
         
         // Check collision with blocks separately
         game.blocks.forEach(block => {
@@ -869,7 +846,7 @@ async function createMarioGame(settings) {
     function updateEnemies() {
         if (game.gameOver || game.won || !game.gameStarted) return;
         
-        game.enemies.forEach(enemy => {
+        game.enemies.forEach((enemy, index) => {
             if (!enemy.alive) return;
             
             // Add gravity to enemies
@@ -877,22 +854,8 @@ async function createMarioGame(settings) {
             enemy.vy += 0.3; // Gravity
             enemy.y += enemy.vy;
             
-            // Check if enemy lands on platforms
-            let onGround = false;
-            game.platforms.forEach(platform => {
-                if (enemy.x < platform.x + platform.width &&
-                    enemy.x + enemy.width > platform.x &&
-                    enemy.y < platform.y + platform.height &&
-                    enemy.y + enemy.height > platform.y) {
-                    
-                    // Landing on top
-                    if (enemy.vy > 0 && enemy.y < platform.y) {
-                        enemy.y = platform.y - enemy.height;
-                        enemy.vy = 0;
-                        onGround = true;
-                    }
-                }
-            });
+            // Use shared collision detection for ground
+            handlePlatformCollision(enemy);
             
             // Remove enemies that fall too far (into pits)
             if (enemy.y > 500) {
@@ -923,27 +886,67 @@ async function createMarioGame(settings) {
             } else {
                 // Regular enemy movement
                 enemy.x += enemy.vx;
+                
+                // Debug: Check if enemy actually moved
+                if (game.frameCount % 60 === 0 && Math.abs(enemy.x - oldX) < 0.1) {
+                    console.log(`Enemy ${index} stuck! Old x:${oldX} New x:${enemy.x} vx:${enemy.vx} hitWall:${hitWall}`);
+                }
             }
             
-            // Enemy collision with platforms and blocks
+            // Enemy collision with platforms and blocks (side collisions only) - AFTER movement
             let hitWall = false;
+            let platformCount = 0;
             game.platforms.forEach(platform => {
+                // Count platforms near this enemy for debug
+                if (Math.abs(platform.x - enemy.x) < 100) {
+                    platformCount++;
+                }
+                
                 if (enemy.x < platform.x + platform.width &&
                     enemy.x + enemy.width > platform.x &&
                     enemy.y < platform.y + platform.height &&
                     enemy.y + enemy.height > platform.y) {
                     
+                    // Only reverse direction for side collisions, not when standing on top
+                    const enemyBottom = enemy.y + enemy.height;
+                    const platformTop = platform.y;
+                    
+                    if (enemyBottom <= platformTop + 5) {
+                        // Enemy is on top of platform, don't reverse direction
+                        if (game.frameCount % 60 === 0 && index > 5) {
+                            console.log(`Enemy ${index} on top of platform, not reversing`);
+                        }
+                        return;
+                    }
+                    
+                    if (game.frameCount % 60 === 0) {
+                        console.log(`Enemy ${index} colliding with platform at x:${platform.x} y:${platform.y} w:${platform.width} h:${platform.height}`);
+                    }
+                    
                     if (enemy.vx > 0) {
+                        if (game.frameCount % 60 === 0 && index > 5) {
+                            console.log(`Enemy ${index} pushed left by platform at x:${platform.x}, enemy moved from ${enemy.x} to ${platform.x - enemy.width}`);
+                        }
                         enemy.x = platform.x - enemy.width;
                         hitWall = true;
                     } else if (enemy.vx < 0) {
+                        if (game.frameCount % 60 === 0 && index > 5) {
+                            console.log(`Enemy ${index} pushed right by platform at x:${platform.x}, enemy moved from ${enemy.x} to ${platform.x + platform.width}`);
+                        }
                         enemy.x = platform.x + platform.width;
                         hitWall = true;
                     }
                 }
             });
             
+            if (game.frameCount % 60 === 0 && enemy.x > 2000) {
+                console.log(`Enemy ${index} at x:${enemy.x} has ${platformCount} nearby platforms`);
+            }
+            
             if (hitWall) {
+                if (game.frameCount % 60 === 0) {
+                    console.log(`Enemy ${index} hit wall, reversing direction from vx:${enemy.vx} to vx:${-enemy.vx}`);
+                }
                 enemy.vx *= -1;
             }
             
@@ -1273,6 +1276,7 @@ async function createMarioGame(settings) {
     }
     
     function gameLoop() {
+        game.frameCount++;
         updatePlayer();
         updateEnemies();
         updatePowerUps();
