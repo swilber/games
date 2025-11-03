@@ -1506,6 +1506,11 @@ async function createMarioGame(settings) {
                             entity.y = platform.y - entity.height;
                             entity.vy = 0;
                             entity.onGround = true;
+                            
+                            // Move entity with moving platform
+                            if (platform.moving && entity === game.player) {
+                                entity.y += platform.vy;
+                            }
                         } else {
                             // Hitting from below - position head against platform bottom
                             entity.y = platform.y + platform.height;
@@ -1658,6 +1663,19 @@ async function createMarioGame(settings) {
         
         // Use shared collision detection
         handlePlatformCollision(game.player);
+        
+        // Move player with moving platforms if standing on one
+        if (game.player.onGround) {
+            game.platforms.forEach(platform => {
+                if (platform.moving &&
+                    game.player.x < platform.x + platform.width &&
+                    game.player.x + game.player.width > platform.x &&
+                    Math.abs((game.player.y + game.player.height) - platform.y) < 2) {
+                    // Player is standing on this moving platform
+                    game.player.y += platform.vy;
+                }
+            });
+        }
         
         // Check collision with blocks separately
         game.blocks.forEach(block => {
