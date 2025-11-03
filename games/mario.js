@@ -444,15 +444,24 @@ async function createMarioGame(settings) {
                 ctx.fillRect(platform.x, platform.y + platform.height - 1, platform.width, 1); // Bottom shadow
                 ctx.fillRect(platform.x + platform.width - 1, platform.y, 1, platform.height); // Right shadow
                 
-                // Black holes - exactly 2 per platform
+                // Black holes - 2 holes per cell (every 20 pixels)
                 ctx.fillStyle = '#000000';
                 const holeSize = 2;
-                const hole1X = platform.x + 4;
-                const hole2X = platform.x + 14;
-                const holeY = platform.y + platform.height/2 - holeSize/2;
+                const cellSize = 20; // One cell = 20 pixels
                 
-                ctx.fillRect(hole1X, holeY, holeSize, holeSize);
-                ctx.fillRect(hole2X, holeY, holeSize, holeSize);
+                for (let cellX = 0; cellX < platform.width; cellX += cellSize) {
+                    const hole1X = platform.x + cellX + 4;
+                    const hole2X = platform.x + cellX + 14;
+                    const holeY = platform.y + platform.height/2 - holeSize/2;
+                    
+                    // Only draw holes if they're within the platform bounds
+                    if (hole1X + holeSize <= platform.x + platform.width) {
+                        ctx.fillRect(hole1X, holeY, holeSize, holeSize);
+                    }
+                    if (hole2X + holeSize <= platform.x + platform.width) {
+                        ctx.fillRect(hole2X, holeY, holeSize, holeSize);
+                    }
+                }
             } else if (platform.type === 'tree') {
                 // Tree platform rendering
                 ctx.fillStyle = ThemeSystem.getColor('ground');
