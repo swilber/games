@@ -1207,6 +1207,23 @@ async function createMarioGame(settings) {
             // Handle Koopa states
             if (enemy.type === 'koopa') {
                 if (enemy.state === 'walking') {
+                    // Check for pit ahead before moving
+                    const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
+                    const checkY = enemy.y + enemy.height + 20; // Look ahead and down
+                    
+                    let foundGround = false;
+                    game.platforms.forEach(platform => {
+                        if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                            checkY >= platform.y && checkY <= platform.y + platform.height) {
+                            foundGround = true;
+                        }
+                    });
+                    
+                    // If no ground ahead, turn around
+                    if (!foundGround) {
+                        enemy.vx = -enemy.vx;
+                    }
+                    
                     enemy.x += enemy.vx;
                 } else if (enemy.state === 'shell') {
                     // Shell is stationary
@@ -1225,7 +1242,23 @@ async function createMarioGame(settings) {
                     });
                 }
             } else {
-                // Regular enemy movement
+                // Regular enemy movement (Goomba) - check for pit ahead
+                const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
+                const checkY = enemy.y + enemy.height + 20; // Look ahead and down
+                
+                let foundGround = false;
+                game.platforms.forEach(platform => {
+                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                        checkY >= platform.y && checkY <= platform.y + platform.height) {
+                        foundGround = true;
+                    }
+                });
+                
+                // If no ground ahead, turn around
+                if (!foundGround) {
+                    enemy.vx = -enemy.vx;
+                }
+                
                 enemy.x += enemy.vx;
             }
             
