@@ -338,15 +338,18 @@ async function createMarioGame(settings) {
         trees: {
             name: 'Tree Tops',
             colors: {
-                sky: '#87CEEB',
-                ground: '#228B22',
-                groundShadow: '#006400',
+                sky: '#5C94FC', // Baby blue like overworld
+                ground: '#8B4513', // Brown like overworld
+                groundShadow: '#654321', // Dark brown like overworld
                 pipe: '#00FF00',
                 pipeShadow: '#00AA00',
-                brick: '#8B4513',
-                brickShadow: '#654321',
+                brick: '#CC6600', // Orange like overworld
+                brickShadow: '#994400', // Dark orange like overworld
                 question: '#FFD700',
-                questionShadow: '#CC9900'
+                questionShadow: '#CC9900',
+                cloud: '#FFFFFF',
+                bush: '#90EE90', // Light green
+                hill: '#228B22'  // Darker green
             },
             sprites: {
                 platform: 'tree',
@@ -423,6 +426,42 @@ async function createMarioGame(settings) {
                             ctx.fillRect(circleX - width/2, groundY - y, width, 1);
                         }
                     }
+                });
+            } else if (ThemeSystem.current?.name === 'Tree Tops') {
+                // More clouds at different levels for sky theme
+                ctx.fillStyle = ThemeSystem.getColor('cloud');
+                
+                // High clouds
+                const highClouds = [100, 320, 540, 760, 980, 1200, 1420, 1640, 1860];
+                highClouds.forEach((x, i) => {
+                    const cloudX = x - (game.camera?.x || 0) * 0.3; // Slower parallax for distance
+                    const cloudY = 40 + (i % 2) * 15;
+                    
+                    ctx.fillRect(cloudX, cloudY, 50, 15);
+                    ctx.fillRect(cloudX + 8, cloudY - 8, 34, 15);
+                    ctx.fillRect(cloudX + 16, cloudY - 16, 18, 15);
+                });
+                
+                // Mid-level clouds
+                const midClouds = [200, 450, 700, 950, 1250, 1500, 1750];
+                midClouds.forEach((x, i) => {
+                    const cloudX = x - (game.camera?.x || 0) * 0.4;
+                    const cloudY = 120 + (i % 3) * 20;
+                    
+                    ctx.fillRect(cloudX, cloudY, 60, 18);
+                    ctx.fillRect(cloudX + 10, cloudY - 10, 40, 18);
+                    ctx.fillRect(cloudX + 20, cloudY - 18, 20, 18);
+                });
+                
+                // Lower clouds
+                const lowClouds = [80, 380, 620, 880, 1140, 1400, 1660];
+                lowClouds.forEach((x, i) => {
+                    const cloudX = x - (game.camera?.x || 0) * 0.5;
+                    const cloudY = 200 + (i % 2) * 25;
+                    
+                    ctx.fillRect(cloudX, cloudY, 70, 20);
+                    ctx.fillRect(cloudX + 12, cloudY - 12, 46, 20);
+                    ctx.fillRect(cloudX + 24, cloudY - 20, 22, 20);
                 });
             }
         },
