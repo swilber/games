@@ -108,7 +108,7 @@ const SpriteRenderer = {
         mario: (ctx, player) => {
             const isSmall = player.powerState === 'small';
             const isFire = player.powerState === 'fire';
-            const baseY = isSmall ? player.y + 8 : player.y; // Adjust for size difference
+            const baseY = player.y; // Use actual collision box position, no offset
             
             // Mario's hat - red for normal, white for fire Mario
             ctx.fillStyle = isFire ? '#FFFFFF' : '#FF0000';
@@ -181,19 +181,19 @@ const SpriteRenderer = {
                 ctx.fillRect(player.x, baseY + 27, 6, 4);
                 ctx.fillRect(player.x + 14, baseY + 27, 6, 4);
             } else {
-                // Small Mario - just overalls (much smaller)
-                ctx.fillStyle = '#0066CC';
-                ctx.fillRect(player.x + 2, baseY + 7, 12, 6);
+                // Small Mario - just overalls (fit within 16px height)
+                ctx.fillStyle = isFire ? '#FFFFFF' : '#0066CC';
+                ctx.fillRect(player.x + 2, baseY + 4, 12, 6);
                 
                 // Small gloves
                 ctx.fillStyle = '#FFF';
-                ctx.fillRect(player.x + 1, baseY + 9, 2, 2);
-                ctx.fillRect(player.x + 13, baseY + 9, 2, 2);
+                ctx.fillRect(player.x + 1, baseY + 6, 2, 2);
+                ctx.fillRect(player.x + 13, baseY + 6, 2, 2);
                 
-                // Small shoes
+                // Small shoes - at bottom of collision box
                 ctx.fillStyle = '#8B4513';
-                ctx.fillRect(player.x + 2, baseY + 13, 4, 2);
-                ctx.fillRect(player.x + 10, baseY + 13, 4, 2);
+                ctx.fillRect(player.x + 2, baseY + 12, 4, 2);
+                ctx.fillRect(player.x + 10, baseY + 12, 4, 2);
             }
         }
     }
@@ -713,39 +713,85 @@ async function createMarioGame(settings) {
     function handlePlatformCollision(entity) {
         entity.onGround = false;
         
+        // Store previous position
+        const prevX = entity.x - entity.vx;
+        const prevY = entity.y - entity.vy;
+        
         game.platforms.forEach(platform => {
+            // Check if entity is currently overlapping platform
             if (entity.x < platform.x + platform.width &&
                 entity.x + entity.width > platform.x &&
                 entity.y < platform.y + platform.height &&
                 entity.y + entity.height > platform.y) {
                 
-                const overlapLeft = (entity.x + entity.width) - platform.x;
-                const overlapRight = (platform.x + platform.width) - entity.x;
-                const overlapTop = (entity.y + entity.height) - platform.y;
-                const overlapBottom = (platform.y + platform.height) - entity.y;
+                // Check if entity was NOT overlapping in previous frame
+                const wasOverlapping = prevX < platform.x + platform.width &&
+                                     prevX + entity.width > platform.x &&
+                                     prevY < platform.y + platform.height &&
+                                     prevY + entity.height > platform.y;
                 
-                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-                
-                // Landing on top
-                if (minOverlap === overlapTop && entity.vy >= 0) {
-                    entity.y = platform.y - entity.height;
-                    entity.vy = 0;
-                    entity.onGround = true;
-                }
-                // Hitting from below
-                else if (minOverlap === overlapBottom && entity.vy < 0) {
-                    entity.y = platform.y + platform.height;
-                    entity.vy = 0;
-                }
-                // Side collision from right
-                else if (minOverlap === overlapLeft && entity.vx > 0) {
-                    entity.x = platform.x - entity.width;
-                    if (entity.vx !== undefined) entity.vx = 0;
-                }
-                // Side collision from left
-                else if (minOverlap === overlapRight && entity.vx < 0) {
-                    entity.x = platform.x + platform.width;
-                    if (entity.vx !== undefined) entity.vx = 0;
+                if (!wasOverlapping) {
+                    // Calculate intersection point for each axis
+                    let collisionTime = 1.0;
+                    let collisionAxis = null;
+                    
+                    // Vertical collision (top/bottom)
+                    if (entity.vy !== 0) {
+                        let timeY;
+                        if (entity.vy > 0) {
+                            // Moving down - check when bottom edge hits top of platform
+                            timeY = (platform.y - (prevY + entity.height)) / entity.vy;
+                        } else {
+                            // Moving up - check when top edge hits bottom of platform
+                            timeY = (platform.y + platform.height - prevY) / entity.vy;
+                        }
+                        
+                        if (timeY >= 0 && timeY <= 1 && timeY < collisionTime) {
+                            collisionTime = timeY;
+                            collisionAxis = 'y';
+                        }
+                    }
+                    
+                    // Horizontal collision (left/right)
+                    if (entity.vx !== 0) {
+                        let timeX;
+                        if (entity.vx > 0) {
+                            // Moving right - check collision with left of platform
+                            timeX = (platform.x - (prevX + entity.width)) / entity.vx;
+                        } else {
+                            // Moving left - check collision with right of platform
+                            timeX = (platform.x + platform.width - prevX) / entity.vx;
+                        }
+                        
+                        if (timeX >= 0 && timeX <= 1 && timeX < collisionTime) {
+                            collisionTime = timeX;
+                            collisionAxis = 'x';
+                        }
+                    }
+                    
+                    // Apply collision response
+                    if (collisionAxis === 'y') {
+                        if (entity.vy > 0) {
+                            // Landing on top - position feet on platform surface
+                            entity.y = platform.y - entity.height;
+                            entity.vy = 0;
+                            entity.onGround = true;
+                        } else {
+                            // Hitting from below - position head against platform bottom
+                            entity.y = platform.y + platform.height;
+                            entity.vy = 0;
+                        }
+                    } else if (collisionAxis === 'x') {
+                        if (entity.vx > 0) {
+                            // Hit from left
+                            entity.x = platform.x - entity.width;
+                            if (entity.vx !== undefined) entity.vx = 0;
+                        } else {
+                            // Hit from right
+                            entity.x = platform.x + platform.width;
+                            if (entity.vx !== undefined) entity.vx = 0;
+                        }
+                    }
                 }
             }
         });
