@@ -1276,11 +1276,11 @@ async function createMarioGame(settings) {
                         const centerX = (minX + maxX) / 2;
                         enemies.push({
                             x: centerX * tileSize, 
-                            y: minY * tileSize - 16, // Position at top of pipe
+                            y: minY * tileSize - 16, // Position at top of pipe (minY is the pipe's top)
                             type: 'piranha',
                             alive: true
                         });
-                        console.log('Found Piranha Plant for pipe group at center', centerX, minY);
+                        console.log('Found Piranha Plant for pipe group at center', centerX, 'minY:', minY, 'calculated Y:', minY * tileSize - 16);
                     }
                     
                     // Create single pipe for this group
