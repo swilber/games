@@ -2371,14 +2371,14 @@ async function createMarioGame(settings) {
             ctx.fillStyle = '#006400'; // Dark green shadow
             ctx.fillRect(minX, treeY + platform.height - 4, treeWidth, 4);
             
-            // Create shaded half-circle bumps at the bottom
+            // Create shaded half-circle bumps hanging down from the bottom
             const bumpRadius = 6;
             const bumpSpacing = 12;
             for (let x = minX + bumpRadius; x < maxX - bumpRadius; x += bumpSpacing) {
                 const centerX = x;
                 const centerY = treeY + platform.height;
                 
-                // Draw half-circle bump with shading
+                // Draw half-circle bump hanging down with shading
                 for (let i = -bumpRadius; i <= bumpRadius; i++) {
                     const height = Math.sqrt(bumpRadius * bumpRadius - i * i);
                     
@@ -2389,7 +2389,7 @@ async function createMarioGame(settings) {
                         ctx.fillStyle = '#006400'; // Dark green shadow
                     }
                     
-                    ctx.fillRect(centerX + i, centerY - height, 1, height);
+                    ctx.fillRect(centerX + i, centerY, 1, height);
                 }
             }
             
