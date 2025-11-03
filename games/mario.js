@@ -1190,12 +1190,12 @@ async function createMarioGame(settings) {
                         enemy.initialFlight = false;
                     }
                 } else {
-                    // Normal flight: 6 cells (120 pixels) in each direction
-                    if (distanceFromCenter <= -120) {
-                        // Reached top limit, start flying down
+                    // Normal flight: alternate between 6 cells up and down
+                    if (enemy.flyDirection === -1 && distanceFromCenter <= -120) {
+                        // Flying up and reached top limit, start flying down
                         enemy.flyDirection = 1;
-                    } else if (distanceFromCenter >= 120) {
-                        // Reached bottom limit, start flying up
+                    } else if (enemy.flyDirection === 1 && distanceFromCenter >= 60) {
+                        // Flying down and reached bottom limit (3 cells below center), start flying up
                         enemy.flyDirection = -1;
                     }
                 }
