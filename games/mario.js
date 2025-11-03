@@ -2360,29 +2360,28 @@ async function createMarioGame(settings) {
             
             processedTrees.add(key);
             
-            // Draw tree top with rounded corners
+            // Draw tree top as solid lime green rectangle with rounded corners
             const treeWidth = maxX - minX;
-            const cornerRadius = 6;
+            const cornerRadius = 4;
             
-            // Main tree top rectangle (excluding corners)
-            ctx.fillStyle = '#228B22'; // Darker green
-            ctx.fillRect(minX + cornerRadius, treeY, treeWidth - (cornerRadius * 2), platform.height);
+            // Main tree top rectangle
+            ctx.fillStyle = '#32CD32'; // Lime green
+            ctx.fillRect(minX, treeY, treeWidth, platform.height);
             
-            // Left rounded corner
-            for (let i = 0; i < cornerRadius; i++) {
-                const height = Math.sqrt(cornerRadius * cornerRadius - (cornerRadius - i - 1) * (cornerRadius - i - 1));
-                ctx.fillRect(minX + i, treeY + cornerRadius - height, 1, height);
-            }
+            // Round off the top corners by removing sharp corner pixels
+            ctx.fillStyle = ThemeSystem.getColor('sky'); // Sky color to "erase" corners
             
-            // Right rounded corner
-            for (let i = 0; i < cornerRadius; i++) {
-                const height = Math.sqrt(cornerRadius * cornerRadius - i * i);
-                ctx.fillRect(maxX - cornerRadius + i, treeY + cornerRadius - height, 1, height);
-            }
+            // Top-left corner rounding
+            ctx.fillRect(minX, treeY, 2, 1); // Remove corner pixels
+            ctx.fillRect(minX, treeY + 1, 1, 1);
             
-            // Even darker green shadow at bottom
-            ctx.fillStyle = '#006400'; // Dark green shadow
-            ctx.fillRect(minX + cornerRadius, treeY + platform.height - 4, treeWidth - (cornerRadius * 2), 4);
+            // Top-right corner rounding  
+            ctx.fillRect(maxX - 2, treeY, 2, 1); // Remove corner pixels
+            ctx.fillRect(maxX - 1, treeY + 1, 1, 1);
+            
+            // Darker green shadow at bottom
+            ctx.fillStyle = '#228B22'; // Darker green shadow
+            ctx.fillRect(minX, treeY + platform.height - 3, treeWidth, 3);
             
             // Create shaded half-circle bumps hanging down from the bottom
             const bumpRadius = 6;
