@@ -613,7 +613,7 @@ async function createMarioGame(settings) {
         overworld: {
             name: 'Overworld',
             colors: {
-                sky: '#5C94FC',
+                sky: '#5C94FC', // Baby blue
                 ground: '#8B4513',
                 groundShadow: '#654321',
                 pipe: '#00FF00',
@@ -621,7 +621,10 @@ async function createMarioGame(settings) {
                 brick: '#CC6600',
                 brickShadow: '#994400',
                 question: '#FFD700',
-                questionShadow: '#CC9900'
+                questionShadow: '#CC9900',
+                cloud: '#FFFFFF',
+                bush: '#90EE90', // Light green
+                hill: '#228B22'  // Darker green
             },
             sprites: {
                 platform: 'grass',
@@ -684,6 +687,60 @@ async function createMarioGame(settings) {
             // Sky background
             ctx.fillStyle = ThemeSystem.getColor('sky');
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add theme-specific background elements
+            if (ThemeSystem.current?.name === 'Overworld') {
+                // Clouds high in the sky
+                ctx.fillStyle = ThemeSystem.getColor('cloud');
+                const cloudPositions = [120, 380, 620, 880, 1140, 1400, 1660, 1920];
+                cloudPositions.forEach((x, i) => {
+                    const cloudX = x - (game.camera?.x || 0) * 0.5; // Parallax effect
+                    const cloudY = 60 + (i % 3) * 20; // Varying heights
+                    
+                    // Cloud shape
+                    ctx.fillRect(cloudX, cloudY, 60, 20);
+                    ctx.fillRect(cloudX + 10, cloudY - 10, 40, 20);
+                    ctx.fillRect(cloudX + 20, cloudY - 20, 20, 20);
+                });
+                
+                // Hills coming out of ground
+                ctx.fillStyle = ThemeSystem.getColor('hill');
+                const hillPositions = [200, 450, 750, 1100, 1450, 1800];
+                hillPositions.forEach((x, i) => {
+                    const hillX = x - (game.camera?.x || 0);
+                    const hillWidth = 40 + (i % 2) * 20; // Smaller hills
+                    const hillHeight = 30 + (i % 3) * 10; // Smaller heights
+                    const groundY = canvas.height - 35; // 10 pixels lower (was -45)
+                    
+                    // Half oval with flat bottom - invert the width calculation
+                    for (let y = 0; y < hillHeight; y++) {
+                        // Invert: y=0 (top) should be narrow, y=hillHeight (bottom) should be wide
+                        const normalizedY = (hillHeight - y) / hillHeight; // 1 at top, 0 at bottom
+                        const width = hillWidth * Math.sqrt(1 - normalizedY * normalizedY);
+                        ctx.fillRect(hillX - width/2, groundY - hillHeight + y, width, 1);
+                    }
+                });
+                
+                // Small bushes coming out of ground
+                ctx.fillStyle = ThemeSystem.getColor('bush');
+                const bushPositions = [150, 320, 480, 680, 920, 1200, 1380, 1620];
+                bushPositions.forEach((x, i) => {
+                    const bushX = x - (game.camera?.x || 0);
+                    const bushWidth = 30 + (i % 2) * 15; // Varying sizes
+                    const bushHeight = 20 + (i % 3) * 10;
+                    const groundY = canvas.height - 35; // 10 pixels lower (was -45)
+                    
+                    // Bush shape - three circles
+                    const circleRadius = bushHeight / 3;
+                    for (let circle = 0; circle < 3; circle++) {
+                        const circleX = bushX + (circle * bushWidth / 3);
+                        for (let y = 0; y < circleRadius * 2; y++) {
+                            const width = Math.sqrt(circleRadius * circleRadius - (y - circleRadius) * (y - circleRadius)) * 2;
+                            ctx.fillRect(circleX - width/2, groundY - y, width, 1);
+                        }
+                    }
+                });
+            }
         },
         
         renderPlatform: (ctx, platform) => {
@@ -695,6 +752,20 @@ async function createMarioGame(settings) {
                 // Tree shadow
                 ctx.fillStyle = ThemeSystem.getColor('groundShadow');
                 ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2);
+            } else if (platform.type === 'block') {
+                // 3D block platform with highlights and shadows
+                ctx.fillStyle = ThemeSystem.getColor('ground');
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Light highlights on top and left (2px wide)
+                ctx.fillStyle = '#DEB887'; // Light brown highlight
+                ctx.fillRect(platform.x, platform.y, platform.width, 2); // Top highlight
+                ctx.fillRect(platform.x, platform.y, 2, platform.height); // Left highlight
+                
+                // Dark shadows on bottom and right (2px wide)
+                ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                ctx.fillRect(platform.x, platform.y + platform.height - 2, platform.width, 2); // Bottom shadow
+                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height); // Right shadow
             } else {
                 // Regular ground platform
                 ctx.fillStyle = ThemeSystem.getColor('ground');
@@ -749,6 +820,7 @@ async function createMarioGame(settings) {
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
         '#': { type: 'platform', variant: 'ground' },
+        '%': { type: 'platform', variant: 'block' },
         'T': { type: 'platform', variant: 'tree' },
         '?': { type: 'block', variant: 'question', content: 'coin' },
         'C': { type: 'block', variant: 'question', content: 'coin' },
@@ -1696,19 +1768,6 @@ async function createMarioGame(settings) {
         
         // Use theme system for background
         ThemeSystem.renderBackground(ctx, canvas);
-        
-        // Add theme-specific background elements
-        if (game.currentTheme === 'trees') {
-            // Add sparse clouds for tree theme
-            ctx.fillStyle = '#FFFFFF';
-            const cloudPositions = [150, 400, 650, 900, 1200, 1500, 1800];
-            cloudPositions.forEach(x => {
-                // Simple cloud shape
-                ctx.fillRect(x - game.camera.x, 80, 60, 20);
-                ctx.fillRect(x - game.camera.x + 10, 70, 40, 20);
-                ctx.fillRect(x - game.camera.x + 20, 60, 20, 20);
-            });
-        }
         
         ctx.save();
         ctx.translate(-game.camera.x, 0);
