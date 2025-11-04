@@ -26,7 +26,7 @@ const convertASCIIToLevel = (asciiLines) => {
         }
     });
     
-    const level = { tiles: [], enemies: [], blocks: [], width: 0 };
+    const level = { tiles: [], enemies: [], blocks: [], width: 0, castle: null };
     
     // Find ground line (line with # symbols)
     const groundLineIndex = asciiLines.findIndex(line => line.includes('#'));
@@ -169,7 +169,7 @@ const LevelMapper = {
     },
     
     createFromMap: (mapData) => {
-        const level = { platforms: [], blocks: [], pits: [], enemies: [], coins: [] };
+        const level = { platforms: [], blocks: [], pits: [], enemies: [], coins: [], castle: null };
         let currentGroundStart = null;
         let currentGroundWidth = 0;
         
@@ -1443,6 +1443,7 @@ async function createMarioGame(settings) {
             game.enemies = layout.enemies;
             game.coins = layout.coins || [];
             game.flag = layout.flag;
+            game.castles = layout.castles || [];
             game.player.x = layout.startX;
             game.player.y = layout.startY;
         } catch (error) {
@@ -1650,7 +1651,31 @@ async function createMarioGame(settings) {
             }
         }
         
-        return {platforms, blocks, enemies, coins, flag, startX, startY};
+        // Handle castle characters 'q' (2-level) and 'Q' (3-level) - find all castles
+        let castles = [];
+        
+        for (let y = 0; y < lines.length; y++) {
+            const line = lines[y];
+            for (let x = 0; x < line.length; x++) {
+                if (line[x] === 'q' || line[x] === 'Q') {
+                    // Find ground level
+                    let groundY = y * tileSize;
+                    for (let checkY = y; checkY < lines.length; checkY++) {
+                        if (lines[checkY] && lines[checkY][x] === '#') {
+                            groundY = checkY * tileSize;
+                            break;
+                        }
+                    }
+                    const isLarge = line[x] === 'Q';
+                    const castleHeight = isLarge ? 180 : 140; // Taller castles
+                    const castle = { x: x * tileSize, y: groundY - castleHeight, large: isLarge };
+                    castles.push(castle);
+                    console.log('Found Castle at position', x, y, 'world coords:', castle.x, castle.y, 'type:', isLarge ? '3-level' : '2-level');
+                }
+            }
+        }
+
+        return {platforms, blocks, enemies, coins, flag, castles, startX, startY};
     }
     
     
@@ -2435,6 +2460,294 @@ async function createMarioGame(settings) {
             ctx.fillRect(trunkX, treeY + platform.height, 2, 400 - (treeY + platform.height));
             ctx.fillRect(trunkX + trunkWidth - 2, treeY + platform.height, 2, 400 - (treeY + platform.height));
         });
+        
+        // Castles (background elements - render before everything else)
+        if (game.castles && game.castles.length > 0) {
+            game.castles.forEach(castle => {
+            const isLarge = castle.large;
+            
+            // Helper function to draw brick pattern
+            function drawBrickPattern(x, y, width, height, baseColor, shadowColor) {
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(x, y, width, height);
+                
+                // Draw brick lines
+                ctx.fillStyle = shadowColor;
+                const brickHeight = 8;
+                const brickWidth = 16;
+                
+                // Horizontal lines
+                for (let row = 0; row < height; row += brickHeight) {
+                    ctx.fillRect(x, y + row, width, 1);
+                }
+                
+                // Vertical lines (offset every other row)
+                for (let row = 0; row < height; row += brickHeight) {
+                    const offset = (Math.floor(row / brickHeight) % 2) * (brickWidth / 2);
+                    for (let col = offset; col < width; col += brickWidth) {
+                        ctx.fillRect(x + col, y + row, 1, brickHeight);
+                    }
+                }
+            }
+            
+            // Castle dimensions based on size
+            const castleWidth = isLarge ? 160 : 120;
+            const towerWidth = isLarge ? 40 : 30;
+            const towerHeight = isLarge ? 180 : 140;
+            
+            // Draw tiered castle structure with proper shading boundaries
+            if (isLarge) {
+                // 3-tier castle - draw from bottom to top (largest to smallest)
+                const tier1Width = castleWidth;
+                const tier2Width = castleWidth * 0.75;
+                const tier3Width = castleWidth * 0.5;
+                const tierHeight = 60;
+                
+                // Tier 1 (bottom/largest) - draw first
+                drawBrickPattern(castle.x, castle.y + tierHeight * 2, tier1Width, tierHeight, '#A0A0A0', '#808080');
+                ctx.fillStyle = '#B8B8B8';
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2, tier1Width, 2);
+                ctx.fillStyle = '#696969';
+                ctx.fillRect(castle.x + tier1Width - 2, castle.y + tierHeight * 2, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 3 - 2, tier1Width, 2);
+                
+                // Tier 2 (middle) - draw second
+                const tier2X = castle.x + (tier1Width - tier2Width) / 2;
+                drawBrickPattern(tier2X, castle.y + tierHeight, tier2Width, tierHeight, '#A0A0A0', '#808080');
+                ctx.fillStyle = '#B8B8B8';
+                ctx.fillRect(tier2X, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight, tier2Width, 2);
+                ctx.fillStyle = '#696969';
+                ctx.fillRect(tier2X + tier2Width - 2, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight * 2 - 2, tier2Width, 2);
+                
+                // Tier 3 (top/smallest) - draw last with limited shading
+                const tier3X = castle.x + (tier1Width - tier3Width) / 2;
+                drawBrickPattern(tier3X, castle.y, tier3Width, tierHeight, '#A0A0A0', '#808080');
+                ctx.fillStyle = '#B8B8B8';
+                ctx.fillRect(tier3X, castle.y, 2, tierHeight);
+                ctx.fillRect(tier3X, castle.y, tier3Width, 2);
+                ctx.fillStyle = '#696969';
+                // Only shade the right edge within the tier bounds
+                ctx.fillRect(tier3X + tier3Width - 2, castle.y, 2, tierHeight);
+                // Only shade the bottom edge within the tier bounds  
+                ctx.fillRect(tier3X, castle.y + tierHeight - 2, tier3Width, 2);
+            } else {
+                // 2-tier castle - draw from bottom to top
+                const tier1Width = castleWidth;
+                const tier2Width = castleWidth * 0.7;
+                const tierHeight = 70;
+                
+                // Tier 1 (bottom/larger) - draw first
+                drawBrickPattern(castle.x, castle.y + tierHeight, tier1Width, tierHeight, '#A0A0A0', '#808080');
+                ctx.fillStyle = '#B8B8B8';
+                ctx.fillRect(castle.x, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight, tier1Width, 2);
+                ctx.fillStyle = '#696969';
+                ctx.fillRect(castle.x + tier1Width - 2, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2 - 2, tier1Width, 2);
+                
+                // Tier 2 (top/smaller) - draw second with limited shading
+                const tier2X = castle.x + (tier1Width - tier2Width) / 2;
+                drawBrickPattern(tier2X, castle.y, tier2Width, tierHeight, '#A0A0A0', '#808080');
+                ctx.fillStyle = '#B8B8B8';
+                ctx.fillRect(tier2X, castle.y, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y, tier2Width, 2);
+                ctx.fillStyle = '#696969';
+                // Only shade within tier bounds
+                ctx.fillRect(tier2X + tier2Width - 2, castle.y, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight - 2, tier2Width, 2);
+            }
+            
+            // Left tower (positioned to reach ground) with shading - draw first
+            const totalCastleHeight = isLarge ? 180 : 140;
+            drawBrickPattern(castle.x - 30, castle.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
+            // Tower shading
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(castle.x - 30 + towerWidth - 2, castle.y + totalCastleHeight - towerHeight, 2, towerHeight);
+            ctx.fillRect(castle.x - 30, castle.y + totalCastleHeight - 2, towerWidth, 2);
+            
+            // Right tower (positioned to reach ground) with shading - draw second
+            drawBrickPattern(castle.x + castleWidth - 10, castle.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
+            // Tower shading
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(castle.x + castleWidth - 10 + towerWidth - 2, castle.y + totalCastleHeight - towerHeight, 2, towerHeight);
+            ctx.fillRect(castle.x + castleWidth - 10, castle.y + totalCastleHeight - 2, towerWidth, 2);
+            
+            // Center tower (only for large castle) - draw BEHIND the tiers, not in front
+            if (isLarge) {
+                // Position center tower to only extend above the top tier, not from ground
+                const centerTowerHeight = 60; // Only above the castle
+                drawBrickPattern(castle.x + castleWidth/2 - 20, castle.y - centerTowerHeight, towerWidth, centerTowerHeight, '#A0A0A0', '#808080');
+                // Center tower shading
+                ctx.fillStyle = '#696969';
+                ctx.fillRect(castle.x + castleWidth/2 - 20 + towerWidth - 2, castle.y - centerTowerHeight, 2, centerTowerHeight);
+                ctx.fillRect(castle.x + castleWidth/2 - 20, castle.y - 2, towerWidth, 2);
+            }
+            
+            // Tower crenellations (battlements)
+            ctx.fillStyle = '#A0A0A0';
+            
+            // Left tower crenellations
+            const leftTowerX = castle.x - 30;
+            const leftTowerTop = castle.y + totalCastleHeight - towerHeight - 10;
+            for (let i = 0; i < Math.floor(towerWidth/8); i++) {
+                if (i % 2 === 0) {
+                    ctx.fillRect(leftTowerX + i * 8, leftTowerTop, 6, 10);
+                }
+            }
+            
+            // Right tower crenellations
+            const rightTowerX = castle.x + castleWidth - 10;
+            const rightTowerTop = castle.y + totalCastleHeight - towerHeight - 10;
+            for (let i = 0; i < Math.floor(towerWidth/8); i++) {
+                if (i % 2 === 0) {
+                    ctx.fillRect(rightTowerX + i * 8, rightTowerTop, 6, 10);
+                }
+            }
+            
+            // Castle tier crenellations
+            if (isLarge) {
+                // 3-tier castle crenellations
+                const tierHeight = 60;
+                
+                // Top tier (tier 3) crenellations
+                const tier3Width = castleWidth * 0.5;
+                const tier3X = castle.x + (castleWidth - tier3Width) / 2;
+                for (let i = 0; i < Math.floor(tier3Width/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(tier3X + i * 8, castle.y - 10, 6, 10);
+                    }
+                }
+                
+                // Middle tier (tier 2) crenellations
+                const tier2Width = castleWidth * 0.75;
+                const tier2X = castle.x + (castleWidth - tier2Width) / 2;
+                for (let i = 0; i < Math.floor(tier2Width/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(tier2X + i * 8, castle.y + tierHeight - 10, 6, 10);
+                    }
+                }
+                
+                // Bottom tier (tier 1) crenellations
+                for (let i = 0; i < Math.floor(castleWidth/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(castle.x + i * 8, castle.y + tierHeight * 2 - 10, 6, 10);
+                    }
+                }
+                
+                // Center tower crenellations
+                const centerTowerX = castle.x + castleWidth/2 - 20;
+                const centerTowerTop = castle.y - 60 - 10; // Top of the shortened center tower
+                for (let i = 0; i < Math.floor(towerWidth/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(centerTowerX + i * 8, centerTowerTop, 6, 10);
+                    }
+                }
+            } else {
+                // 2-tier castle crenellations
+                const tierHeight = 70;
+                
+                // Top tier (tier 2) crenellations
+                const tier2Width = castleWidth * 0.7;
+                const tier2X = castle.x + (castleWidth - tier2Width) / 2;
+                for (let i = 0; i < Math.floor(tier2Width/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(tier2X + i * 8, castle.y - 10, 6, 10);
+                    }
+                }
+                
+                // Bottom tier (tier 1) crenellations
+                for (let i = 0; i < Math.floor(castleWidth/8); i++) {
+                    if (i % 2 === 0) {
+                        ctx.fillRect(castle.x + i * 8, castle.y + tierHeight - 10, 6, 10);
+                    }
+                }
+            }
+            
+            // Windows on tiers
+            ctx.fillStyle = '#000000';
+            
+            if (isLarge) {
+                // 3-tier castle windows
+                const tierHeight = 60;
+                // Tier 1 windows (bottom)
+                ctx.fillRect(castle.x + 20, castle.y + tierHeight * 2 + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth - 32, castle.y + tierHeight * 2 + 25, 12, 16);
+                // Tier 2 windows (middle)
+                ctx.fillRect(castle.x + castleWidth * 0.3, castle.y + tierHeight + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.7 - 12, castle.y + tierHeight + 25, 12, 16);
+                // Tier 3 windows (top)
+                ctx.fillRect(castle.x + castleWidth * 0.4, castle.y + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.6 - 12, castle.y + 25, 12, 16);
+            } else {
+                // 2-tier castle windows
+                const tierHeight = 70;
+                // Tier 1 windows (bottom)
+                ctx.fillRect(castle.x + 20, castle.y + tierHeight + 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth - 32, castle.y + tierHeight + 30, 12, 16);
+                // Tier 2 windows (top)
+                ctx.fillRect(castle.x + castleWidth * 0.35, castle.y + 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.65 - 12, castle.y + 30, 12, 16);
+            }
+            
+            // Tower windows
+            ctx.fillRect(castle.x - 20, castle.y + 40, 8, 12);
+            ctx.fillRect(castle.x + castleWidth - 2, castle.y + 40, 8, 12);
+            
+            // Center tower window (large castle only)
+            if (isLarge) {
+                ctx.fillRect(castle.x + castleWidth/2 - 6, castle.y - 30, 12, 16);
+            }
+            
+            // Main entrance - arched door (on bottom tier)
+            ctx.fillStyle = '#000000';
+            const doorWidth = isLarge ? 40 : 30;
+            const doorHeight = isLarge ? 40 : 35;
+            const doorX = castle.x + castleWidth/2 - doorWidth/2;
+            const doorY = castle.y + (isLarge ? 180 - doorHeight : 140 - doorHeight);
+            
+            // Door rectangle
+            ctx.fillRect(doorX, doorY, doorWidth, doorHeight);
+            
+            // Door arch (semicircle top)
+            ctx.beginPath();
+            ctx.arc(doorX + doorWidth/2, doorY, doorWidth/2, Math.PI, 0, false);
+            ctx.fill();
+            
+            // Castle flag
+            const flagPoleX = castle.x + castleWidth/2 - 2;
+            let flagPoleY;
+            if (isLarge) {
+                // Large castle: flag at top of center tower
+                flagPoleY = castle.y - 60 - 30; // Raised by 10 pixels
+            } else {
+                // Small castle: flag at top of top tier
+                flagPoleY = castle.y - 35; // Lowered by 5 pixels
+            }
+            const flagPoleHeight = 30;
+            
+            // Flag pole
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(flagPoleX, flagPoleY, 3, flagPoleHeight);
+            
+            // Flag (triangular, right-side up)
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.moveTo(flagPoleX + 3, flagPoleY);
+            ctx.lineTo(flagPoleX + 25, flagPoleY + 8);
+            ctx.lineTo(flagPoleX + 3, flagPoleY + 16);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Flag details (Mushroom Kingdom emblem)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(flagPoleX + 12, flagPoleY + 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            });
+        }
         
         // Piranha plants (render behind pipes)
         game.enemies.forEach(enemy => {
