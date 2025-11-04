@@ -229,7 +229,8 @@ async function createMarioGame(settings) {
         const levels = [
             { id: 1, name: 'Level 1-1 (Overworld)', theme: 'overworld' },
             { id: 2, name: 'Level 1-2 (Underground)', theme: 'underground' },
-            { id: 3, name: 'Level 1-3 (Trees)', theme: 'trees' }
+            { id: 3, name: 'Level 1-3 (Trees)', theme: 'trees' },
+            { id: 4, name: 'Level 1-4 (Castle)', theme: 'castle' }
         ];
         
         levels.forEach(level => {
@@ -355,6 +356,27 @@ async function createMarioGame(settings) {
             sprites: {
                 platform: 'tree',
                 background: 'sky'
+            }
+        },
+        
+        castle: {
+            name: 'Castle',
+            colors: {
+                sky: '#000000', // Black background
+                ground: '#808080', // Gray brick
+                groundShadow: '#404040', // Dark gray
+                pipe: '#00FF00',
+                pipeShadow: '#00AA00',
+                brick: '#808080', // Gray brick
+                brickShadow: '#404040', // Dark gray
+                question: '#FFD700',
+                questionShadow: '#CC9900',
+                lava: '#FF4500', // Orange-red lava
+                lavaBubble: '#FFFF00' // Yellow bubbles
+            },
+            sprites: {
+                platform: 'brick',
+                background: 'castle'
             }
         }
     };
@@ -567,6 +589,32 @@ async function createMarioGame(settings) {
                     
                     // Brown shadow
                     ctx.fillStyle = '#654321'; // Dark brown like overworld
+                    ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                } else if (platform.type === 'ground' && ThemeSystem.current?.name === 'Castle') {
+                    // Castle ground - gray brick pattern
+                    ctx.fillStyle = ThemeSystem.getColor('ground');
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Add brick pattern
+                    ctx.fillStyle = ThemeSystem.getColor('groundShadow');
+                    const brickHeight = 8;
+                    const brickWidth = 16;
+                    
+                    // Horizontal lines
+                    for (let row = 0; row < platform.height; row += brickHeight) {
+                        ctx.fillRect(platform.x, platform.y + row, platform.width, 1);
+                    }
+                    
+                    // Vertical lines (offset every other row)
+                    for (let row = 0; row < platform.height; row += brickHeight) {
+                        const offset = (Math.floor(row / brickHeight) % 2) * (brickWidth / 2);
+                        for (let col = offset; col < platform.width; col += brickWidth) {
+                            ctx.fillRect(platform.x + col, platform.y + row, 1, brickHeight);
+                        }
+                    }
+                    
+                    // Ground shadow
+                    ctx.fillStyle = ThemeSystem.getColor('groundShadow');
                     ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
                 } else {
                     // Regular ground platform
@@ -1100,9 +1148,72 @@ async function createMarioGame(settings) {
             return { x, y: groundY - (10 * tileSize), width: 35, height: 10 * tileSize };
         },
         
-        spawn: (def, x, y, tileSize) => ({ x, y }),
+        spawn: (def, x, y, tileSize, lines) => {
+            console.log('Spawn factory called with x:', x, 'y:', y, 'tileSize:', tileSize);
+            console.log('Total lines in map:', lines.length);
+            
+            // Find a safe ground position (not over a pit)
+            let safeX = x;
+            let groundY = y;
+            const spawnTileX = Math.floor(x / tileSize);
+            
+            // First, try to find ground directly below the spawn point
+            for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                const line = lines[checkY];
+                if (line && line[spawnTileX] === '#') {
+                    groundY = checkY * tileSize - 16;
+                    console.log('Found ground directly below at checkY:', checkY, 'groundY:', groundY);
+                    break;
+                }
+            }
+            
+            // If spawn is over a pit (no ground found), find the nearest safe ground
+            if (groundY === y) {
+                console.log('Spawn is over a pit, finding safe ground...');
+                // Look for the first solid ground to the left or right
+                for (let offset = 1; offset < 50; offset++) {
+                    // Try left
+                    const leftTileX = spawnTileX - offset;
+                    if (leftTileX >= 0) {
+                        for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                            const line = lines[checkY];
+                            if (line && line[leftTileX] === '#') {
+                                safeX = leftTileX * tileSize;
+                                groundY = checkY * tileSize - 16;
+                                console.log('Found safe ground to the left at x:', safeX, 'y:', groundY);
+                                break;
+                            }
+                        }
+                        if (groundY !== y) break;
+                    }
+                    
+                    // Try right
+                    const rightTileX = spawnTileX + offset;
+                    for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                        const line = lines[checkY];
+                        if (line && line[rightTileX] && line[rightTileX] === '#') {
+                            safeX = rightTileX * tileSize;
+                            groundY = checkY * tileSize - 16;
+                            console.log('Found safe ground to the right at x:', safeX, 'y:', groundY);
+                            break;
+                        }
+                    }
+                    if (groundY !== y) break;
+                }
+            }
+            
+            // Final fallback
+            if (groundY === y) {
+                console.log('No safe ground found, using fallback position');
+                safeX = 50;
+                groundY = 334;
+            }
+            
+            console.log('Spawn factory returning x:', safeX, 'y:', groundY);
+            return { x: safeX, y: groundY };
+        },
         
-        pit: () => null, // Handled separately
+        pit: (def, x, y, tileSize) => ({ x, width: tileSize }), // Create pit object
         
         empty: () => null // Sky/empty space
     };
@@ -1421,6 +1532,9 @@ async function createMarioGame(settings) {
             } else if (game.currentLevel === 3) {
                 mapFile = 'mario-1-3-map.txt';
                 theme = 'trees';
+            } else if (game.currentLevel === 4) {
+                mapFile = 'mario-1-4-map.txt';
+                theme = 'castle';
             }
             
             const response = await fetch(`./games/mario/${mapFile}?v=${Date.now()}`);
@@ -1438,14 +1552,21 @@ async function createMarioGame(settings) {
             game.currentTheme = theme;
             ThemeSystem.setTheme(theme);
             
+            // Store layout for reset purposes
+            game.currentLayout = layout;
+            
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
             game.enemies = layout.enemies;
             game.coins = layout.coins || [];
+            game.pits = layout.pits || [];
             game.flag = layout.flag;
             game.castles = layout.castles || [];
-            game.player.x = layout.startX;
-            game.player.y = layout.startY;
+            
+            // Use the same function for initial load
+            resetMarioPosition();
+            
+            console.log('Level loaded: Mario starting position:', layout.startX, layout.startY);
         } catch (error) {
             console.error('Failed to load map:', error);
             // Fallback to basic level
@@ -1457,12 +1578,14 @@ async function createMarioGame(settings) {
     }
     
     function parseASCIIMap(mapText) {
+        console.log('parseASCIIMap called - parsing map...');
         const rawLines = mapText.split('\n');
         const lines = rawLines.filter(line => !line.startsWith('# ') && line.length > 0);
         const platforms = [];
         const blocks = [];
         const enemies = [];
         const coins = [];
+        const pits = [];
         let flag = null;
         let startX = 50, startY = 300;
         
@@ -1502,10 +1625,14 @@ async function createMarioGame(settings) {
                     case 'coin':
                         coins.push(obj);
                         break;
+                    case 'pit':
+                        pits.push(obj);
+                        break;
                     case 'flag':
                         flag = obj;
                         break;
                     case 'spawn':
+                        console.log('Processing spawn case: setting startX to', obj.x, 'startY to', obj.y);
                         startX = obj.x;
                         startY = obj.y;
                         break;
@@ -1675,7 +1802,7 @@ async function createMarioGame(settings) {
             }
         }
 
-        return {platforms, blocks, enemies, coins, flag, castles, startX, startY};
+        return {platforms, blocks, enemies, coins, pits, flag, castles, startX, startY};
     }
     
     
@@ -1762,30 +1889,131 @@ async function createMarioGame(settings) {
         });
     }
     
+    function resetMarioPosition() {
+        // Reset Mario to starting position and state
+        game.player.x = game.currentLayout?.startX || 50;
+        game.player.y = game.currentLayout?.startY || 300;
+        game.player.vx = 0;
+        game.player.vy = 0;
+        game.player.onGround = false; // Let gravity handle landing
+        game.player.powerState = 'small';
+        game.player.width = 16;
+        game.player.height = 16;
+        game.player.facingRight = true;
+        game.player.shootCooldown = 0;
+        game.player.invincibleTimer = 0;
+        console.log('Mario position set to:', game.player.x, game.player.y);
+    }
+    
+    async function initializeGameState(preserveLives = false) {
+        console.log('initializeGameState called with preserveLives:', preserveLives);
+        const currentLives = preserveLives ? game.livesToRestore : 3;
+        console.log('Using lives:', currentLives);
+        
+        try {
+            let mapFile, theme;
+            if (game.currentLevel === 1) {
+                mapFile = 'mario-1-1-map.txt';
+                theme = 'overworld';
+            } else if (game.currentLevel === 2) {
+                mapFile = 'mario-1-2-map.txt';
+                theme = 'underground';
+            } else if (game.currentLevel === 3) {
+                mapFile = 'mario-1-3-map.txt';
+                theme = 'trees';
+            } else if (game.currentLevel === 4) {
+                mapFile = 'mario-1-4-map.txt';
+                theme = 'castle';
+            }
+            
+            const response = await fetch(`./games/mario/${mapFile}?v=${Date.now()}`);
+            const mapText = await response.text();
+            const layout = parseASCIIMap(mapText);
+            
+            // Set theme
+            game.currentTheme = theme;
+            ThemeSystem.setTheme(theme);
+            
+            // Store layout for reset purposes
+            game.currentLayout = layout;
+            
+            // Reset all game state
+            game.platforms = layout.platforms;
+            game.blocks = layout.blocks;
+            game.enemies = layout.enemies;
+            game.coins = layout.coins || [];
+            game.pits = layout.pits || [];
+            game.flag = layout.flag;
+            game.castles = layout.castles || [];
+            
+            // Reset Mario completely
+            console.log('Setting Mario position to startX:', layout.startX, 'startY:', layout.startY);
+            game.player.x = layout.startX;
+            game.player.y = layout.startY;
+            game.player.vx = 0;
+            game.player.vy = 0;
+            game.player.onGround = false;
+            game.player.powerState = 'small';
+            game.player.width = 16;
+            game.player.height = 16;
+            game.player.facingRight = true;
+            game.player.shootCooldown = 0;
+            game.player.invincibleTimer = 0;
+            game.player.lives = currentLives;
+            
+            // Reset camera
+            game.camera.x = 0;
+            
+            // Reset other game state
+            game.powerUps = [];
+            game.particles = [];
+            game.fireballs = [];
+            game.gameOver = false;
+            game.won = false;
+            
+            console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
+            
+        } catch (error) {
+            console.error('Failed to load map:', error);
+            // Fallback to basic level
+            game.platforms = [{x: 0, y: 350, width: 2000, height: 50}];
+            game.blocks = [];
+            game.enemies = [];
+            game.pits = [];
+            game.flag = {x: 1800, y: 200, width: 35, height: 150};
+            game.castles = [];
+        }
+    }
+    
+    async function initializeLevel() {
+        return initializeGameState(false); // Fresh start with 3 lives
+    }
+    
     function resetLevel() {
         // Store current lives count
         const currentLives = game.player.lives;
+        
+        console.log('resetLevel() called - setting needsLevelReset flag, lives:', currentLives);
         
         // Set flag to reload level on next frame
         game.needsLevelReset = true;
         game.livesToRestore = currentLives;
     }
     
-    function checkPitCollision() {
-        game.pits.forEach(pit => {
-            if (game.player.x + game.player.width > pit.x && 
-                game.player.x < pit.x + pit.width && 
-                game.player.y + game.player.height > 400) {
-                game.player.lives--;
-                if (game.player.lives <= 0) {
-                    game.gameOver = true;
-                } else {
-                    game.player.x = 50;
-                    game.player.y = 300;
-                    game.camera.x = 0;
-                }
+    function checkScreenBoundary() {
+        // Check if Mario fell below the screen
+        if (game.player.y > 500) {
+            console.log('Mario fell below screen! Lives before:', game.player.lives);
+            game.player.lives--;
+            console.log('Lives after decrement:', game.player.lives);
+            if (game.player.lives <= 0) {
+                console.log('Game over triggered');
+                game.gameOver = true;
+            } else {
+                console.log('Calling resetLevel()');
+                resetLevel();
             }
-        });
+        }
     }
     
     function handlePlatformCollision(entity) {
@@ -2042,16 +2270,6 @@ async function createMarioGame(settings) {
                 }
             }
         });
-        
-        // Check if Mario fell into a pit (below screen)
-        if (game.player.y > 450) {
-            game.player.lives--;
-            if (game.player.lives <= 0) {
-                game.gameOver = true;
-            } else {
-                resetLevel();
-            }
-        }
         
         game.camera.x = Math.max(0, game.player.x - 300);
     }
@@ -2357,7 +2575,7 @@ async function createMarioGame(settings) {
     }
     
     function checkWin() {
-        if (game.player.x + game.player.width > game.flag.x) {
+        if (game.flag && game.player.x + game.player.width > game.flag.x) {
             nextLevel();
         }
     }
@@ -2788,6 +3006,38 @@ async function createMarioGame(settings) {
             }
         });
         
+        // Pits (render lava for castle theme)
+        if (game.pits && game.pits.length > 0) {
+            game.pits.forEach(pit => {
+                if (ThemeSystem.current?.name === 'Castle') {
+                    // Bubbling lava pit
+                    const lavaY = 380; // Ground level
+                    const lavaHeight = 100;
+                    
+                    // Base lava
+                    ctx.fillStyle = ThemeSystem.getColor('lava');
+                    ctx.fillRect(pit.x, lavaY, pit.width, lavaHeight);
+                    
+                    // Animated bubbles
+                    const time = game.frameCount * 0.1;
+                    const bubbleCount = Math.floor(pit.width / 8);
+                    
+                    for (let i = 0; i < bubbleCount; i++) {
+                        const bubbleX = pit.x + (i * 8) + Math.sin(time + i) * 2;
+                        const bubbleY = lavaY + 10 + Math.sin(time * 2 + i * 0.5) * 5;
+                        const bubbleSize = 2 + Math.sin(time * 3 + i) * 1;
+                        
+                        ctx.fillStyle = ThemeSystem.getColor('lavaBubble');
+                        ctx.fillRect(bubbleX, bubbleY, bubbleSize, bubbleSize);
+                    }
+                    
+                    // Lava glow effect
+                    ctx.fillStyle = '#FF6500';
+                    ctx.fillRect(pit.x, lavaY, pit.width, 3);
+                }
+            });
+        }
+        
         // Blocks
         game.blocks.forEach(block => {
             ThemeSystem.renderBlock(ctx, block);
@@ -2913,11 +3163,13 @@ async function createMarioGame(settings) {
         });
         
         // Flag
-        const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
-        ctx.fillStyle = flagPoleColor;
-        ctx.fillRect(game.flag.x, game.flag.y, 5, game.flag.height);
-        ctx.fillStyle = '#FF0000';
-        ctx.fillRect(game.flag.x + 5, game.flag.y, 30, 20);
+        if (game.flag) {
+            const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
+            ctx.fillStyle = flagPoleColor;
+            ctx.fillRect(game.flag.x, game.flag.y, 5, game.flag.height);
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(game.flag.x + 5, game.flag.y, 30, 20);
+        }
         
         ctx.restore();
         
@@ -2953,23 +3205,11 @@ async function createMarioGame(settings) {
     function gameLoop() {
         // Handle level reset if needed
         if (game.needsLevelReset) {
+            console.log('gameLoop: Processing needsLevelReset flag');
             game.needsLevelReset = false;
-            initializeLevel().then(() => {
-                game.player.lives = game.livesToRestore;
-                // Reset Mario to small state at starting position
-                game.player.powerState = 'small';
-                game.player.width = 16;
-                game.player.height = 16;
-                game.player.x = 50;
-                game.player.y = 300;
-                game.player.vx = 0;
-                game.player.vy = 0;
-                game.player.onGround = false;
-                game.player.facingRight = true;
-                game.player.shootCooldown = 0;
-                game.player.invincibleTimer = 0;
-                game.camera.x = 0;
-                
+            console.log('gameLoop: Calling initializeGameState(true)');
+            initializeGameState(true).then(() => {
+                console.log('gameLoop: initializeGameState completed, continuing game loop');
                 // Continue game loop after reset
                 if (!game.gameOver && !game.won) {
                     requestAnimationFrame(gameLoop);
@@ -2985,7 +3225,7 @@ async function createMarioGame(settings) {
         updatePowerUps();
         updateFireballs();
         updateParticles();
-        checkPitCollision();
+        checkScreenBoundary();
         checkCoinCollection();
         checkWin();
         render();
@@ -3003,16 +3243,11 @@ async function createMarioGame(settings) {
         }
         
         if (game.gameOver && e.code === 'KeyR') {
-            game.player = { 
-                x: 50, y: 300, width: 16, height: 16, 
-                vx: 0, vy: 0, onGround: false, 
-                lives: 3, score: 0, powerState: 'small'
-            };
-            game.camera.x = 0;
-            game.enemies.forEach(enemy => enemy.alive = true);
-            game.gameOver = false;
-            game.won = false;
-            gameLoop();
+            console.log('R key pressed - restarting game');
+            initializeGameState(false).then(() => {
+                console.log('Game restarted successfully');
+                gameLoop();
+            });
         }
         
         e.preventDefault();
