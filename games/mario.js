@@ -125,14 +125,14 @@ class PhysicsSystem {
                 }
             });
             
-            // Screen boundaries
+            // Screen boundaries - fix boundary collision
             if (transform.x <= 0) {
                 transform.x = 0;
-                physics.vx *= -1;
+                physics.vx = Math.abs(physics.vx); // Force rightward movement
             }
             if (transform.x >= this.game.levelWidth - transform.width) {
                 transform.x = this.game.levelWidth - transform.width;
-                physics.vx *= -1;
+                physics.vx = -Math.abs(physics.vx); // Force leftward movement
             }
         });
     }
