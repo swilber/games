@@ -35,14 +35,31 @@ class Physics {
 }
 
 class Sprite {
-    constructor(color = '#FF0000') {
-        this.color = color; this.facingRight = true;
+    constructor(color = '#FF0000', type = null) {
+        this.color = color; 
+        this.facingRight = true;
+        this.type = type;
+        this.powerState = 'small';
+        this.invincible = false;
+        this.state = 'walking';
     }
 }
 
 class AI {
     constructor(type = 'patrol') {
         this.type = type; this.direction = -1; this.state = 'active';
+    }
+}
+
+class Camera {
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+    
+    move(dx, dy) {
+        this.x += dx;
+        this.y += dy;
     }
 }
 
@@ -81,19 +98,21 @@ class PhysicsSystem {
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics');
         
-        entities.forEach((entity, index) => {
+        entities.forEach(entity => {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
             
             // Apply gravity
-            physics.vy += physics.gravity;
+            physics.vy += 0.5;
             
-            // Update position
+            // Apply velocity
             transform.x += physics.vx;
             transform.y += physics.vy;
             
-            // Platform collision - check all platforms and blocks
+            // Ground collision at y=350 as fallback
             physics.onGround = false;
+            
+            // Platform and block collision
             const allSolids = [...this.game.platforms, ...this.game.blocks];
             
             allSolids.forEach(solid => {
@@ -102,38 +121,59 @@ class PhysicsSystem {
                     transform.y < solid.y + solid.height &&
                     transform.y + transform.height > solid.y) {
                     
-                    // Landing on top
-                    if (physics.vy > 0 && transform.y < solid.y) {
+                    // Calculate overlap amounts
+                    const overlapLeft = (transform.x + transform.width) - solid.x;
+                    const overlapRight = (solid.x + solid.width) - transform.x;
+                    const overlapTop = (transform.y + transform.height) - solid.y;
+                    const overlapBottom = (solid.y + solid.height) - transform.y;
+                    
+                    // Find smallest overlap to determine collision direction
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                    
+                    if (minOverlap === overlapTop && physics.vy >= 0) {
+                        // Landing on top
                         transform.y = solid.y - transform.height;
                         physics.vy = 0;
                         physics.onGround = true;
-                    }
-                    // Hitting from below
-                    else if (physics.vy < 0 && transform.y > solid.y) {
+                    } else if (minOverlap === overlapBottom && physics.vy < 0) {
+                        // Hitting from below
                         transform.y = solid.y + solid.height;
                         physics.vy = 0;
-                    }
-                    // Side collision
-                    else if (physics.vx > 0 && transform.x < solid.x) {
+                    } else if (minOverlap === overlapLeft && physics.vx > 0) {
+                        // Hit right side of solid
                         transform.x = solid.x - transform.width;
-                        physics.vx *= -1; // Reverse direction for enemies
-                    }
-                    else if (physics.vx < 0 && transform.x > solid.x) {
+                        physics.vx *= -1;
+                        // Update AI direction for entities with AI
+                        const ai = entity.get('ai');
+                        if (ai) ai.direction = physics.vx;
+                    } else if (minOverlap === overlapRight && physics.vx < 0) {
+                        // Hit left side of solid
                         transform.x = solid.x + solid.width;
-                        physics.vx *= -1; // Reverse direction for enemies
+                        physics.vx *= -1;
+                        // Update AI direction for entities with AI
+                        const ai = entity.get('ai');
+                        if (ai) ai.direction = physics.vx;
                     }
                 }
             });
             
-            // Screen boundaries - fix boundary collision
-            if (transform.x <= 0) {
-                transform.x = 0;
-                physics.vx = Math.abs(physics.vx); // Force rightward movement
+            // Fallback ground collision if no platform collision
+            if (!physics.onGround && transform.y + transform.height >= 380) {
+                transform.y = 380 - transform.height;
+                physics.vy = 0;
+                physics.onGround = true;
             }
-            if (transform.x >= this.game.levelWidth - transform.width) {
-                transform.x = this.game.levelWidth - transform.width;
-                physics.vx = -Math.abs(physics.vx); // Force leftward movement
+            
+            // Screen boundaries
+            if (transform.x <= 0 && physics.vx < 0) {
+                physics.vx *= -1;
             }
+            if (transform.x >= 3200 - transform.width && physics.vx > 0) {
+                physics.vx *= -1;
+            }
+            
+            // Terminal velocity
+            if (physics.vy > 15) physics.vy = 15;
         });
     }
 }
@@ -150,29 +190,41 @@ class AISystem {
             const physics = entity.get('physics');
             const ai = entity.get('ai');
             
-            if (ai.type === 'patrol') {
+            // Ensure entity always has movement velocity
+            if (physics.vx === 0) {
                 physics.vx = ai.direction;
-                
-                // Reverse at level boundaries
-                if (transform.x <= 0 || transform.x >= this.game.levelWidth - transform.width) {
-                    ai.direction *= -1;
-                }
-                
-                // Reverse at platform edges (simplified)
-                let foundGround = false;
-                this.game.platforms.forEach(platform => {
-                    const checkX = transform.x + (ai.direction > 0 ? transform.width + 10 : -10);
-                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                        transform.y + transform.height >= platform.y - 20 &&
-                        transform.y + transform.height <= platform.y + 20) {
-                        foundGround = true;
-                    }
-                });
-                
-                if (!foundGround && physics.onGround) {
-                    ai.direction *= -1;
-                }
             }
+            
+            // Check for pits ahead
+            const checkX = transform.x + (ai.direction > 0 ? transform.width + 5 : -5);
+            const checkY = transform.y + transform.height + 10; // Look below feet
+            
+            let foundGround = false;
+            // Check platforms for ground ahead
+            this.game.platforms.forEach(platform => {
+                if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                    checkY >= platform.y && checkY <= platform.y + platform.height) {
+                    foundGround = true;
+                }
+            });
+            
+            // Turn around if no ground ahead (pit detection)
+            if (!foundGround && physics.onGround) {
+                ai.direction *= -1;
+                physics.vx = ai.direction;
+            }
+            
+            // Check boundaries and reverse direction if needed
+            if (transform.x <= 0 && ai.direction < 0) {
+                ai.direction = 1;
+                physics.vx = 1;
+            } else if (transform.x >= 3200 - transform.width && ai.direction > 0) {
+                ai.direction = -1;
+                physics.vx = -1;
+            }
+            
+            // Ensure velocity matches direction
+            physics.vx = ai.direction;
         });
     }
 }
@@ -225,21 +277,163 @@ class CollisionSystem {
     }
 }
 
+class PlayerSyncSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
+        if (playerEntity && this.game.player) {
+            const transform = playerEntity.get('transform');
+            const physics = playerEntity.get('physics');
+            
+            // Sync entity with player object (both ways)
+            transform.x = this.game.player.x;
+            transform.y = this.game.player.y;
+            transform.width = this.game.player.width;
+            transform.height = this.game.player.height;
+            physics.vx = this.game.player.vx;
+            physics.vy = this.game.player.vy;
+            physics.onGround = this.game.player.onGround;
+        }
+    }
+}
+
+class ImprovedCollisionSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerPhysics = playerEntity.get('physics');
+        
+        const enemies = entityManager.query('transform', 'ai');
+        enemies.forEach(enemy => {
+            const enemyTransform = enemy.get('transform');
+            
+            if (this.isColliding(playerTransform, enemyTransform)) {
+                // Check if player is stomping (falling and above enemy)
+                if (playerPhysics.vy > 0 && playerTransform.y < enemyTransform.y - 8) {
+                    // Stomp enemy
+                    enemyTransform.height = 8;
+                    enemy.components.delete('ai');
+                    enemy.components.delete('physics');
+                    playerPhysics.vy = -8; // Bounce
+                    this.game.player.vy = -8; // Also bounce the actual player
+                    this.game.player.score += 100;
+                } else {
+                    // Side collision - damage player
+                    if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                        this.game.player.powerState = 'small';
+                        this.game.player.width = 16;
+                        this.game.player.height = 16;
+                        this.game.player.y += 16;
+                    } else {
+                        this.game.player.lives--;
+                        if (this.game.player.lives <= 0) {
+                            this.game.gameOver = true;
+                        }
+                    }
+                    this.game.player.invincible = true;
+                    this.game.player.invincibleTimer = 120;
+                }
+            }
+        });
+    }
+    
+    isColliding(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
+    }
+}
+
+class ImprovedRenderSystem {
+    constructor(spriteRenderer) {
+        this.lastLogTime = 0;
+        this.spriteRenderer = spriteRenderer;
+    }
+    
+    render(ctx, entityManager, camera) {
+        const entities = entityManager.query('transform', 'sprite');
+        
+        // Throttled debug logging once per second
+        const now = Date.now();
+        if (now - this.lastLogTime >= 1000) {
+            console.log(`--- Mario Entity Update (${now - this.lastLogTime}ms since last) ---`);
+            entities.forEach(entity => {
+                const transform = entity.get('transform');
+                const screenX = transform.x - camera.x;
+                console.log(`Entity ${entity.id}: global(${transform.x}, ${transform.y}) screen(${screenX}, ${transform.y})`);
+            });
+            this.lastLogTime = now;
+        }
+        
+        entities.forEach(entity => {
+            const transform = entity.get('transform');
+            const sprite = entity.get('sprite');
+            
+            // Convert world coordinates to screen coordinates
+            const screenX = transform.x - camera.x;
+            const screenY = transform.y - camera.y;
+            
+            // Create fake object for sprite renderer
+            const fakeObject = {
+                x: screenX,
+                y: screenY,
+                width: transform.width,
+                height: transform.height,
+                alive: true,
+                facingRight: sprite.facingRight !== false
+            };
+            
+            // Use proper sprite rendering based on entity type
+            if (entity.id === 'player') {
+                // Render Mario using player sprite system
+                fakeObject.powerState = sprite.powerState || 'small';
+                fakeObject.invincible = sprite.invincible || false;
+                this.spriteRenderer.player.mario(ctx, fakeObject);
+            } else if (entity.id.startsWith('goomba')) {
+                // Render goomba using enemy sprite system
+                fakeObject.type = 'goomba';
+                this.spriteRenderer.enemies.goomba(ctx, fakeObject);
+            } else if (entity.id.startsWith('koopa')) {
+                // Render koopa using enemy sprite system
+                fakeObject.type = 'koopa';
+                fakeObject.state = sprite.state || 'walking';
+                this.spriteRenderer.enemies.koopa(ctx, fakeObject);
+            } else {
+                // Fallback to colored rectangle for unknown entities
+                ctx.fillStyle = sprite.color || '#FF0000';
+                ctx.fillRect(screenX, screenY, transform.width, transform.height);
+            }
+        });
+    }
+}
+
 class RenderSystem {
     constructor(spriteRenderer) {
         this.spriteRenderer = spriteRenderer;
     }
     
     render(ctx, entityManager, camera) {
-        const entities = entityManager.query('transform', 'sprite', 'ai');
+        const entities = entityManager.query('transform', 'sprite');
+        
+        console.log('RenderSystem: Found', entities.length, 'entities to render');
+        entities.forEach((entity, index) => {
+            console.log(`Entity ${index} components:`, Array.from(entity.components.keys()));
+        });
         
         entities.forEach((entity, index) => {
             const transform = entity.get('transform');
             
-            // Debug first entity to see coordinate issue
-            if (index === 0) {
-                console.log('Entity 0 render: world=', transform.x, 'camera=', camera.x, 'screen=', transform.x - camera.x);
-            }
+            // Debug removed - was causing console spam
             
             // Create a fake enemy object for the sprite renderer
             // NOTE: ctx is already translated by camera, so use world coordinates directly
@@ -945,26 +1139,26 @@ async function createMarioGame(settings) {
                     shadowColor = '#654321'; // Normal dark brown
                 }
                 
-                // Goomba body - brown mushroom with proper shape
+                // Goomba body - brown mushroom with proper shape (moved down to fill height)
                 ctx.fillStyle = bodyColor;
-                ctx.fillRect(enemy.x + 2, enemy.y + 6, 16, 10); // Main body
-                ctx.fillRect(enemy.x + 4, enemy.y + 4, 12, 2);  // Top cap
-                ctx.fillRect(enemy.x + 6, enemy.y + 2, 8, 2);   // Very top
+                ctx.fillRect(enemy.x + 2, enemy.y + 8, 16, 10); // Main body (moved down 2px)
+                ctx.fillRect(enemy.x + 4, enemy.y + 6, 12, 2);  // Top cap (moved down 2px)
+                ctx.fillRect(enemy.x + 6, enemy.y + 4, 8, 2);   // Very top (moved down 2px)
                 
                 // Darker brown for shading
                 ctx.fillStyle = shadowColor;
-                ctx.fillRect(enemy.x + 3, enemy.y + 7, 14, 1);  // Body shadow
+                ctx.fillRect(enemy.x + 3, enemy.y + 9, 14, 1);  // Body shadow (moved down 2px)
                 
                 // Eyes - white background with black pupils
                 ctx.fillStyle = '#FFF';
-                ctx.fillRect(enemy.x + 5, enemy.y + 8, 2, 2);
-                ctx.fillRect(enemy.x + 13, enemy.y + 8, 2, 2);
+                ctx.fillRect(enemy.x + 5, enemy.y + 10, 2, 2);  // Eyes (moved down 2px)
+                ctx.fillRect(enemy.x + 13, enemy.y + 10, 2, 2);
                 
                 // Animated eye pupils
                 ctx.fillStyle = '#000';
                 const eyeOffset = enemy.animFrame === 0 ? 0 : 1;
-                ctx.fillRect(enemy.x + 5 + eyeOffset, enemy.y + 8, 1, 1);
-                ctx.fillRect(enemy.x + 14 - eyeOffset, enemy.y + 8, 1, 1);
+                ctx.fillRect(enemy.x + 5 + eyeOffset, enemy.y + 10, 1, 1);  // Pupils (moved down 2px)
+                ctx.fillRect(enemy.x + 14 - eyeOffset, enemy.y + 10, 1, 1);
                 
                 // Angry eyebrows
                 ctx.fillStyle = '#000';
@@ -1318,12 +1512,15 @@ async function createMarioGame(settings) {
     };
     
     // Initialize RenderSystem now that SpriteRenderer is defined
-    game.renderSystem = new RenderSystem(SpriteRenderer);
+    // game.renderSystem = new RenderSystem(SpriteRenderer); // Disabled - using ImprovedRenderSystem
+    game.improvedRenderSystem = new ImprovedRenderSystem(SpriteRenderer);
+    game.camera = new Camera(0, 0);
     
-    // Initialize Entity Systems once (not on every reset)
+    // Initialize Entity Systems once (not on every reset) - using improved versions
     game.entityManager.addSystem(new PhysicsSystem(game));
-    game.entityManager.addSystem(new AISystem(game));
-    // CollisionSystem will be added after resetLevel function is defined
+    game.entityManager.addSystem(new PlayerSyncSystem(game));
+    game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
+    game.entityManager.addSystem(new ImprovedCollisionSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -1828,33 +2025,56 @@ async function createMarioGame(settings) {
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
             
-            // Convert goombas to entities, keep others as regular enemies
+            // Convert ALL enemies to entities
             // Clear existing entities first
             game.entityManager.entities.clear();
             
             console.log('DEBUG FIRST LOAD: layout.enemies count:', layout.enemies ? layout.enemies.length : 'undefined');
             
-            game.enemies = [];
+            game.enemies = []; // Keep empty - all enemies now in entity system
             
             // Process enemies from layout (from level data)
+            let goombaCount = 0;
+            let koopaCount = 0;
+            let enemyCount = 0;
+            
             if (layout.enemies) {
                 layout.enemies.forEach(enemy => {
                     if (enemy.type === 'goomba') {
+                        goombaCount++;
                         // Create entity for goomba
-                        const goombaEntity = game.entityManager.create()
-                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
+                        const goombaEntity = game.entityManager.create(`goomba${goombaCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 300, 20, 18))
                             .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#8B4513'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'koopa') {
+                        koopaCount++;
+                        // Create entity for koopa
+                        const koopaEntity = game.entityManager.create(`koopa${koopaCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 300, 20, 24))
+                            .add('physics', new Physics(-0.5, 0))
+                            .add('sprite', new Sprite('#00AA00'))
+                            .add('ai', new AI('patrol'));
                     } else {
-                        // Keep other enemies as regular objects
-                        game.enemies.push(enemy);
+                        enemyCount++;
+                        // Convert other enemy types to entities too
+                        const enemyEntity = game.entityManager.create(`${enemy.type}${enemyCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 332, 20, 20))
+                            .add('physics', new Physics(-1, 0))
+                            .add('sprite', new Sprite('#FF6600'))
+                            .add('ai', new AI('patrol'));
                     }
                 });
             }
             
-            // Ensure no goombas remain in regular enemies array
-            game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
+            // All enemies now in entity system - no filtering needed
+            
+            // Add player entity for tracking
+            const playerEntity = game.entityManager.create('player')
+                .add('transform', new Transform(game.player.x, game.player.y, game.player.width, game.player.height))
+                .add('physics', new Physics(0, 0))
+                .add('sprite', new Sprite('#FF0000'));
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
@@ -2240,31 +2460,54 @@ async function createMarioGame(settings) {
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
             
-            // Convert goombas to entities, keep others as regular enemies
+            // Convert ALL enemies to entities
             // Clear existing entities first
             game.entityManager.entities.clear();
             
-            game.enemies = [];
+            game.enemies = []; // Keep empty - all enemies now in entity system
             
             // Process enemies from layout (from level data)
+            let goombaCount = 0;
+            let koopaCount = 0;
+            let enemyCount = 0;
+            
             if (layout.enemies) {
                 layout.enemies.forEach(enemy => {
                     if (enemy.type === 'goomba') {
+                        goombaCount++;
                         // Create entity for goomba
-                        const goombaEntity = game.entityManager.create()
+                        const goombaEntity = game.entityManager.create(`goomba${goombaCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
                             .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#8B4513'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'koopa') {
+                        koopaCount++;
+                        // Create entity for koopa
+                        const koopaEntity = game.entityManager.create(`koopa${koopaCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 24))
+                            .add('physics', new Physics(-0.5, 0))
+                            .add('sprite', new Sprite('#00AA00'))
+                            .add('ai', new AI('patrol'));
                     } else {
-                        // Keep other enemies as regular objects
-                        game.enemies.push(enemy);
+                        enemyCount++;
+                        // Convert other enemy types to entities too
+                        const enemyEntity = game.entityManager.create(`${enemy.type}${enemyCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 20))
+                            .add('physics', new Physics(-1, 0))
+                            .add('sprite', new Sprite('#FF6600'))
+                            .add('ai', new AI('patrol'));
                     }
                 });
             }
             
-            // Ensure no goombas remain in regular enemies array
-            game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
+            // All enemies now in entity system - no filtering needed
+            
+            // Add player entity for tracking
+            const playerEntity = game.entityManager.create('player')
+                .add('transform', new Transform(game.player.x, game.player.y, game.player.width, game.player.height))
+                .add('physics', new Physics(0, 0))
+                .add('sprite', new Sprite('#FF0000'));
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
@@ -2333,8 +2576,7 @@ async function createMarioGame(settings) {
         game.livesToRestore = currentLives;
     }
     
-    // Initialize CollisionSystem now that resetLevel function is defined
-    game.entityManager.addSystem(new CollisionSystem(game, resetLevel));
+    // Old CollisionSystem removed - using ImprovedCollisionSystem instead
     
     function checkScreenBoundary() {
         // Check if Mario fell below the screen
@@ -2545,6 +2787,14 @@ async function createMarioGame(settings) {
         if ((game.keys['ArrowUp'] || game.keys['KeyW'] || game.keys['Space']) && game.player.onGround) {
             game.player.vy = -12;
             game.player.onGround = false;
+        }
+        
+        // Camera controls (separate from player movement)
+        if (game.keys['KeyQ']) {
+            game.camera.move(-3, 0);
+        }
+        if (game.keys['KeyE']) {
+            game.camera.move(3, 0);
         }
         
         // Shooting fireballs (fire Mario only)
@@ -3442,18 +3692,16 @@ async function createMarioGame(settings) {
             }
         });
         
-        // Enemies (except piranha plants and goombas which are rendered by entity system)
-        game.enemies.forEach(enemy => {
-            if (enemy.alive && enemy.type !== 'piranha' && enemy.type !== 'goomba') {
-                SpriteRenderer.enemies[enemy.type](ctx, enemy);
-            }
-        });
+        // Enemies - all now handled by entity system
+        // (Piranha plants and other enemies now rendered by ImprovedRenderSystem)
         
-        // Entity System Rendering - Phase 2 (in world coordinates)
+        ctx.restore();
+        
+        // Entity System Rendering - Phase 2 (render in screen coordinates)
+        game.improvedRenderSystem.render(ctx, game.entityManager, game.camera);
+        
         ctx.save();
         ctx.translate(-game.camera.x, 0);
-        game.renderSystem.render(ctx, game.entityManager, game.camera);
-        ctx.restore();
         
         // Coins
         game.coins.forEach(coin => {

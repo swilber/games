@@ -110,17 +110,24 @@
                     const transform = entity.get('transform');
                     const physics = entity.get('physics');
                     
-                    physics.vy += physics.gravity;
+                    // Apply gravity
+                    physics.vy += 0.5;
+                    
+                    // Apply velocity
                     transform.x += physics.vx;
                     transform.y += physics.vy;
                     
-                    if (transform.y > 350) {
-                        transform.y = 350;
+                    // Ground collision (platform at y=350)
+                    if (transform.y + transform.height > 350) {
+                        transform.y = 350 - transform.height;
                         physics.vy = 0;
                         physics.onGround = true;
                     } else {
                         physics.onGround = false;
                     }
+                    
+                    // Terminal velocity
+                    if (physics.vy > 15) physics.vy = 15;
                 });
             }
         }
@@ -133,24 +140,101 @@
                     const physics = entity.get('physics');
                     const ai = entity.get('ai');
                     
-                    physics.vx = ai.direction;
-                    
-                    if (transform.x <= 0 || transform.x >= 800 - transform.width) {
-                        ai.direction *= -1;
+                    // Check boundaries and reverse direction if needed
+                    if (transform.x <= 0 && ai.direction < 0) {
+                        ai.direction = 1;
+                    } else if (transform.x >= 800 - transform.width && ai.direction > 0) {
+                        ai.direction = -1;
                     }
+                    
+                    physics.vx = ai.direction;
                 });
             }
         }
 
+        class CollisionSystem {
+            update(entityManager) {
+                const player = entityManager.entities.get('player');
+                if (!player) return;
+                
+                const playerTransform = player.get('transform');
+                const playerPhysics = player.get('physics');
+                
+                const enemies = entityManager.query('transform', 'ai');
+                enemies.forEach(enemy => {
+                    const enemyTransform = enemy.get('transform');
+                    
+                    if (this.isColliding(playerTransform, enemyTransform)) {
+                        // Check if player is stomping (falling and above enemy)
+                        if (playerPhysics.vy > 0 && playerTransform.y < enemyTransform.y - 8) {
+                            // Stomp enemy
+                            enemyTransform.height = 8;
+                            enemy.components.delete('ai');
+                            enemy.components.delete('physics');
+                            playerPhysics.vy = -8; // Bounce
+                        } else {
+                            // Side collision - damage player
+                            playerTransform.x = 50;
+                            playerTransform.y = 300;
+                            playerPhysics.vx = 0;
+                            playerPhysics.vy = 0;
+                        }
+                    }
+                });
+            }
+            
+            isColliding(rect1, rect2) {
+                return rect1.x < rect2.x + rect2.width &&
+                       rect1.x + rect1.width > rect2.x &&
+                       rect1.y < rect2.y + rect2.height &&
+                       rect1.y + rect1.height > rect2.y;
+            }
+        }
+
+        class Camera {
+            constructor(x = 0, y = 0) {
+                this.x = x;
+                this.y = y;
+            }
+            
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+            }
+        }
+
         class RenderSystem {
-            render(ctx, entityManager) {
+            constructor() {
+                this.lastLogTime = 0;
+                console.log('RenderSystem created');
+            }
+            
+            render(ctx, entityManager, camera) {
                 const entities = entityManager.query('transform', 'sprite');
+                
+                // Log positions once per second
+                const now = Date.now();
+                if (now - this.lastLogTime >= 1000) {
+                    console.log(`--- Position Update (${now - this.lastLogTime}ms since last) ---`);
+                    entities.forEach(entity => {
+                        const transform = entity.get('transform');
+                        const cameraX = transform.x - camera.x;
+                        const cameraY = transform.y - camera.y;
+                        console.log(`Entity ${entity.id}: global(${transform.x}, ${transform.y}) camera(${cameraX}, ${cameraY})`);
+                    });
+                    this.lastLogTime = now;
+                }
+                
                 entities.forEach(entity => {
                     const transform = entity.get('transform');
                     const sprite = entity.get('sprite');
                     
+                    // Render at camera-relative position
+                    const screenX = transform.x - camera.x;
+                    const screenY = transform.y - camera.y;
+                    
                     ctx.fillStyle = sprite.color;
-                    ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
+                    ctx.fillRect(screenX, screenY, transform.width, transform.height);
                 });
             }
         }
@@ -167,22 +251,84 @@
             
             entityManager.addSystem(new PhysicsSystem());
             entityManager.addSystem(new AISystem());
+            entityManager.addSystem(new CollisionSystem());
             const renderSystem = new RenderSystem();
+            const camera = new Camera(0, 0);
             
             // Create entities
-            const player = new Entity('player')
+            const player = entityManager.create('player')
                 .add('transform', new Transform(50, 300, 16, 16))
                 .add('physics', new Physics(0, 0))
                 .add('sprite', new Sprite('#FF0000'));
                 
-            const goomba = new Entity()
+            const goomba1 = entityManager.create('goomba1')
                 .add('transform', new Transform(200, 334, 16, 16))
                 .add('physics', new Physics(-1, 0))
                 .add('sprite', new Sprite('#8B4513'))
                 .add('ai', new AI('patrol'));
                 
-            const platform = new Entity()
-                .add('transform', new Transform(0, 366, 800, 34))
+            const goomba2 = entityManager.create('goomba2')
+                .add('transform', new Transform(900, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const goomba3 = entityManager.create('goomba3')
+                .add('transform', new Transform(1200, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const goomba4 = entityManager.create('goomba4')
+                .add('transform', new Transform(600, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const goomba5 = entityManager.create('goomba5')
+                .add('transform', new Transform(800, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const goomba6 = entityManager.create('goomba6')
+                .add('transform', new Transform(1400, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const goomba7 = entityManager.create('goomba7')
+                .add('transform', new Transform(1600, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const koopa1 = entityManager.create('koopa1')
+                .add('transform', new Transform(400, 334, 16, 24))
+                .add('physics', new Physics(-0.5, 0))
+                .add('sprite', new Sprite('#00AA00'))
+                .add('ai', new AI('patrol'));
+                
+            const koopa2 = entityManager.create('koopa2')
+                .add('transform', new Transform(1500, 334, 16, 24))
+                .add('physics', new Physics(-0.5, 0))
+                .add('sprite', new Sprite('#00AA00'))
+                .add('ai', new AI('patrol'));
+                
+            const coin1 = entityManager.create('coin1')
+                .add('transform', new Transform(300, 280, 12, 12))
+                .add('sprite', new Sprite('#FFD700'));
+                
+            const coin2 = entityManager.create('coin2')
+                .add('transform', new Transform(1100, 280, 12, 12))
+                .add('sprite', new Sprite('#FFD700'));
+                
+            const coin3 = entityManager.create('coin3')
+                .add('transform', new Transform(1800, 280, 12, 12))
+                .add('sprite', new Sprite('#FFD700'));
+                
+            const platform = entityManager.create('platform')
+                .add('transform', new Transform(0, 350, 2000, 50))
                 .add('sprite', new Sprite('#00AA00'));
             
             // Input
@@ -206,11 +352,19 @@
                     playerPhysics.vy = -12;
                 }
                 
+                // Camera controls
+                if (keys['KeyA'] || keys['ArrowLeft']) {
+                    camera.move(-3, 0);
+                }
+                if (keys['KeyD'] || keys['ArrowRight']) {
+                    camera.move(3, 0);
+                }
+                
                 entityManager.update();
                 
                 ctx.fillStyle = '#5C94FC';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                renderSystem.render(ctx, entityManager);
+                renderSystem.render(ctx, entityManager, camera);
                 
                 ctx.fillStyle = '#000';
                 ctx.font = '16px Arial';
