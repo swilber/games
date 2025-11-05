@@ -231,12 +231,14 @@ class RenderSystem {
     
     render(ctx, entityManager) {
         const entities = entityManager.query('transform', 'sprite', 'ai');
+        console.log('RenderSystem: Found', entities.length, 'entities to render');
+        
         entities.forEach((entity, index) => {
             const transform = entity.get('transform');
             
-            // Debug: Log first goomba position
-            if (index === 0) {
-                console.log('Entity 0 world position:', transform.x, transform.y);
+            // Debug: Log first few entity positions
+            if (index < 3) {
+                console.log(`Entity ${index} world position:`, transform.x, transform.y);
             }
             
             // Create a fake enemy object for the sprite renderer
