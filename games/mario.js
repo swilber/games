@@ -91,21 +91,48 @@ class PhysicsSystem {
             transform.x += physics.vx;
             transform.y += physics.vy;
             
-            // Platform collision (simplified)
+            // Platform collision - check all platforms and blocks
             physics.onGround = false;
-            this.game.platforms.forEach(platform => {
-                if (transform.x < platform.x + platform.width &&
-                    transform.x + transform.width > platform.x &&
-                    transform.y < platform.y + platform.height &&
-                    transform.y + transform.height > platform.y) {
+            const allSolids = [...this.game.platforms, ...this.game.blocks];
+            
+            allSolids.forEach(solid => {
+                if (transform.x < solid.x + solid.width &&
+                    transform.x + transform.width > solid.x &&
+                    transform.y < solid.y + solid.height &&
+                    transform.y + transform.height > solid.y) {
                     
-                    if (physics.vy > 0 && transform.y < platform.y) {
-                        transform.y = platform.y - transform.height;
+                    // Landing on top
+                    if (physics.vy > 0 && transform.y < solid.y) {
+                        transform.y = solid.y - transform.height;
                         physics.vy = 0;
                         physics.onGround = true;
                     }
+                    // Hitting from below
+                    else if (physics.vy < 0 && transform.y > solid.y) {
+                        transform.y = solid.y + solid.height;
+                        physics.vy = 0;
+                    }
+                    // Side collision
+                    else if (physics.vx > 0 && transform.x < solid.x) {
+                        transform.x = solid.x - transform.width;
+                        physics.vx *= -1; // Reverse direction for enemies
+                    }
+                    else if (physics.vx < 0 && transform.x > solid.x) {
+                        transform.x = solid.x + solid.width;
+                        physics.vx *= -1; // Reverse direction for enemies
+                    }
                 }
             });
+            
+            // Screen boundaries
+            if (transform.x <= 0) {
+                transform.x = 0;
+                physics.vx *= -1;
+            }
+            if (transform.x >= this.game.levelWidth - transform.width) {
+                transform.x = this.game.levelWidth - transform.width;
+                physics.vx *= -1;
+            }
         });
     }
 }
@@ -161,7 +188,7 @@ class CollisionSystem {
         goombaEntities.forEach(entity => {
             const transform = entity.get('transform');
             
-            // Check collision with player
+            // Check collision with player (both in world coordinates)
             if (!this.game.player.invincible &&
                 this.game.player.x < transform.x + transform.width &&
                 this.game.player.x + this.game.player.width > transform.x &&
@@ -3379,7 +3406,7 @@ async function createMarioGame(settings) {
             }
         });
         
-        // Entity System Rendering - Phase 1
+        // Entity System Rendering - Phase 2 (in world coordinates)
         ctx.save();
         ctx.translate(-game.camera.x, 0);
         game.renderSystem.render(ctx, game.entityManager);
