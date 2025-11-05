@@ -376,7 +376,22 @@ class InteractiveSystem {
                     width: 16,
                     height: 16
                 });
+            } else {
+                // Determine power-up type based on Mario's current state
+                let powerUpType = block.content;
+                if (block.content === 'fireflower' && this.game.player.powerState === 'small') {
+                    powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
+                }
+                
+                this.game.powerUps.push({
+                    x: block.x, y: block.y - 32,
+                    width: 32, height: 32,
+                    type: powerUpType, 
+                    vx: powerUpType === 'fireflower' ? 0 : 1, // Fire flowers don't move
+                    vy: 0
+                });
             }
+            block.content = null;
         }
     }
 }
