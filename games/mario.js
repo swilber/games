@@ -1844,6 +1844,10 @@ async function createMarioGame(settings) {
             console.log('FIRST LOAD - Final game.enemies array has', game.enemies.length, 'regular enemies');
             console.log('FIRST LOAD - EntityManager has', game.entityManager.entities.size, 'entities');
             
+            // Double-check: remove any goombas that might have slipped through
+            game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
+            console.log('FIRST LOAD - After filtering, game.enemies has', game.enemies.length, 'non-goomba enemies');
+            
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
             game.flag = layout.flag;
@@ -2251,6 +2255,10 @@ async function createMarioGame(settings) {
             });
             console.log('RESET - Final game.enemies array has', game.enemies.length, 'regular enemies');
             console.log('RESET - EntityManager has', game.entityManager.entities.size, 'entities');
+            
+            // Double-check: remove any goombas that might have slipped through
+            game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
+            console.log('RESET - After filtering, game.enemies has', game.enemies.length, 'non-goomba enemies');
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
