@@ -1882,307 +1882,35 @@ async function createMarioGame(settings) {
         empty: () => null // Sky/empty space
     };
     
-    // Enemy Behavior System - defined after game object
-    const EnemyBehaviors = {
-        goomba: {
-            states: ['walking', 'dead'],
-            defaultState: 'walking',
-            
-            movement: (enemy) => {
-                if (enemy.state !== 'walking') return;
-                
-                // Check for pit ahead before moving
-                const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
-                const checkY = enemy.y + enemy.height + 20;
-                
-                let foundGround = false;
-                game.platforms.forEach(platform => {
-                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                        checkY >= platform.y && checkY <= platform.y + platform.height) {
-                        foundGround = true;
-                    }
-                });
-                
-                if (!foundGround) {
-                    enemy.vx = -enemy.vx;
-                }
-                
-                enemy.x += enemy.vx;
-            },
-            
-            onStomp: (enemy, player) => {
-                enemy.alive = false;
-                player.vy = -8;
-                player.score += 100;
-            },
-            
-            onSideHit: (enemy, player) => {
-                // Normal enemy collision - handle power-up states
-                if (player.powerState === 'big' || player.powerState === 'fire') {
-                    player.powerState = 'small';
-                    player.width = 16;
-                    player.height = 16;
-                    player.y += 16;
-                    player.invincible = true;
-                    player.invincibleTimer = 120;
-                    
-                    if (player.x < enemy.x) {
-                        player.x -= 20;
-                    } else {
-                        player.x += 20;
-                    }
-                } else {
-                    player.lives--;
-                    if (player.lives <= 0) {
-                        game.gameOver = true;
-                    } else {
-                        resetLevel();
-                    }
-                }
+    
+    async function initializeLevel() {
+        try {
+            let mapFile, theme;
+            if (game.currentLevel === 1) {
+                mapFile = 'mario-1-1-map.txt';
+                theme = 'overworld';
+            } else if (game.currentLevel === 2) {
+                mapFile = 'mario-1-2-map.txt';
+                theme = 'underground';
+            } else if (game.currentLevel === 3) {
+                mapFile = 'mario-1-3-map.txt';
+                theme = 'overworld';
+            } else if (game.currentLevel === 4) {
+                mapFile = 'mario-1-4-map.txt';
+                theme = 'castle';
             }
-        },
-        
-        koopa: {
-            states: ['walking', 'shell', 'shellMoving'],
-            defaultState: 'walking',
             
-            movement: (enemy) => {
-                if (enemy.state === 'walking') {
-                    // Check for pit ahead before moving
-                    const checkX = enemy.x + (enemy.vx > 0 ? enemy.width + 10 : -10);
-                    const checkY = enemy.y + enemy.height + 20;
-                    
-                    let foundGround = false;
-                    game.platforms.forEach(platform => {
-                        if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                            checkY >= platform.y && checkY <= platform.y + platform.height) {
-                            foundGround = true;
-                        }
-                    });
-                    
-                    if (!foundGround) {
-                        enemy.vx = -enemy.vx;
-                    }
-                    
-                    enemy.x += enemy.vx;
-                } else if (enemy.state === 'shell') {
-                    enemy.vx = 0;
-                } else if (enemy.state === 'shellMoving') {
-                    enemy.x += enemy.vx;
-                    // Moving shell can kill other enemies
-                    game.enemies.forEach(otherEnemy => {
-                        if (otherEnemy !== enemy && otherEnemy.alive &&
-                            enemy.x < otherEnemy.x + otherEnemy.width &&
-                            enemy.x + enemy.width > otherEnemy.x &&
-                            enemy.y < otherEnemy.y + otherEnemy.height &&
-                            enemy.y + enemy.height > otherEnemy.y) {
-                            otherEnemy.alive = false;
-                        }
-                    });
-                }
-            },
+            const response = await fetch(`./games/mario/${mapFile}?v=${Date.now()}`);
+            const mapText = await response.text();
+            const layout = parseASCIIMap(mapText);
             
-            onStomp: (enemy, player) => {
-                if (enemy.state === 'walking') {
-                    enemy.state = 'shell';
-                    enemy.vx = 0;
-                    enemy.height = 16;
-                    enemy.y += 4;
-                    player.vy = -8;
-                    player.score += 100;
-                } else if (enemy.state === 'shell') {
-                    enemy.state = 'shellMoving';
-                    enemy.vx = player.x < enemy.x ? 3 : -3;
-                    player.vy = -8;
-                    player.score += 400;
-                } else if (enemy.state === 'shellMoving') {
-                    enemy.state = 'shell';
-                    enemy.vx = 0;
-                    player.vy = -8;
-                    player.score += 100;
-                }
-            },
-            
-            onSideHit: (enemy, player) => {
-                if (enemy.state === 'shell') {
-                    enemy.state = 'shellMoving';
-                    enemy.vx = player.x < enemy.x ? 3 : -3;
-                    player.score += 400;
-                } else if (enemy.state === 'shellMoving') {
-                    enemy.state = 'shell';
-                    enemy.vx = 0;
-                    player.score += 100;
-                } else {
-                    // Walking koopa - normal collision
-                    if (player.powerState === 'big' || player.powerState === 'fire') {
-                        player.powerState = 'small';
-                        player.width = 16;
-                        player.height = 16;
-                        player.y += 16;
-                        player.invincible = true;
-                        player.invincibleTimer = 120;
-                        
-                        if (player.x < enemy.x) {
-                            player.x -= 20;
-                        } else {
-                            player.x += 20;
-                        }
-                    } else {
-                        player.lives--;
-                        if (player.lives <= 0) {
-                            game.gameOver = true;
-                        } else {
-                            resetLevel();
-                        }
-                    }
-                }
-            }
-        },
-        
-        parakoopa: {
-            states: ['flying'],
-            defaultState: 'flying',
-            
-            movement: (enemy) => {
-                if (!enemy.topY) enemy.topY = enemy.y; // 'k' position is top of flight
-                if (!enemy.flyDirection) enemy.flyDirection = 1; // Start flying down
-                if (!enemy.flySpeed) enemy.flySpeed = 1;
-                
-                // Move vertically
-                enemy.y += enemy.flyDirection * enemy.flySpeed;
-                
-                // Check flight limits (6 cells = 120 pixels total range)
-                const distanceFromTop = enemy.y - enemy.topY;
-                
-                if (enemy.flyDirection === 1 && distanceFromTop >= 120) {
-                    // Flying down and reached bottom limit (6 cells), start flying up
-                    enemy.flyDirection = -1;
-                } else if (enemy.flyDirection === -1 && distanceFromTop <= 0) {
-                    // Flying up and reached top limit, start flying down
-                    enemy.flyDirection = 1;
-                }
-            },
-            
-            onStomp: (enemy, player) => {
-                // Convert to regular koopa when stomped
-                enemy.type = 'koopa';
-                enemy.state = 'walking';
-                enemy.vx = -1;
-                enemy.flyDirection = 0;
-                player.vy = -8;
-                player.score += 100;
-            },
-            
-            onSideHit: (enemy, player) => {
-                // Same as regular koopa side hit
-                if (player.powerState === 'big' || player.powerState === 'fire') {
-                    player.powerState = 'small';
-                    player.width = 16;
-                    player.height = 16;
-                    player.y += 16;
-                    player.invincible = true;
-                    player.invincibleTimer = 120;
-                    
-                    if (player.x < enemy.x) {
-                        player.x -= 20;
-                    } else {
-                        player.x += 20;
-                    }
-                } else {
-                    player.lives--;
-                    if (player.lives <= 0) {
-                        game.gameOver = true;
-                    } else {
-                        resetLevel();
-                    }
-                }
-            }
-        },
-        
-        piranha: {
-            states: ['hidden', 'emerging', 'visible', 'retreating'],
-            defaultState: 'hidden',
-            
-            movement: (enemy) => {
-                if (!enemy.timer) enemy.timer = 0;
-                if (!enemy.baseY) enemy.baseY = enemy.y;
-                if (!enemy.hiddenY) enemy.hiddenY = enemy.baseY + 20;
-                
-                const distanceToPlayer = Math.abs(game.player.x - enemy.x);
-                const tooClose = distanceToPlayer < 48;
-                
-                enemy.timer++;
-                
-                if (enemy.state === 'hidden') {
-                    enemy.y = enemy.hiddenY;
-                    if (!tooClose && enemy.timer > 60) {
-                        enemy.state = 'emerging';
-                        enemy.timer = 0;
-                    }
-                } else if (enemy.state === 'emerging') {
-                    enemy.y = enemy.hiddenY - (enemy.timer * 1); // Slower movement
-                    if (enemy.y <= enemy.baseY) {
-                        enemy.y = enemy.baseY;
-                        enemy.state = 'visible';
-                        enemy.timer = 0;
-                    }
-                    // Don't check tooClose during emerging - let it complete
-                } else if (enemy.state === 'visible') {
-                    enemy.y = enemy.baseY;
-                    if (enemy.timer > 120) { // Only check timer, not distance
-                        enemy.state = 'retreating';
-                        enemy.timer = 0;
-                    }
-                } else if (enemy.state === 'retreating') {
-                    enemy.y = enemy.baseY + (enemy.timer * 1); // Slower movement
-                    if (enemy.y >= enemy.hiddenY) {
-                        enemy.y = enemy.hiddenY;
-                        enemy.state = 'hidden';
-                        enemy.timer = 0;
-                    }
-                    // Don't check tooClose during retreating - let it complete
-                }
-            },
-            
-            onStomp: (enemy, player) => {
-                // Piranha plants can't be stomped - damage player instead
-                if (player.powerState === 'big' || player.powerState === 'fire') {
-                    player.powerState = 'small';
-                    player.width = 16;
-                    player.height = 16;
-                    player.y += 16;
-                    player.invincible = true;
-                    player.invincibleTimer = 120;
-                } else {
-                    player.lives--;
-                    if (player.lives <= 0) {
-                        game.gameOver = true;
-                    } else {
-                        resetLevel();
-                    }
-                }
-            },
-            
-            onSideHit: (enemy, player) => {
-                // Same as stomp - piranha plants always damage
-                if (player.powerState === 'big' || player.powerState === 'fire') {
-                    player.powerState = 'small';
-                    player.width = 16;
-                    player.height = 16;
-                    player.y += 16;
-                    player.invincible = true;
-                    player.invincibleTimer = 120;
-                } else {
-                    player.lives--;
-                    if (player.lives <= 0) {
-                        game.gameOver = true;
-                    } else {
-                        resetLevel();
-                    }
-                }
-            }
+            // Set theme based on level
+            game.currentTheme = theme;
+            ThemeSystem.setTheme(theme);
+        } catch (error) {
+            console.error('Failed to load map:', error);
         }
-    };
+    }
     
     async function initializeLevel() {
         try {
@@ -3213,146 +2941,6 @@ async function createMarioGame(settings) {
         });
     }
     
-    function updateEnemies() {
-        if (game.gameOver || game.won || !game.gameStarted) return;
-        
-        game.enemies.forEach((enemy, index) => {
-            if (!enemy.alive) return;
-            
-            // Skip goombas - they're handled by entity system
-            if (enemy.type === 'goomba') return;
-            
-            // Initialize enemy properties if not set
-            if (!enemy.width) {
-                if (enemy.type === 'koopa') {
-                    enemy.width = 20;
-                    enemy.height = 20;
-                    enemy.vx = -1;
-                } else if (enemy.type === 'parakoopa') {
-                    enemy.width = 20;
-                    enemy.height = 20;
-                    enemy.vx = 0; // No horizontal movement
-                } else if (enemy.type === 'piranha') {
-                    enemy.width = 20;
-                    enemy.height = 32;
-                    enemy.vx = 0; // Piranha plants don't move horizontally
-                    // Keep original Y position from map parsing
-                }
-                enemy.vy = 0;
-                enemy.state = EnemyBehaviors[enemy.type]?.defaultState || 'walking';
-                enemy.alive = true;
-                enemy.onGround = true;
-                enemy.animFrame = 0;
-                enemy.animTimer = 0;
-            }
-            
-            // Add gravity to enemies (except piranha plants and parakoopas)
-            if (enemy.type !== 'piranha' && enemy.type !== 'parakoopa') {
-                if (!enemy.vy) enemy.vy = 0;
-                enemy.vy += 0.3; // Gravity
-                enemy.y += enemy.vy;
-            }
-            
-            // Use shared collision detection for ground (except piranha plants and parakoopas)
-            if (enemy.type !== 'piranha' && enemy.type !== 'parakoopa') {
-                handlePlatformCollision(enemy);
-            }
-            
-            // Remove enemies that fall too far (into pits)
-            if (enemy.y > 500) {
-                enemy.alive = false;
-                return;
-            }
-            
-            // Use behavior system for movement
-            const behavior = EnemyBehaviors[enemy.type];
-            if (behavior && behavior.movement) {
-                behavior.movement(enemy);
-            }
-            
-            // Enemy collision with platforms and blocks (side collisions only) - AFTER movement
-            let hitWall = false;
-            let platformCount = 0;
-            game.platforms.forEach(platform => {
-                // Count platforms near this enemy for debug
-                if (Math.abs(platform.x - enemy.x) < 100) {
-                    platformCount++;
-                }
-                
-                if (enemy.x < platform.x + platform.width &&
-                    enemy.x + enemy.width > platform.x &&
-                    enemy.y < platform.y + platform.height &&
-                    enemy.y + enemy.height > platform.y) {
-                    
-                    // Only reverse direction for side collisions, not when standing on top
-                    const enemyBottom = enemy.y + enemy.height;
-                    const platformTop = platform.y;
-                    
-                    if (enemyBottom <= platformTop + 5) {
-                        // Enemy is on top of platform, don't reverse direction
-                        return;
-                    }
-                    
-                    if (game.frameCount % 60 === 0) {
-                    }
-                    
-                    if (enemy.vx > 0) {
-                        if (game.frameCount % 60 === 0 && index > 5) {
-                        }
-                        enemy.x = platform.x - enemy.width;
-                        hitWall = true;
-                    } else if (enemy.vx < 0) {
-                        if (game.frameCount % 60 === 0 && index > 5) {
-                        }
-                        enemy.x = platform.x + platform.width;
-                        hitWall = true;
-                    }
-                }
-            });
-            
-            if (hitWall) {
-                enemy.vx *= -1;
-            }
-            
-            enemy.animTimer++;
-            if (enemy.animTimer > 20) {
-                enemy.animFrame = (enemy.animFrame + 1) % 2;
-                enemy.animTimer = 0;
-            }
-            
-            if (enemy.x <= 100 || enemy.x >= game.levelWidth - 150) {
-                enemy.vx *= -1;
-            }
-            
-            // Player collision
-            if (!game.player.invincible && 
-                game.player.x < enemy.x + enemy.width &&
-                game.player.x + game.player.width > enemy.x &&
-                game.player.y < enemy.y + enemy.height &&
-                game.player.y + game.player.height > enemy.y) {
-                
-                // Skip collision for hidden piranha plants
-                if (enemy.type === 'piranha' && (enemy.state === 'hidden' || enemy.state === 'retreating')) {
-                    return;
-                }
-                
-                if (game.player.vy > 0 && game.player.y < enemy.y) {
-                    // Jumping on enemy - use behavior system
-                    const behavior = EnemyBehaviors[enemy.type];
-                    if (behavior && behavior.onStomp) {
-                        behavior.onStomp(enemy, game.player);
-                    }
-                } else {
-                    // Hit by enemy - use behavior system
-                    const behavior = EnemyBehaviors[enemy.type];
-                    if (behavior && behavior.onSideHit) {
-                        behavior.onSideHit(enemy, game.player);
-                    }
-                }
-            }
-        });
-    }
-    
     function checkCoinCollection() {
         game.coins.forEach(coin => {
             if (!coin.collected &&
@@ -3760,12 +3348,7 @@ async function createMarioGame(settings) {
             });
         }
         
-        // Piranha plants (render behind pipes)
-        game.enemies.forEach(enemy => {
-            if (enemy.alive && enemy.type === 'piranha') {
-                SpriteRenderer.enemies[enemy.type](ctx, enemy);
-            }
-        });
+        // Piranha plants (render behind pipes) - now handled by entity system
         
         // Piranha plants (render behind pipes)
         game.entityManager.query('transform', 'sprite').forEach(entity => {
@@ -4037,7 +3620,6 @@ async function createMarioGame(settings) {
         game.frameCount++;
         updatePlayer();
         updateMovingPlatforms();
-        updateEnemies();
         updatePowerUps();
         updateFireballs();
         updateParticles();
