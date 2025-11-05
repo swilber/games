@@ -102,6 +102,11 @@ class PhysicsSystem {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
             
+            // Skip physics for piranha plants (they handle their own movement)
+            if (entity.id.startsWith('piranha')) {
+                return;
+            }
+            
             // Apply gravity
             physics.vy += 0.5;
             
@@ -185,11 +190,61 @@ class AISystem {
     
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics', 'ai');
+        
         entities.forEach(entity => {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
             const ai = entity.get('ai');
             
+            if (ai.type === 'piranha') {
+                // Piranha plant behavior - hide when Mario is nearby
+                if (!ai.timer) ai.timer = 0;
+                if (!ai.piranhaState) ai.piranhaState = 'hidden';
+                if (!ai.baseY) ai.baseY = transform.y; // Store original pipe position
+                if (!ai.hiddenY) ai.hiddenY = ai.baseY + 32; // Hidden position (in pipe)
+                
+                // Check if Mario is too close (within 48 pixels)
+                const playerEntity = entityManager.entities.get('player');
+                let tooClose = false;
+                if (playerEntity) {
+                    const playerTransform = playerEntity.get('transform');
+                    const distance = Math.abs(playerTransform.x - transform.x);
+                    tooClose = distance < 48;
+                }
+                
+                ai.timer++;
+                
+                // Piranha behavior with Mario proximity check
+                if (ai.piranhaState === 'hidden' && ai.timer > 60 && !tooClose) {
+                    ai.piranhaState = 'emerging';
+                    ai.timer = 0;
+                } else if (ai.piranhaState === 'emerging') {
+                    // Move up from pipe
+                    transform.y = ai.hiddenY - (ai.timer * 1); // Emerge slowly
+                    if (transform.y <= ai.baseY || ai.timer > 32) {
+                        transform.y = ai.baseY;
+                        ai.piranhaState = 'visible';
+                        ai.timer = 0;
+                    }
+                } else if (ai.piranhaState === 'visible' && (ai.timer > 180 || tooClose)) {
+                    ai.piranhaState = 'retreating';
+                    ai.timer = 0;
+                } else if (ai.piranhaState === 'retreating') {
+                    // Move down into pipe
+                    transform.y = ai.baseY + (ai.timer * 1); // Retreat slowly
+                    if (transform.y >= ai.hiddenY || ai.timer > 32) {
+                        transform.y = ai.hiddenY;
+                        ai.piranhaState = 'hidden';
+                        ai.timer = 0;
+                    }
+                }
+                
+                // Update sprite state
+                entity.get('sprite').state = ai.piranhaState;
+                return; // Skip normal AI processing
+            }
+            
+            // Normal enemy AI (goombas, koopas, etc.)
             // Ensure entity always has movement velocity
             if (physics.vx === 0) {
                 physics.vx = ai.direction;
@@ -253,7 +308,6 @@ class CollisionSystem {
                     entityManager.entities.delete(entity.id);
                     this.game.player.vy = -8;
                     this.game.player.score += 100;
-                    console.log('Stomped goomba entity!');
                 } else {
                     // Take damage
                     if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
@@ -300,6 +354,23 @@ class PlayerSyncSystem {
     }
 }
 
+class SquishSystem {
+    update(entityManager) {
+        const squished = entityManager.query('transform', 'sprite').filter(entity => 
+            entity.get('sprite').state === 'squished'
+        );
+        
+        squished.forEach(entity => {
+            const sprite = entity.get('sprite');
+            sprite.squishTimer--;
+            
+            if (sprite.squishTimer <= 0) {
+                entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
 class ImprovedCollisionSystem {
     constructor(game) {
         this.game = game;
@@ -313,34 +384,135 @@ class ImprovedCollisionSystem {
         const playerPhysics = playerEntity.get('physics');
         
         const enemies = entityManager.query('transform', 'ai');
+        let playerBounced = false;
+        
         enemies.forEach(enemy => {
             const enemyTransform = enemy.get('transform');
+            const enemySprite = enemy.get('sprite');
             
             if (this.isColliding(playerTransform, enemyTransform)) {
-                // Check if player is stomping (falling and above enemy)
-                if (playerPhysics.vy > 0 && playerTransform.y < enemyTransform.y - 8) {
-                    // Stomp enemy
-                    enemyTransform.height = 8;
-                    enemy.components.delete('ai');
-                    enemy.components.delete('physics');
-                    playerPhysics.vy = -8; // Bounce
-                    this.game.player.vy = -8; // Also bounce the actual player
+                // Check if player is stomping (falling and intersecting from above)
+                const playerCenterY = playerTransform.y + playerTransform.height / 2;
+                const enemyCenterY = enemyTransform.y + enemyTransform.height / 2;
+                const isFromAbove = playerCenterY < enemyCenterY;
+                
+                if (playerPhysics.vy > 0 && isFromAbove) {
+                    // Stomp behavior based on enemy type
+                    if (enemy.id.startsWith('goomba')) {
+                        // Goomba: Squish flat then disappear
+                        enemyTransform.height = 8; // Squish flat
+                        enemy.components.delete('ai'); // Stop moving
+                        enemy.components.delete('physics'); // Stop physics
+                        enemySprite.state = 'squished';
+                        enemySprite.squishTimer = 30; // Disappear after 30 frames
+                    } else if (enemy.id.startsWith('koopa')) {
+                        // Koopa: Turn into shell
+                        enemyTransform.height = 16; // Shell height
+                        enemyTransform.y += 8; // Move down to ground
+                        enemy.components.delete('ai'); // Remove AI
+                        enemy.components.delete('physics'); // Remove physics
+                        enemySprite.state = 'shell';
+                        enemySprite.kickable = true;
+                    } else if (enemy.id.startsWith('piranha')) {
+                        // Piranha plants can't be stomped - damage player instead
+                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                            this.game.player.powerState = 'small';
+                            this.game.player.width = 16;
+                            this.game.player.height = 16;
+                            this.game.player.y += 16;
+                        } else {
+                            this.game.player.lives--;
+                            if (this.game.player.lives <= 0) {
+                                this.game.gameOver = true;
+                            }
+                        }
+                        this.game.player.invincible = true;
+                        this.game.player.invincibleTimer = 120;
+                        return; // Skip player bounce
+                    } else {
+                        // Other enemies: Remove
+                        entityManager.entities.delete(enemy.id);
+                    }
+                    
+                    // Player bounce (only once per frame)
+                    if (!playerBounced) {
+                        playerPhysics.vy = -8;
+                        this.game.player.vy = -8;
+                        playerBounced = true;
+                    }
                     this.game.player.score += 100;
                 } else {
-                    // Side collision - damage player
-                    if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
-                        this.game.player.powerState = 'small';
-                        this.game.player.width = 16;
-                        this.game.player.height = 16;
-                        this.game.player.y += 16;
-                    } else {
-                        this.game.player.lives--;
-                        if (this.game.player.lives <= 0) {
-                            this.game.gameOver = true;
+                    // Side collision - damage player (only if not invincible)
+                    if (!this.game.player.invincible) {
+                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                            this.game.player.powerState = 'small';
+                            this.game.player.width = 16;
+                            this.game.player.height = 16;
+                            this.game.player.y += 16;
+                        } else {
+                            this.game.player.lives--;
+                            if (this.game.player.lives <= 0) {
+                                this.game.gameOver = true;
+                            }
                         }
+                        this.game.player.invincible = true;
+                        this.game.player.invincibleTimer = 120;
                     }
-                    this.game.player.invincible = true;
-                    this.game.player.invincibleTimer = 120;
+                }
+            }
+        });
+        
+        // Handle shell kicking
+        const shells = entityManager.query('transform', 'sprite').filter(entity => 
+            entity.get('sprite').state === 'shell' && entity.get('sprite').kickable
+        );
+        
+        shells.forEach(shell => {
+            const shellTransform = shell.get('transform');
+            const shellSprite = shell.get('sprite');
+            
+            if (this.isColliding(playerTransform, shellTransform)) {
+                // Kick shell
+                const kickDirection = playerTransform.x < shellTransform.x ? 1 : -1;
+                shell.add('physics', new Physics(kickDirection * 4, 0)); // Slower shell movement
+                shellSprite.kickable = false; // Can't kick again until it stops
+            }
+        });
+        
+        // Handle moving shell collisions with enemies
+        const movingShells = entityManager.query('transform', 'physics', 'sprite').filter(entity => 
+            entity.get('sprite').state === 'shell' && !entity.get('sprite').kickable
+        );
+        
+        movingShells.forEach(shell => {
+            const shellTransform = shell.get('transform');
+            const shellPhysics = shell.get('physics');
+            
+            // Check collision with other enemies
+            enemies.forEach(enemy => {
+                if (enemy.id !== shell.id) {
+                    const enemyTransform = enemy.get('transform');
+                    
+                    if (this.isColliding(shellTransform, enemyTransform)) {
+                        // Shell kills enemy
+                        if (enemy.id.startsWith('goomba')) {
+                            entityManager.entities.delete(enemy.id);
+                        } else if (enemy.id.startsWith('koopa')) {
+                            entityManager.entities.delete(enemy.id);
+                        } else {
+                            entityManager.entities.delete(enemy.id);
+                        }
+                        this.game.player.score += 100;
+                    }
+                }
+            });
+            
+            // Stop shell if it hits a wall
+            if (Math.abs(shellPhysics.vx) > 0) {
+                // Shell will be stopped by wall collision in PhysicsSystem
+                // When it stops, make it kickable again
+                if (shellPhysics.vx === 0) {
+                    shell.get('sprite').kickable = true;
                 }
             }
         });
@@ -366,11 +538,9 @@ class ImprovedRenderSystem {
         // Throttled debug logging once per second
         const now = Date.now();
         if (now - this.lastLogTime >= 1000) {
-            console.log(`--- Mario Entity Update (${now - this.lastLogTime}ms since last) ---`);
             entities.forEach(entity => {
                 const transform = entity.get('transform');
                 const screenX = transform.x - camera.x;
-                console.log(`Entity ${entity.id}: global(${transform.x}, ${transform.y}) screen(${screenX}, ${transform.y})`);
             });
             this.lastLogTime = now;
         }
@@ -402,11 +572,19 @@ class ImprovedRenderSystem {
             } else if (entity.id.startsWith('goomba')) {
                 // Render goomba using enemy sprite system
                 fakeObject.type = 'goomba';
+                fakeObject.state = sprite.state || 'walking';
                 this.spriteRenderer.enemies.goomba(ctx, fakeObject);
             } else if (entity.id.startsWith('koopa')) {
                 // Render koopa using enemy sprite system
                 fakeObject.type = 'koopa';
                 fakeObject.state = sprite.state || 'walking';
+                this.spriteRenderer.enemies.koopa(ctx, fakeObject);
+            } else if (entity.id.startsWith('piranha')) {
+                // Piranha plants are rendered separately behind pipes - skip here
+            } else if (sprite.state === 'shell') {
+                // Render shell (for stomped koopas)
+                fakeObject.type = 'koopa';
+                fakeObject.state = 'shell';
                 this.spriteRenderer.enemies.koopa(ctx, fakeObject);
             } else {
                 // Fallback to colored rectangle for unknown entities
@@ -424,11 +602,6 @@ class RenderSystem {
     
     render(ctx, entityManager, camera) {
         const entities = entityManager.query('transform', 'sprite');
-        
-        console.log('RenderSystem: Found', entities.length, 'entities to render');
-        entities.forEach((entity, index) => {
-            console.log(`Entity ${index} components:`, Array.from(entity.components.keys()));
-        });
         
         entities.forEach((entity, index) => {
             const transform = entity.get('transform');
@@ -454,13 +627,9 @@ class RenderSystem {
 
 // ASCII Map Converter
 const convertASCIIToLevel = (asciiLines) => {
-    console.log('Converting ASCII lines:', asciiLines.length, 'lines');
-    console.log('All lines:');
     asciiLines.forEach((line, i) => {
-        console.log(`Line ${i}: "${line.substring(0, 50)}..." (length: ${line.length})`);
         // Show unique characters in this line
         const uniqueChars = [...new Set(line.split(''))].sort();
-        console.log(`  Unique chars: [${uniqueChars.join(', ')}]`);
         
         // Count specific characters we're looking for
         const counts = {
@@ -472,16 +641,12 @@ const convertASCIIToLevel = (asciiLines) => {
             'P': (line.match(/P/g) || []).length,
             '#': (line.match(/#/g) || []).length
         };
-        if (Object.values(counts).some(c => c > 0)) {
-            console.log(`  Character counts:`, counts);
-        }
     });
     
     const level = { tiles: [], enemies: [], blocks: [], width: 0, castle: null };
     
     // Find ground line (line with # symbols)
     const groundLineIndex = asciiLines.findIndex(line => line.includes('#'));
-    console.log('Ground line found at index:', groundLineIndex);
     
     if (groundLineIndex === -1) {
         console.warn('No ground line found!');
@@ -489,11 +654,9 @@ const convertASCIIToLevel = (asciiLines) => {
     }
     
     const groundLine = asciiLines[groundLineIndex];
-    console.log('Ground line content:', `"${groundLine.substring(0, 100)}..."`);
     
     const width = groundLine.length;
     level.width = width;
-    console.log('Level width:', width);
     
     // Initialize tiles array
     level.tiles = new Array(width).fill('G');
@@ -502,34 +665,27 @@ const convertASCIIToLevel = (asciiLines) => {
     const enemyLineIndex = groundLineIndex - 1;
     if (enemyLineIndex >= 0) {
         const enemyLine = asciiLines[enemyLineIndex];
-        console.log('Enemy line content:', `"${enemyLine.substring(0, 100)}..."`);
         
         // Look for enemies and other elements
         for (let x = 0; x < width && x < enemyLine.length; x++) {
             if (enemyLine[x] === 'G') {
                 level.enemies.push({x: x * 16, type: 'goomba'});
-                console.log('Found Goomba at position', x);
             }
             if (enemyLine[x] === 'K') {
                 level.enemies.push({x: x * 16, type: 'koopa'});
-                console.log('Found Koopa at position', x);
             }
             if (enemyLine[x] === 'k') {
                 level.enemies.push({x: x * 16, type: 'parakoopa'});
-                console.log('Found Parakoopa at position', x);
             }
             if (enemyLine[x] === 'p') {
                 level.enemies.push({x: x * 16, y: 320, type: 'piranha'});
                 level.tiles[x] = 'p'; // Pipe with piranha
-                console.log('Found Piranha Plant at position', x, 'y=320');
             }
             if (enemyLine[x] === 'P') {
                 level.tiles[x] = 'p'; // Regular pipe
-                console.log('Found Pipe at position', x);
             }
             if (enemyLine[x] === 'F') {
                 // Flag position - we'll handle this in the level initialization
-                console.log('Found Flag at position', x);
             }
         }
     }
@@ -538,21 +694,17 @@ const convertASCIIToLevel = (asciiLines) => {
     for (let x = 0; x < width; x++) {
         if (groundLine[x] === 'X') {
             level.tiles[x] = 'P'; // Pit
-            console.log('Found Pit at position', x);
         }
     }
     
     // Check for blocks in upper lines
-    console.log(`Checking for blocks in lines 0 to ${groundLineIndex - 2} (ground is at ${groundLineIndex})`);
     for (let y = 0; y < groundLineIndex - 1; y++) {
         const blockLine = asciiLines[y];
-        console.log(`Block line ${y} content:`, `"${blockLine.substring(0, 100)}..."`);
         
         // Count blocks in this line
         const bCount = (blockLine.match(/B/g) || []).length;
         const qCount = (blockLine.match(/\?/g) || []).length;
         if (bCount > 0 || qCount > 0) {
-            console.log(`  Line ${y} has ${bCount} B's and ${qCount} ?'s`);
         }
         
         for (let x = 0; x < width && x < blockLine.length; x++) {
@@ -564,7 +716,6 @@ const convertASCIIToLevel = (asciiLines) => {
                     type: 'question', 
                     content
                 });
-                console.log('Found Question block at position', x, y);
             }
             if (blockLine[x] === 'B') {
                 level.blocks.push({
@@ -572,16 +723,9 @@ const convertASCIIToLevel = (asciiLines) => {
                     y: 272,
                     type: 'brick'
                 });
-                console.log('Found Brick at position', x, y);
             }
         }
     }
-    
-    console.log('Final converted level:', {
-        width: level.width,
-        enemies: level.enemies.length,
-        blocks: level.blocks.length
-    });
     
     return level;
 };
@@ -615,8 +759,6 @@ const LevelMapper = {
     
     async init() {
         this.levels = await loadASCIIMaps();
-        console.log('LevelMapper.levels loaded:', Object.keys(this.levels));
-        console.log('Level 1-1 details:', this.levels['1-1']);
     },
     
     createFromMap: (mapData) => {
@@ -1139,26 +1281,40 @@ async function createMarioGame(settings) {
                     shadowColor = '#654321'; // Normal dark brown
                 }
                 
-                // Goomba body - brown mushroom with proper shape (moved down to fill height)
-                ctx.fillStyle = bodyColor;
-                ctx.fillRect(enemy.x + 2, enemy.y + 8, 16, 10); // Main body (moved down 2px)
-                ctx.fillRect(enemy.x + 4, enemy.y + 6, 12, 2);  // Top cap (moved down 2px)
-                ctx.fillRect(enemy.x + 6, enemy.y + 4, 8, 2);   // Very top (moved down 2px)
-                
-                // Darker brown for shading
-                ctx.fillStyle = shadowColor;
-                ctx.fillRect(enemy.x + 3, enemy.y + 9, 14, 1);  // Body shadow (moved down 2px)
-                
-                // Eyes - white background with black pupils
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(enemy.x + 5, enemy.y + 10, 2, 2);  // Eyes (moved down 2px)
-                ctx.fillRect(enemy.x + 13, enemy.y + 10, 2, 2);
-                
-                // Animated eye pupils
-                ctx.fillStyle = '#000';
-                const eyeOffset = enemy.animFrame === 0 ? 0 : 1;
-                ctx.fillRect(enemy.x + 5 + eyeOffset, enemy.y + 10, 1, 1);  // Pupils (moved down 2px)
-                ctx.fillRect(enemy.x + 14 - eyeOffset, enemy.y + 10, 1, 1);
+                if (enemy.state === 'squished') {
+                    // Squished goomba - flat brown rectangle
+                    ctx.fillStyle = shadowColor;
+                    ctx.fillRect(enemy.x + 2, enemy.y + 10, 16, 8); // Flat squished body
+                    
+                    // Eyes still visible
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillRect(enemy.x + 5, enemy.y + 12, 2, 1);
+                    ctx.fillRect(enemy.x + 13, enemy.y + 12, 2, 1);
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(enemy.x + 6, enemy.y + 12, 1, 1);
+                    ctx.fillRect(enemy.x + 14, enemy.y + 12, 1, 1);
+                } else {
+                    // Normal goomba - brown mushroom with proper shape (moved down to fill height)
+                    ctx.fillStyle = bodyColor;
+                    ctx.fillRect(enemy.x + 2, enemy.y + 8, 16, 10); // Main body (moved down 2px)
+                    ctx.fillRect(enemy.x + 4, enemy.y + 6, 12, 2);  // Top cap (moved down 2px)
+                    ctx.fillRect(enemy.x + 6, enemy.y + 4, 8, 2);   // Very top (moved down 2px)
+                    
+                    // Darker brown for shading
+                    ctx.fillStyle = shadowColor;
+                    ctx.fillRect(enemy.x + 3, enemy.y + 9, 14, 1);  // Body shadow (moved down 2px)
+                    
+                    // Eyes - white background with black pupils
+                    ctx.fillStyle = '#FFF';
+                    ctx.fillRect(enemy.x + 5, enemy.y + 10, 2, 2);  // Eyes (moved down 2px)
+                    ctx.fillRect(enemy.x + 13, enemy.y + 10, 2, 2);
+                    
+                    // Animated eye pupils
+                    ctx.fillStyle = '#000';
+                    const eyeOffset = enemy.animFrame === 0 ? 0 : 1;
+                    ctx.fillRect(enemy.x + 5 + eyeOffset, enemy.y + 10, 1, 1);  // Pupils (moved down 2px)
+                    ctx.fillRect(enemy.x + 14 - eyeOffset, enemy.y + 10, 1, 1);
+                }
                 
                 // Angry eyebrows
                 ctx.fillStyle = '#000';
@@ -1521,6 +1677,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new PlayerSyncSystem(game));
     game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
+    game.entityManager.addSystem(new SquishSystem());
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -1616,8 +1773,6 @@ async function createMarioGame(settings) {
         },
         
         spawn: (def, x, y, tileSize, lines) => {
-            console.log('Spawn factory called with x:', x, 'y:', y, 'tileSize:', tileSize);
-            console.log('Total lines in map:', lines.length);
             
             // Find a safe ground position (not over a pit)
             let safeX = x;
@@ -1629,14 +1784,12 @@ async function createMarioGame(settings) {
                 const line = lines[checkY];
                 if (line && line[spawnTileX] === '#') {
                     groundY = checkY * tileSize - 16;
-                    console.log('Found ground directly below at checkY:', checkY, 'groundY:', groundY);
                     break;
                 }
             }
             
             // If spawn is over a pit (no ground found), find the nearest safe ground
             if (groundY === y) {
-                console.log('Spawn is over a pit, finding safe ground...');
                 // Look for the first solid ground to the left or right
                 for (let offset = 1; offset < 50; offset++) {
                     // Try left
@@ -1647,7 +1800,6 @@ async function createMarioGame(settings) {
                             if (line && line[leftTileX] === '#') {
                                 safeX = leftTileX * tileSize;
                                 groundY = checkY * tileSize - 16;
-                                console.log('Found safe ground to the left at x:', safeX, 'y:', groundY);
                                 break;
                             }
                         }
@@ -1661,7 +1813,6 @@ async function createMarioGame(settings) {
                         if (line && line[rightTileX] && line[rightTileX] === '#') {
                             safeX = rightTileX * tileSize;
                             groundY = checkY * tileSize - 16;
-                            console.log('Found safe ground to the right at x:', safeX, 'y:', groundY);
                             break;
                         }
                     }
@@ -1671,12 +1822,10 @@ async function createMarioGame(settings) {
             
             // Final fallback
             if (groundY === y) {
-                console.log('No safe ground found, using fallback position');
                 safeX = 50;
                 groundY = 334;
             }
             
-            console.log('Spawn factory returning x:', safeX, 'y:', groundY);
             return { x: safeX, y: groundY };
         },
         
@@ -2008,13 +2157,6 @@ async function createMarioGame(settings) {
             const mapText = await response.text();
             const layout = parseASCIIMap(mapText);
             
-            console.log(`Level ${game.currentLevel} loaded:`, {
-                platforms: layout.platforms.length,
-                blocks: layout.blocks.length, 
-                enemies: layout.enemies.length,
-                coins: layout.coins.length
-            });
-            
             // Set theme based on level
             game.currentTheme = theme;
             ThemeSystem.setTheme(theme);
@@ -2029,7 +2171,6 @@ async function createMarioGame(settings) {
             // Clear existing entities first
             game.entityManager.entities.clear();
             
-            console.log('DEBUG FIRST LOAD: layout.enemies count:', layout.enemies ? layout.enemies.length : 'undefined');
             
             game.enemies = []; // Keep empty - all enemies now in entity system
             
@@ -2056,6 +2197,14 @@ async function createMarioGame(settings) {
                             .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'piranha') {
+                        enemyCount++;
+                        // Create entity for piranha plant
+                        const piranhaEntity = game.entityManager.create(`piranha${enemyCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 300, 20, 32))
+                            .add('physics', new Physics(0, 0)) // Add physics for position updates
+                            .add('sprite', new Sprite('#228B22', 'piranha'))
+                            .add('ai', new AI('piranha')); // Special AI type for piranha behavior
                     } else {
                         enemyCount++;
                         // Convert other enemy types to entities too
@@ -2084,7 +2233,6 @@ async function createMarioGame(settings) {
             // Use the same function for initial load
             resetMarioPosition();
             
-            console.log('Level loaded: Mario starting position:', layout.startX, layout.startY);
         } catch (error) {
             console.error('Failed to load map:', error);
             // Fallback to basic level
@@ -2096,7 +2244,6 @@ async function createMarioGame(settings) {
     }
     
     function parseASCIIMap(mapText) {
-        console.log('parseASCIIMap called - parsing map...');
         const rawLines = mapText.split('\n');
         const lines = rawLines.filter(line => !line.startsWith('# ') && line.length > 0);
         const platforms = [];
@@ -2150,7 +2297,6 @@ async function createMarioGame(settings) {
                         flag = obj;
                         break;
                     case 'spawn':
-                        console.log('Processing spawn case: setting startX to', obj.x, 'startY to', obj.y);
                         startX = obj.x;
                         startY = obj.y;
                         break;
@@ -2315,7 +2461,6 @@ async function createMarioGame(settings) {
                     const castleHeight = isLarge ? 180 : 140; // Taller castles
                     const castle = { x: x * tileSize, y: groundY - castleHeight, large: isLarge };
                     castles.push(castle);
-                    console.log('Found Castle at position', x, y, 'world coords:', castle.x, castle.y, 'type:', isLarge ? '3-level' : '2-level');
                 }
             }
         }
@@ -2420,16 +2565,12 @@ async function createMarioGame(settings) {
         game.player.facingRight = true;
         game.player.shootCooldown = 0;
         game.player.invincibleTimer = 0;
-        console.log('Mario position set to:', game.player.x, game.player.y);
     }
     
     async function initializeGameState(preserveLives = false) {
-        console.log('initializeGameState called with preserveLives:', preserveLives);
         const currentLives = preserveLives ? game.livesToRestore : 3;
-        console.log('Using lives:', currentLives);
         
         try {
-            console.log('DEBUG: Starting level load process for first load');
             let mapFile, theme;
             if (game.currentLevel === 1) {
                 mapFile = 'mario-1-1-map.txt';
@@ -2489,6 +2630,14 @@ async function createMarioGame(settings) {
                             .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'piranha') {
+                        enemyCount++;
+                        // Create entity for piranha plant
+                        const piranhaEntity = game.entityManager.create(`piranha${enemyCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 32))
+                            .add('physics', new Physics(0, 0)) // Add physics for position updates
+                            .add('sprite', new Sprite('#228B22', 'piranha'))
+                            .add('ai', new AI('piranha')); // Special AI type for piranha behavior
                     } else {
                         enemyCount++;
                         // Convert other enemy types to entities too
@@ -2515,7 +2664,6 @@ async function createMarioGame(settings) {
             game.castles = layout.castles || [];
             
             // Reset Mario completely
-            console.log('Setting Mario position to startX:', layout.startX, 'startY:', layout.startY);
             game.player.x = layout.startX;
             game.player.y = layout.startY;
             game.player.vx = 0;
@@ -2539,11 +2687,7 @@ async function createMarioGame(settings) {
             game.gameOver = false;
             game.won = false;
             
-            console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
-            console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
-            console.log('Regular enemies array has', game.enemies.length, 'enemies');
             game.enemies.forEach((enemy, i) => {
-                console.log(`Regular enemy ${i}: type=${enemy.type} at x=${enemy.x}`);
             });
             
             // Initialize position logging timer
@@ -2569,7 +2713,6 @@ async function createMarioGame(settings) {
         // Store current lives count
         const currentLives = game.player.lives;
         
-        console.log('resetLevel() called - setting needsLevelReset flag, lives:', currentLives);
         
         // Set flag to reload level on next frame
         game.needsLevelReset = true;
@@ -2581,14 +2724,10 @@ async function createMarioGame(settings) {
     function checkScreenBoundary() {
         // Check if Mario fell below the screen
         if (game.player.y > 500) {
-            console.log('Mario fell below screen! Lives before:', game.player.lives);
             game.player.lives--;
-            console.log('Lives after decrement:', game.player.lives);
             if (game.player.lives <= 0) {
-                console.log('Game over triggered');
                 game.gameOver = true;
             } else {
-                console.log('Calling resetLevel()');
                 resetLevel();
             }
         }
@@ -2731,17 +2870,27 @@ async function createMarioGame(settings) {
                 }
             });
             
-            // Hit enemies
-            game.enemies.forEach(enemy => {
-                if (enemy.alive &&
-                    fireball.x < enemy.x + enemy.width &&
-                    fireball.x + fireball.width > enemy.x &&
-                    fireball.y < enemy.y + enemy.height &&
-                    fireball.y + fireball.height > enemy.y) {
+            // Hit enemies (now using entity system)
+            const entities = game.entityManager.query('transform', 'ai');
+            entities.forEach(entity => {
+                const transform = entity.get('transform');
+                if (fireball.x < transform.x + transform.width &&
+                    fireball.x + fireball.width > transform.x &&
+                    fireball.y < transform.y + transform.height &&
+                    fireball.y + fireball.height > transform.y) {
                     
-                    enemy.alive = false;
+                    // Kill enemy based on type
+                    if (entity.id.startsWith('goomba')) {
+                        game.entityManager.entities.delete(entity.id);
+                    } else if (entity.id.startsWith('koopa')) {
+                        game.entityManager.entities.delete(entity.id);
+                    } else {
+                        game.entityManager.entities.delete(entity.id);
+                    }
+                    
                     game.player.score += 100;
                     game.fireballs.splice(index, 1);
+                    return; // Fireball destroyed on enemy hit
                 }
             });
             
@@ -3083,18 +3232,15 @@ async function createMarioGame(settings) {
                     }
                     
                     if (game.frameCount % 60 === 0) {
-                        console.log(`Enemy ${index} colliding with platform at x:${platform.x} y:${platform.y} w:${platform.width} h:${platform.height}`);
                     }
                     
                     if (enemy.vx > 0) {
                         if (game.frameCount % 60 === 0 && index > 5) {
-                            console.log(`Enemy ${index} pushed left by platform at x:${platform.x}, enemy moved from ${enemy.x} to ${platform.x - enemy.width}`);
                         }
                         enemy.x = platform.x - enemy.width;
                         hitWall = true;
                     } else if (enemy.vx < 0) {
                         if (game.frameCount % 60 === 0 && index > 5) {
-                            console.log(`Enemy ${index} pushed right by platform at x:${platform.x}, enemy moved from ${enemy.x} to ${platform.x + platform.width}`);
                         }
                         enemy.x = platform.x + platform.width;
                         hitWall = true;
@@ -3559,6 +3705,28 @@ async function createMarioGame(settings) {
             }
         });
         
+        // Piranha plants (render behind pipes)
+        game.entityManager.query('transform', 'sprite').forEach(entity => {
+            if (entity.id.startsWith('piranha')) {
+                const transform = entity.get('transform');
+                const sprite = entity.get('sprite');
+                const piranhaState = sprite.state || 'hidden';
+                
+                if (piranhaState !== 'hidden') {
+                    const fakeObject = {
+                        x: transform.x,
+                        y: transform.y,
+                        width: transform.width,
+                        height: transform.height,
+                        type: 'piranha',
+                        state: piranhaState,
+                        alive: true
+                    };
+                    SpriteRenderer.enemies.piranha(ctx, fakeObject);
+                }
+            }
+        });
+        
         // Platforms
         game.platforms.forEach(platform => {
             if (platform.type === 'pipe') {
@@ -3794,11 +3962,8 @@ async function createMarioGame(settings) {
     function gameLoop() {
         // Handle level reset if needed
         if (game.needsLevelReset) {
-            console.log('gameLoop: Processing needsLevelReset flag');
             game.needsLevelReset = false;
-            console.log('gameLoop: Calling initializeGameState(true)');
             initializeGameState(true).then(() => {
-                console.log('gameLoop: initializeGameState completed, continuing game loop');
                 // Continue game loop after reset
                 if (!game.gameOver && !game.won) {
                     requestAnimationFrame(gameLoop);
@@ -3836,9 +4001,7 @@ async function createMarioGame(settings) {
         }
         
         if (game.gameOver && e.code === 'KeyR') {
-            console.log('R key pressed - restarting game');
             initializeGameState(false).then(() => {
-                console.log('Game restarted successfully');
                 gameLoop();
             });
         }
