@@ -2291,6 +2291,18 @@ async function createMarioGame(settings) {
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
             
+            // Debug: Check what components each entity has
+            let entityIndex = 0;
+            for (const [id, entity] of game.entityManager.entities) {
+                const hasTransform = entity.has('transform');
+                const hasPhysics = entity.has('physics');
+                const hasAI = entity.has('ai');
+                const hasSprite = entity.has('sprite');
+                console.log(`Entity ${entityIndex}: T:${hasTransform} P:${hasPhysics} A:${hasAI} S:${hasSprite}`);
+                entityIndex++;
+                if (entityIndex >= 5) break; // Only show first 5
+            }
+            
         } catch (error) {
             console.error('Failed to load map:', error);
             // Fallback to basic level
