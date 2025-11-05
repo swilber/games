@@ -1828,6 +1828,8 @@ async function createMarioGame(settings) {
             // Clear existing entities first
             game.entityManager.entities.clear();
             
+            console.log('DEBUG FIRST LOAD: layout.enemies count:', layout.enemies ? layout.enemies.length : 'undefined');
+            
             game.enemies = [];
             
             // Process enemies from layout (from level data)
