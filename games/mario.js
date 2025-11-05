@@ -1369,6 +1369,11 @@ async function createMarioGame(settings) {
         }),
         
         enemy: (def, x, y, tileSize, lines) => {
+            const enemy = {
+                x, width: 20, vx: -1, vy: 0, 
+                type: def.variant, state: 'walking', alive: true, onGround: true
+            };
+            
             // Position enemy on ground level
             let groundY = y;
             for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
@@ -1378,24 +1383,9 @@ async function createMarioGame(settings) {
                 }
             }
             
-            if (def.variant === 'goomba') {
-                // Create entity for goomba instead of regular enemy
-                const goombaEntity = game.entityManager.create()
-                    .add('transform', new Transform(x, groundY, 20, 18))
-                    .add('physics', new Physics(-1, 0))
-                    .add('sprite', new Sprite('#8B4513'))
-                    .add('ai', new AI('patrol'));
-                return null; // Don't return regular enemy object
-            } else {
-                // Create regular enemy for non-goombas
-                const enemy = {
-                    x, width: 20, vx: -1, vy: 0, 
-                    type: def.variant, state: 'walking', alive: true, onGround: true
-                };
-                enemy.y = groundY;
-                enemy.height = def.variant === 'goomba' ? 18 : 20;
-                return enemy;
-            }
+            enemy.y = groundY;
+            enemy.height = def.variant === 'goomba' ? 18 : 20;
+            return enemy;
         },
         
         coin: (def, x, y, tileSize) => ({
@@ -1834,19 +1824,23 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            layout.enemies.forEach(enemy => {
-                if (enemy.type === 'goomba') {
-                    // Create entity for goomba
-                    const goombaEntity = game.entityManager.create()
-                        .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
-                        .add('physics', new Physics(-1, 0))
-                        .add('sprite', new Sprite('#8B4513'))
-                        .add('ai', new AI('patrol'));
-                } else {
-                    // Keep other enemies as regular objects
-                    game.enemies.push(enemy);
-                }
-            });
+            
+            // Process enemies from layout (from level data)
+            if (layout.enemies) {
+                layout.enemies.forEach(enemy => {
+                    if (enemy.type === 'goomba') {
+                        // Create entity for goomba
+                        const goombaEntity = game.entityManager.create()
+                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
+                            .add('physics', new Physics(-1, 0))
+                            .add('sprite', new Sprite('#8B4513'))
+                            .add('ai', new AI('patrol'));
+                    } else {
+                        // Keep other enemies as regular objects
+                        game.enemies.push(enemy);
+                    }
+                });
+            }
             
             // Ensure no goombas remain in regular enemies array
             game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
@@ -2239,19 +2233,23 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            layout.enemies.forEach(enemy => {
-                if (enemy.type === 'goomba') {
-                    // Create entity for goomba
-                    const goombaEntity = game.entityManager.create()
-                        .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
-                        .add('physics', new Physics(-1, 0))
-                        .add('sprite', new Sprite('#8B4513'))
-                        .add('ai', new AI('patrol'));
-                } else {
-                    // Keep other enemies as regular objects
-                    game.enemies.push(enemy);
-                }
-            });
+            
+            // Process enemies from layout (from level data)
+            if (layout.enemies) {
+                layout.enemies.forEach(enemy => {
+                    if (enemy.type === 'goomba') {
+                        // Create entity for goomba
+                        const goombaEntity = game.entityManager.create()
+                            .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
+                            .add('physics', new Physics(-1, 0))
+                            .add('sprite', new Sprite('#8B4513'))
+                            .add('ai', new AI('patrol'));
+                    } else {
+                        // Keep other enemies as regular objects
+                        game.enemies.push(enemy);
+                    }
+                });
+            }
             
             // Ensure no goombas remain in regular enemies array
             game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
