@@ -1,5 +1,131 @@
 // Mario Game - Theme system and sprite rendering
 
+// Entity System - Phase 1: Run alongside existing code
+class Entity {
+    constructor(id = null) {
+        this.id = id || Math.random().toString(36).substr(2, 9);
+        this.components = new Map();
+        this.active = true;
+    }
+    
+    add(name, component) {
+        this.components.set(name, component);
+        return this;
+    }
+    
+    get(name) {
+        return this.components.get(name);
+    }
+    
+    has(name) {
+        return this.components.has(name);
+    }
+}
+
+class Transform {
+    constructor(x = 0, y = 0, width = 16, height = 16) {
+        this.x = x; this.y = y; this.width = width; this.height = height;
+    }
+}
+
+class Physics {
+    constructor(vx = 0, vy = 0) {
+        this.vx = vx; this.vy = vy; this.gravity = 0.5; this.onGround = false;
+    }
+}
+
+class Sprite {
+    constructor(color = '#FF0000') {
+        this.color = color; this.facingRight = true;
+    }
+}
+
+class AI {
+    constructor(type = 'patrol') {
+        this.type = type; this.direction = -1; this.state = 'active';
+    }
+}
+
+class EntityManager {
+    constructor() {
+        this.entities = new Map();
+        this.systems = [];
+    }
+    
+    create(id = null) {
+        const entity = new Entity(id);
+        this.entities.set(entity.id, entity);
+        return entity;
+    }
+    
+    query(...componentNames) {
+        return Array.from(this.entities.values()).filter(entity =>
+            componentNames.every(name => entity.has(name))
+        );
+    }
+    
+    addSystem(system) {
+        this.systems.push(system);
+    }
+    
+    update() {
+        this.systems.forEach(system => system.update(this));
+    }
+}
+
+class PhysicsSystem {
+    update(entityManager) {
+        const entities = entityManager.query('transform', 'physics');
+        entities.forEach(entity => {
+            const transform = entity.get('transform');
+            const physics = entity.get('physics');
+            
+            physics.vy += physics.gravity;
+            transform.x += physics.vx;
+            transform.y += physics.vy;
+            
+            if (transform.y > 350) {
+                transform.y = 350;
+                physics.vy = 0;
+                physics.onGround = true;
+            } else {
+                physics.onGround = false;
+            }
+        });
+    }
+}
+
+class AISystem {
+    update(entityManager) {
+        const entities = entityManager.query('transform', 'physics', 'ai');
+        entities.forEach(entity => {
+            const transform = entity.get('transform');
+            const physics = entity.get('physics');
+            const ai = entity.get('ai');
+            
+            if (ai.type === 'patrol') {
+                physics.vx = ai.direction;
+                
+                if (transform.x <= 0 || transform.x >= 800 - transform.width) {
+                    ai.direction *= -1;
+                }
+            }
+        });
+    }
+}
+
+class RenderSystem {
+    render(ctx, entityManager) {
+        const entities = entityManager.query('transform', 'sprite');
+        entities.forEach(entity => {
+            const transform = entity.get('transform');
+            const sprite = entity.get('sprite');
+            
+            ctx.fillStyle = sprite.color;
+            ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
+        });
+    }
+}
 
 // ASCII Map Converter
 const convertASCIIToLevel = (asciiLines) => {
@@ -290,7 +416,11 @@ async function createMarioGame(settings) {
         gameStarted: false,
         keys: {},
         currentTheme: 'overworld',
-        frameCount: 0
+        frameCount: 0,
+        
+        // Entity System - Phase 1
+        entityManager: new EntityManager(),
+        renderSystem: new RenderSystem()
     };
     
     // Theme System - centralized theme configuration
@@ -1971,7 +2101,22 @@ async function createMarioGame(settings) {
             game.gameOver = false;
             game.won = false;
             
+            // Initialize Entity System - Phase 1
+            game.entityManager.addSystem(new PhysicsSystem());
+            game.entityManager.addSystem(new AISystem());
+            
+            // Create a test entity alongside existing enemies
+            if (game.enemies.length > 0) {
+                const testEntity = game.entityManager.create('test-goomba')
+                    .add('transform', new Transform(game.enemies[0].x + 50, game.enemies[0].y, 16, 16))
+                    .add('physics', new Physics(-1, 0))
+                    .add('sprite', new Sprite('#FF69B4'))
+                    .add('ai', new AI('patrol'));
+                console.log('Created test entity alongside existing enemies');
+            }
+            
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
+            console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
             
         } catch (error) {
             console.error('Failed to load map:', error);
@@ -3114,6 +3259,12 @@ async function createMarioGame(settings) {
             }
         });
         
+        // Entity System Rendering - Phase 1
+        ctx.save();
+        ctx.translate(-game.camera.x, 0);
+        game.renderSystem.render(ctx, game.entityManager);
+        ctx.restore();
+        
         // Coins
         game.coins.forEach(coin => {
             if (!coin.collected) {
@@ -3225,6 +3376,10 @@ async function createMarioGame(settings) {
         updatePowerUps();
         updateFireballs();
         updateParticles();
+        
+        // Update Entity System - Phase 1
+        game.entityManager.update();
+        
         checkScreenBoundary();
         checkCoinCollection();
         checkWin();
