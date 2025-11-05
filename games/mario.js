@@ -545,7 +545,8 @@ async function createMarioGame(settings) {
         
         // Entity System - Phase 1
         entityManager: new EntityManager(),
-        renderSystem: null // Will be initialized after SpriteRenderer is defined
+        renderSystem: null, // Will be initialized after SpriteRenderer is defined
+        lastLogTime: 0 // For position logging
     };
     
     // Theme System - centralized theme configuration
@@ -3546,6 +3547,22 @@ async function createMarioGame(settings) {
         }
         
         game.frameCount++;
+        
+        // Log all goomba positions every second
+        const currentTime = Date.now();
+        if (currentTime - game.lastLogTime >= 1000) {
+            game.lastLogTime = currentTime;
+            console.log('=== GOOMBA POSITIONS (Camera X:', game.camera.x, ') ===');
+            let entityIndex = 0;
+            for (const [id, entity] of game.entityManager.entities) {
+                const transform = entity.get('transform');
+                if (transform) {
+                    console.log(`Goomba ${entityIndex}: World(${transform.x}, ${transform.y}) Screen(${transform.x - game.camera.x}, ${transform.y})`);
+                    entityIndex++;
+                }
+            }
+        }
+        
         updatePlayer();
         updateMovingPlatforms();
         updateEnemies();
