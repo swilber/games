@@ -68,6 +68,14 @@ class AI {
     }
 }
 
+class Interactive {
+    constructor(type = 'question', contents = 'coin') {
+        this.type = type;
+        this.contents = contents;
+        this.used = false;
+    }
+}
+
 // Entity Manager
 class EntityManager {
     constructor() {
@@ -208,6 +216,26 @@ class EntityFactory {
             .add('transform', new Transform(x, y, 12, 12))
             .add('sprite', new Sprite('#FFD700'));
     }
+    
+    static createQuestionBlock(x, y, contents = 'coin') {
+        return new Entity()
+            .add('transform', new Transform(x, y, 16, 16))
+            .add('sprite', new Sprite('#FFAA00'))
+            .add('interactive', new Interactive('question', contents));
+    }
+    
+    static createBrickBlock(x, y) {
+        return new Entity()
+            .add('transform', new Transform(x, y, 16, 16))
+            .add('sprite', new Sprite('#AA5500'))
+            .add('interactive', new Interactive('brick'));
+    }
+    
+    static createPipe(x, y, height = 32) {
+        return new Entity()
+            .add('transform', new Transform(x, y, 32, height))
+            .add('sprite', new Sprite('#00AA00'));
+    }
 }
 
 export { 
@@ -217,6 +245,7 @@ export {
     Sprite, 
     Health, 
     AI,
+    Interactive,
     EntityManager, 
     PhysicsSystem, 
     AISystem, 

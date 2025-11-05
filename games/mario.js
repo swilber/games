@@ -51,6 +51,14 @@ class AI {
     }
 }
 
+class Interactive {
+    constructor(type = 'question', contents = 'coin') {
+        this.type = type;
+        this.contents = contents;
+        this.used = false;
+    }
+}
+
 class Camera {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -304,6 +312,72 @@ class AISystem {
             // Ensure velocity matches direction
             physics.vx = ai.direction;
         });
+    }
+}
+
+class InteractiveSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const player = this.game.player;
+        
+        // Handle all player-block collisions (both interactive and solid)
+        this.game.blocks.forEach(block => {
+            if (player.x < block.x + block.width &&
+                player.x + player.width > block.x &&
+                player.y < block.y + block.height &&
+                player.y + player.height > block.y) {
+                
+                // Landing on top
+                if (player.vy > 0 && player.y < block.y) {
+                    player.y = block.y - player.height;
+                    player.vy = 0;
+                    player.onGround = true;
+                }
+                // Hitting from below
+                else if (player.vy < 0 && player.y > block.y) {
+                    player.y = block.y + block.height;
+                    player.vy = 0;
+                    
+                    // Only trigger interaction if block is question type and not hit
+                    if (block.type === 'question' && !block.hit) {
+                        this.handleBlockHit(block);
+                    }
+                }
+                // Side collision
+                else if (player.vx > 0) {
+                    player.x = block.x - player.width;
+                } else if (player.vx < 0) {
+                    player.x = block.x + block.width;
+                }
+            }
+        });
+    }
+    
+    handleBlockHit(block) {
+        if (block.hit) return;
+        block.hit = true;
+        
+        if (block.type === 'question' && block.content) {
+            if (block.content === 'coin') {
+                this.game.player.score += 200;
+                
+                // Add coin animation above the block
+                this.game.particles.push({
+                    x: block.x + block.width/2 - 8,
+                    y: block.y - 16,
+                    vx: 0,
+                    vy: -2,
+                    life: 30,
+                    maxLife: 30,
+                    type: 'coin',
+                    width: 16,
+                    height: 16
+                });
+            }
+        }
     }
 }
 
@@ -1726,6 +1800,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
     game.entityManager.addSystem(new SquishSystem());
+    game.entityManager.addSystem(new InteractiveSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -2768,104 +2843,8 @@ async function createMarioGame(settings) {
         // Use shared collision detection
         handlePlatformCollision(game.player);
         
-        // Check collision with blocks separately
-        game.blocks.forEach(block => {
-            if (game.player.x < block.x + block.width &&
-                game.player.x + game.player.width > block.x &&
-                game.player.y < block.y + block.height &&
-                game.player.y + game.player.height > block.y) {
-                
-                // Landing on top
-                if (game.player.vy > 0 && game.player.y < block.y) {
-                    game.player.y = block.y - game.player.height;
-                    game.player.vy = 0;
-                    game.player.onGround = true;
-                }
-                // Hitting from below
-                else if (game.player.vy < 0 && game.player.y > block.y) {
-                    game.player.y = block.y + block.height;
-                    game.player.vy = 0;
-                    checkBlockHit(block);
-                }
-                // Side collision
-                else if (game.player.vx > 0) {
-                    game.player.x = block.x - game.player.width;
-                } else if (game.player.vx < 0) {
-                    game.player.x = block.x + block.width;
-                }
-            }
-        });
-        
+        // Block collision now handled by entity system
         game.camera.x = Math.max(0, game.player.x - 300);
-    }
-    
-    function checkBlockHit(block) {
-        if (block.hit) return;
-        
-        if (block.type === 'brick') {
-            // Only big Mario can break bricks
-            if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
-                // Brick explodes - create particle animation
-                for (let i = 0; i < 4; i++) {
-                    game.particles.push({
-                        x: block.x + (i % 2) * 10,
-                        y: block.y + Math.floor(i / 2) * 10,
-                        vx: (i % 2 === 0 ? -1 : 1) * (1 + Math.random()),
-                        vy: -2 - Math.random() * 2,
-                        width: 6,
-                        height: 6,
-                        life: 60,
-                        type: 'brick'
-                    });
-                }
-                
-                // Remove the brick
-                const blockIndex = game.blocks.indexOf(block);
-                if (blockIndex > -1) {
-                    game.blocks.splice(blockIndex, 1);
-                }
-                
-                game.player.score += 50;
-            }
-            // Small Mario just bounces off bricks (no explosion)
-            return;
-        }
-        
-        block.hit = true;
-        
-        if (block.type === 'question' && block.content) {
-            if (block.content === 'coin') {
-                game.player.score += 200;
-                
-                // Add coin animation above the block
-                game.particles.push({
-                    x: block.x + block.width/2 - 8,
-                    y: block.y - 16,
-                    vx: 0,
-                    vy: -2,
-                    life: 30,
-                    maxLife: 30,
-                    type: 'coin',
-                    width: 16,
-                    height: 16
-                });
-            } else {
-                // Determine power-up type based on Mario's current state
-                let powerUpType = block.content;
-                if (block.content === 'fireflower' && game.player.powerState === 'small') {
-                    powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
-                }
-                
-                game.powerUps.push({
-                    x: block.x, y: block.y - 32,
-                    width: 32, height: 32,
-                    type: powerUpType, 
-                    vx: powerUpType === 'fireflower' ? 0 : 1, // Fire flowers don't move
-                    vy: 0
-                });
-            }
-            block.content = null;
-        }
     }
     
     function updateMovingPlatforms() {
@@ -3668,6 +3647,22 @@ async function createMarioGame(settings) {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     
-    initializeLevel().then(() => gameLoop());
+    // Convert all question blocks to entities
+    function convertQuestionBlocksToEntities() {
+        let blockCount = 0;
+        game.blocks.forEach(block => {
+            if (block.type === 'question') {
+                blockCount++;
+                const blockEntity = game.entityManager.create(`question${blockCount}`)
+                    .add('transform', new Transform(block.x, block.y, block.width, block.height))
+                    .add('interactive', new Interactive('question', block.content || 'coin'));
+            }
+        });
+    }
+    
+    initializeLevel().then(() => {
+        convertQuestionBlocksToEntities();
+        gameLoop();
+    });
     } // End startMarioGame function
 } // End createMarioGame function

@@ -327,6 +327,10 @@
                 .add('transform', new Transform(1800, 280, 12, 12))
                 .add('sprite', new Sprite('#FFD700'));
                 
+            const pipe1 = entityManager.create('pipe1')
+                .add('transform', new Transform(500, 286, 32, 64))
+                .add('sprite', new Sprite('#00FF00'));
+                
             const platform = entityManager.create('platform')
                 .add('transform', new Transform(0, 350, 2000, 50))
                 .add('sprite', new Sprite('#00AA00'));
