@@ -2293,6 +2293,9 @@ async function createMarioGame(settings) {
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
             
+            // Initialize position logging timer
+            game.lastLogTime = Date.now();
+            
         } catch (error) {
             console.error('Failed to load map:', error);
             // Fallback to basic level
@@ -3561,6 +3564,7 @@ async function createMarioGame(settings) {
                     entityIndex++;
                 }
             }
+            console.log('=== END GOOMBA POSITIONS ===');
         }
         
         updatePlayer();
