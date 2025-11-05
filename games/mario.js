@@ -197,6 +197,10 @@ class CollisionSystem {
 }
 
 class RenderSystem {
+    constructor(spriteRenderer) {
+        this.spriteRenderer = spriteRenderer;
+    }
+    
     render(ctx, entityManager) {
         const entities = entityManager.query('transform', 'sprite', 'ai');
         entities.forEach(entity => {
@@ -213,7 +217,7 @@ class RenderSystem {
             };
             
             // Use the existing goomba sprite renderer
-            SpriteRenderer.enemies.goomba(ctx, fakeEnemy);
+            this.spriteRenderer.enemies.goomba(ctx, fakeEnemy);
         });
     }
 }
@@ -511,7 +515,7 @@ async function createMarioGame(settings) {
         
         // Entity System - Phase 1
         entityManager: new EntityManager(),
-        renderSystem: new RenderSystem()
+        renderSystem: null // Will be initialized after SpriteRenderer is defined
     };
     
     // Theme System - centralized theme configuration
@@ -1275,6 +1279,9 @@ async function createMarioGame(settings) {
             }
         }
     };
+    
+    // Initialize RenderSystem now that SpriteRenderer is defined
+    game.renderSystem = new RenderSystem(SpriteRenderer);
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
