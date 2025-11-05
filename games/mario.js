@@ -114,7 +114,48 @@ class AISystem {
     }
 }
 
-class RenderSystem {
+class CollisionSystem {
+    update(entityManager) {
+        const goombaEntities = entityManager.query('transform', 'ai');
+        
+        goombaEntities.forEach(entity => {
+            const transform = entity.get('transform');
+            
+            // Check collision with player
+            if (!game.player.invincible &&
+                game.player.x < transform.x + transform.width &&
+                game.player.x + game.player.width > transform.x &&
+                game.player.y < transform.y + transform.height &&
+                game.player.y + game.player.height > transform.y) {
+                
+                if (game.player.vy > 0 && game.player.y < transform.y) {
+                    // Stomp goomba
+                    entityManager.entities.delete(entity.id);
+                    game.player.vy = -8;
+                    game.player.score += 100;
+                    console.log('Stomped goomba entity!');
+                } else {
+                    // Take damage
+                    if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
+                        game.player.powerState = 'small';
+                        game.player.width = 16;
+                        game.player.height = 16;
+                        game.player.y += 16;
+                    } else {
+                        game.player.lives--;
+                        if (game.player.lives <= 0) {
+                            game.gameOver = true;
+                        } else {
+                            resetLevel();
+                        }
+                    }
+                    game.player.invincible = true;
+                    game.player.invincibleTimer = 120;
+                }
+            }
+        });
+    }
+}
     render(ctx, entityManager) {
         const entities = entityManager.query('transform', 'sprite');
         entities.forEach(entity => {
@@ -1687,7 +1728,24 @@ async function createMarioGame(settings) {
             
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
-            game.enemies = layout.enemies;
+            
+            // Convert goombas to entities, keep others as regular enemies
+            game.enemies = [];
+            layout.enemies.forEach(enemy => {
+                if (enemy.type === 'goomba') {
+                    // Create entity for goomba
+                    const goombaEntity = game.entityManager.create()
+                        .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
+                        .add('physics', new Physics(-1, 0))
+                        .add('sprite', new Sprite('#8B4513'))
+                        .add('ai', new AI('patrol'));
+                    console.log('Converted goomba to entity at', enemy.x);
+                } else {
+                    // Keep other enemies as regular objects
+                    game.enemies.push(enemy);
+                }
+            });
+            
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
             game.flag = layout.flag;
@@ -2070,7 +2128,24 @@ async function createMarioGame(settings) {
             // Reset all game state
             game.platforms = layout.platforms;
             game.blocks = layout.blocks;
-            game.enemies = layout.enemies;
+            
+            // Convert goombas to entities, keep others as regular enemies
+            game.enemies = [];
+            layout.enemies.forEach(enemy => {
+                if (enemy.type === 'goomba') {
+                    // Create entity for goomba
+                    const goombaEntity = game.entityManager.create()
+                        .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
+                        .add('physics', new Physics(-1, 0))
+                        .add('sprite', new Sprite('#8B4513'))
+                        .add('ai', new AI('patrol'));
+                    console.log('Converted goomba to entity at', enemy.x);
+                } else {
+                    // Keep other enemies as regular objects
+                    game.enemies.push(enemy);
+                }
+            });
+            
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
             game.flag = layout.flag;
@@ -2101,19 +2176,10 @@ async function createMarioGame(settings) {
             game.gameOver = false;
             game.won = false;
             
-            // Initialize Entity System - Phase 1
+            // Initialize Entity System - Phase 2
             game.entityManager.addSystem(new PhysicsSystem());
             game.entityManager.addSystem(new AISystem());
-            
-            // Create a test entity alongside existing enemies
-            if (game.enemies.length > 0) {
-                const testEntity = game.entityManager.create('test-goomba')
-                    .add('transform', new Transform(game.enemies[0].x + 50, game.enemies[0].y, 16, 16))
-                    .add('physics', new Physics(-1, 0))
-                    .add('sprite', new Sprite('#FF69B4'))
-                    .add('ai', new AI('patrol'));
-                console.log('Created test entity alongside existing enemies');
-            }
+            game.entityManager.addSystem(new CollisionSystem());
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
@@ -2569,11 +2635,7 @@ async function createMarioGame(settings) {
             
             // Initialize enemy properties if not set
             if (!enemy.width) {
-                if (enemy.type === 'goomba') {
-                    enemy.width = 20;
-                    enemy.height = 18;
-                    enemy.vx = -1;
-                } else if (enemy.type === 'koopa') {
+                if (enemy.type === 'koopa') {
                     enemy.width = 20;
                     enemy.height = 20;
                     enemy.vx = -1;
