@@ -59,6 +59,14 @@ class Interactive {
     }
 }
 
+class Collectible {
+    constructor(type = 'coin', value = 200) {
+        this.type = type;
+        this.value = value;
+        this.collected = false;
+    }
+}
+
 class Camera {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -437,6 +445,34 @@ class PowerUpSystem {
     }
 }
 
+class CollectibleSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const collectibles = entityManager.query('transform', 'collectible');
+        
+        collectibles.forEach(entity => {
+            const transform = entity.get('transform');
+            const collectible = entity.get('collectible');
+            
+            if (collectible.collected) return;
+            
+            // Check collision with player
+            if (this.game.player.x < transform.x + transform.width &&
+                this.game.player.x + this.game.player.width > transform.x &&
+                this.game.player.y < transform.y + transform.height &&
+                this.game.player.y + this.game.player.height > transform.y) {
+                
+                collectible.collected = true;
+                this.game.player.score += collectible.value;
+                entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
 class CollisionSystem {
     constructor(game, resetLevel) {
         this.game = game;
@@ -767,12 +803,23 @@ class ImprovedRenderSystem {
             } else if (entity.id.startsWith('powerup')) {
                 // Render power-up
                 this.renderPowerUp(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height, type: sprite.type });
+            } else if (entity.id.startsWith('coin')) {
+                // Render coin
+                this.renderCoin(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
                 ctx.fillRect(screenX, screenY, transform.width, transform.height);
             }
         });
+    }
+    
+    renderCoin(ctx, coin) {
+        // Draw oval-shaped yellow coin (same as original)
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(coin.x + 6, coin.y + 4, 8, 12); // Taller oval shape
+        ctx.fillStyle = '#FFA500';
+        ctx.fillRect(coin.x + 8, coin.y + 6, 4, 8); // Taller inner oval
     }
     
     renderPowerUp(ctx, powerUp) {
@@ -1900,6 +1947,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new SquishSystem());
     game.entityManager.addSystem(new InteractiveSystem(game));
     game.entityManager.addSystem(new PowerUpSystem(game));
+    game.entityManager.addSystem(new CollectibleSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -2182,10 +2230,12 @@ async function createMarioGame(settings) {
                 .add('physics', new Physics(0, 0))
                 .add('sprite', new Sprite('#FF0000'));
             
-            game.coins = layout.coins || [];
             game.pits = layout.pits || [];
             game.flag = layout.flag;
             game.castles = layout.castles || [];
+            
+            // Convert coins to entities
+            convertCoinsToEntities(layout);
             
             // Use the same function for initial load
             resetMarioPosition();
@@ -2622,10 +2672,12 @@ async function createMarioGame(settings) {
                 .add('physics', new Physics(0, 0))
                 .add('sprite', new Sprite('#FF0000'));
             
-            game.coins = layout.coins || [];
             game.pits = layout.pits || [];
             game.flag = layout.flag;
             game.castles = layout.castles || [];
+            
+            // Convert coins to entities
+            convertCoinsToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -3015,20 +3067,6 @@ async function createMarioGame(settings) {
                         platform.vx = 1; // Start moving right
                     }
                 }
-            }
-        });
-    }
-    
-    function checkCoinCollection() {
-        game.coins.forEach(coin => {
-            if (!coin.collected &&
-                game.player.x < coin.x + coin.width &&
-                game.player.x + game.player.width > coin.x &&
-                game.player.y < coin.y + coin.height &&
-                game.player.y + game.player.height > coin.y) {
-                
-                coin.collected = true;
-                game.player.score += 200;
             }
         });
     }
@@ -3527,17 +3565,6 @@ async function createMarioGame(settings) {
         ctx.save();
         ctx.translate(-game.camera.x, 0);
         
-        // Coins
-        game.coins.forEach(coin => {
-            if (!coin.collected) {
-                // Draw oval-shaped yellow coin
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(coin.x + 6, coin.y + 4, 8, 12); // Taller oval shape
-                ctx.fillStyle = '#FFA500';
-                ctx.fillRect(coin.x + 8, coin.y + 6, 4, 8); // Taller inner oval
-            }
-        });
-        
         // Fireballs
         game.fireballs.forEach(fireball => {
             ctx.fillStyle = '#FF4500';
@@ -3643,7 +3670,6 @@ async function createMarioGame(settings) {
         game.entityManager.update();
         
         checkScreenBoundary();
-        checkCoinCollection();
         checkWin();
         render();
         
@@ -3693,6 +3719,20 @@ async function createMarioGame(settings) {
                     .add('transform', new Transform(block.x, block.y, block.width, block.height))
                     .add('interactive', new Interactive('question', block.content || 'coin'));
             }
+        });
+    }
+    
+    // Convert all coins to entities
+    function convertCoinsToEntities(layout) {
+        if (!layout.coins) return;
+        
+        let coinCount = 0;
+        layout.coins.forEach(coin => {
+            coinCount++;
+            const coinEntity = game.entityManager.create(`coin${coinCount}`)
+                .add('transform', new Transform(coin.x, coin.y, coin.width, coin.height))
+                .add('sprite', new Sprite('#FFD700', 'coin'))
+                .add('collectible', new Collectible('coin', 200));
         });
     }
     
