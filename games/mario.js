@@ -1815,6 +1815,9 @@ async function createMarioGame(settings) {
             game.blocks = layout.blocks;
             
             // Convert goombas to entities, keep others as regular enemies
+            // Clear existing entities first
+            game.entityManager.entities.clear();
+            
             game.enemies = [];
             layout.enemies.forEach(enemy => {
                 if (enemy.type === 'goomba') {
@@ -2215,6 +2218,9 @@ async function createMarioGame(settings) {
             game.blocks = layout.blocks;
             
             // Convert goombas to entities, keep others as regular enemies
+            // Clear existing entities first
+            game.entityManager.entities.clear();
+            
             game.enemies = [];
             layout.enemies.forEach(enemy => {
                 if (enemy.type === 'goomba') {
