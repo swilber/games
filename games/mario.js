@@ -74,28 +74,47 @@ class EntityManager {
 }
 
 class PhysicsSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics');
         entities.forEach(entity => {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
             
+            // Apply gravity
             physics.vy += physics.gravity;
+            
+            // Update position
             transform.x += physics.vx;
             transform.y += physics.vy;
             
-            if (transform.y > 350) {
-                transform.y = 350;
-                physics.vy = 0;
-                physics.onGround = true;
-            } else {
-                physics.onGround = false;
-            }
+            // Platform collision (simplified)
+            physics.onGround = false;
+            this.game.platforms.forEach(platform => {
+                if (transform.x < platform.x + platform.width &&
+                    transform.x + transform.width > platform.x &&
+                    transform.y < platform.y + platform.height &&
+                    transform.y + transform.height > platform.y) {
+                    
+                    if (physics.vy > 0 && transform.y < platform.y) {
+                        transform.y = platform.y - transform.height;
+                        physics.vy = 0;
+                        physics.onGround = true;
+                    }
+                }
+            });
         });
     }
 }
 
 class AISystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics', 'ai');
         entities.forEach(entity => {
@@ -106,7 +125,23 @@ class AISystem {
             if (ai.type === 'patrol') {
                 physics.vx = ai.direction;
                 
-                if (transform.x <= 0 || transform.x >= 800 - transform.width) {
+                // Reverse at level boundaries
+                if (transform.x <= 0 || transform.x >= this.game.levelWidth - transform.width) {
+                    ai.direction *= -1;
+                }
+                
+                // Reverse at platform edges (simplified)
+                let foundGround = false;
+                this.game.platforms.forEach(platform => {
+                    const checkX = transform.x + (ai.direction > 0 ? transform.width + 10 : -10);
+                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                        transform.y + transform.height >= platform.y - 20 &&
+                        transform.y + transform.height <= platform.y + 20) {
+                        foundGround = true;
+                    }
+                });
+                
+                if (!foundGround && physics.onGround) {
                     ai.direction *= -1;
                 }
             }
@@ -163,13 +198,22 @@ class CollisionSystem {
 
 class RenderSystem {
     render(ctx, entityManager) {
-        const entities = entityManager.query('transform', 'sprite');
+        const entities = entityManager.query('transform', 'sprite', 'ai');
         entities.forEach(entity => {
             const transform = entity.get('transform');
-            const sprite = entity.get('sprite');
             
-            ctx.fillStyle = sprite.color;
-            ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
+            // Create a fake enemy object for the sprite renderer
+            const fakeEnemy = {
+                x: transform.x,
+                y: transform.y,
+                width: transform.width,
+                height: transform.height,
+                type: 'goomba',
+                alive: true
+            };
+            
+            // Use the existing goomba sprite renderer
+            SpriteRenderer.enemies.goomba(ctx, fakeEnemy);
         });
     }
 }
@@ -2183,8 +2227,8 @@ async function createMarioGame(settings) {
             game.won = false;
             
             // Initialize Entity System - Phase 2
-            game.entityManager.addSystem(new PhysicsSystem());
-            game.entityManager.addSystem(new AISystem());
+            game.entityManager.addSystem(new PhysicsSystem(game));
+            game.entityManager.addSystem(new AISystem(game));
             game.entityManager.addSystem(new CollisionSystem(game));
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
