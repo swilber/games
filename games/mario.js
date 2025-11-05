@@ -80,9 +80,14 @@ class PhysicsSystem {
     
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics');
-        entities.forEach(entity => {
+        entities.forEach((entity, index) => {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
+            
+            // Debug: Log entity 0 position before physics update
+            if (index === 0) {
+                console.log('Entity 0 BEFORE physics:', transform.x, 'camera:', this.game.camera.x);
+            }
             
             // Apply gravity
             physics.vy += physics.gravity;
@@ -90,6 +95,11 @@ class PhysicsSystem {
             // Update position
             transform.x += physics.vx;
             transform.y += physics.vy;
+            
+            // Debug: Log entity 0 position after physics update
+            if (index === 0) {
+                console.log('Entity 0 AFTER physics:', transform.x, 'vx:', physics.vx);
+            }
             
             // Platform collision - check all platforms and blocks
             physics.onGround = false;
