@@ -231,8 +231,13 @@ class RenderSystem {
     
     render(ctx, entityManager) {
         const entities = entityManager.query('transform', 'sprite', 'ai');
-        entities.forEach(entity => {
+        entities.forEach((entity, index) => {
             const transform = entity.get('transform');
+            
+            // Debug: Log first goomba position
+            if (index === 0) {
+                console.log('Entity 0 world position:', transform.x, transform.y);
+            }
             
             // Create a fake enemy object for the sprite renderer
             const fakeEnemy = {
