@@ -150,8 +150,9 @@ class AISystem {
 }
 
 class CollisionSystem {
-    constructor(game) {
+    constructor(game, resetLevel) {
         this.game = game;
+        this.resetLevel = resetLevel;
     }
     
     update(entityManager) {
@@ -185,7 +186,7 @@ class CollisionSystem {
                         if (this.game.player.lives <= 0) {
                             this.game.gameOver = true;
                         } else {
-                            resetLevel();
+                            this.resetLevel();
                         }
                     }
                     this.game.player.invincible = true;
@@ -2236,7 +2237,7 @@ async function createMarioGame(settings) {
             // Initialize Entity System - Phase 2
             game.entityManager.addSystem(new PhysicsSystem(game));
             game.entityManager.addSystem(new AISystem(game));
-            game.entityManager.addSystem(new CollisionSystem(game));
+            game.entityManager.addSystem(new CollisionSystem(game, resetLevel));
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
