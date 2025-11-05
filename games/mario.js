@@ -2727,6 +2727,9 @@ async function createMarioGame(settings) {
         game.enemies.forEach((enemy, index) => {
             if (!enemy.alive) return;
             
+            // Skip goombas - they're handled by entity system
+            if (enemy.type === 'goomba') return;
+            
             // Initialize enemy properties if not set
             if (!enemy.width) {
                 if (enemy.type === 'koopa') {
@@ -3408,9 +3411,9 @@ async function createMarioGame(settings) {
             }
         });
         
-        // Enemies (except piranha plants which are rendered behind pipes)
+        // Enemies (except piranha plants and goombas which are rendered by entity system)
         game.enemies.forEach(enemy => {
-            if (enemy.alive && enemy.type !== 'piranha') {
+            if (enemy.alive && enemy.type !== 'piranha' && enemy.type !== 'goomba') {
                 SpriteRenderer.enemies[enemy.type](ctx, enemy);
             }
         });
