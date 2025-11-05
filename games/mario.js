@@ -80,7 +80,9 @@ class PhysicsSystem {
     
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics');
-        entities.forEach(entity => {
+        console.log('PhysicsSystem processing', entities.length, 'entities');
+        
+        entities.forEach((entity, index) => {
             const transform = entity.get('transform');
             const physics = entity.get('physics');
             
