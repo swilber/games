@@ -1824,7 +1824,9 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            layout.enemies.forEach(enemy => {
+            console.log('FIRST LOAD - Processing', layout.enemies.length, 'enemies from layout');
+            layout.enemies.forEach((enemy, index) => {
+                console.log(`Enemy ${index}: type=${enemy.type}, x=${enemy.x}`);
                 if (enemy.type === 'goomba') {
                     // Create entity for goomba
                     const goombaEntity = game.entityManager.create()
@@ -1836,8 +1838,11 @@ async function createMarioGame(settings) {
                 } else {
                     // Keep other enemies as regular objects
                     game.enemies.push(enemy);
+                    console.log('Kept', enemy.type, 'as regular enemy at', enemy.x);
                 }
             });
+            console.log('FIRST LOAD - Final game.enemies array has', game.enemies.length, 'regular enemies');
+            console.log('FIRST LOAD - EntityManager has', game.entityManager.entities.size, 'entities');
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
@@ -2227,7 +2232,9 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            layout.enemies.forEach(enemy => {
+            console.log('RESET - Processing', layout.enemies.length, 'enemies from layout');
+            layout.enemies.forEach((enemy, index) => {
+                console.log(`Enemy ${index}: type=${enemy.type}, x=${enemy.x}`);
                 if (enemy.type === 'goomba') {
                     // Create entity for goomba
                     const goombaEntity = game.entityManager.create()
@@ -2239,8 +2246,11 @@ async function createMarioGame(settings) {
                 } else {
                     // Keep other enemies as regular objects
                     game.enemies.push(enemy);
+                    console.log('Kept', enemy.type, 'as regular enemy at', enemy.x);
                 }
             });
+            console.log('RESET - Final game.enemies array has', game.enemies.length, 'regular enemies');
+            console.log('RESET - EntityManager has', game.entityManager.entities.size, 'entities');
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
