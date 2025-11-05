@@ -2302,7 +2302,6 @@ async function createMarioGame(settings) {
                 const hasSprite = entity.has('sprite');
                 console.log(`Entity ${entityIndex}: T:${hasTransform} P:${hasPhysics} A:${hasAI} S:${hasSprite}`);
                 entityIndex++;
-                if (entityIndex >= 5) break; // Only show first 5
             }
             
         } catch (error) {
