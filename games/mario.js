@@ -2205,6 +2205,7 @@ async function createMarioGame(settings) {
         console.log('Using lives:', currentLives);
         
         try {
+            console.log('DEBUG: Starting level load process for first load');
             let mapFile, theme;
             if (game.currentLevel === 1) {
                 mapFile = 'mario-1-1-map.txt';
