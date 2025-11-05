@@ -1824,9 +1824,7 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            console.log('FIRST LOAD - Processing', layout.enemies.length, 'enemies from layout');
-            layout.enemies.forEach((enemy, index) => {
-                console.log(`Enemy ${index}: type=${enemy.type}, x=${enemy.x}`);
+            layout.enemies.forEach(enemy => {
                 if (enemy.type === 'goomba') {
                     // Create entity for goomba
                     const goombaEntity = game.entityManager.create()
@@ -1834,19 +1832,14 @@ async function createMarioGame(settings) {
                         .add('physics', new Physics(-1, 0))
                         .add('sprite', new Sprite('#8B4513'))
                         .add('ai', new AI('patrol'));
-                    console.log('Converted goomba to entity at', enemy.x);
                 } else {
                     // Keep other enemies as regular objects
                     game.enemies.push(enemy);
-                    console.log('Kept', enemy.type, 'as regular enemy at', enemy.x);
                 }
             });
-            console.log('FIRST LOAD - Final game.enemies array has', game.enemies.length, 'regular enemies');
-            console.log('FIRST LOAD - EntityManager has', game.entityManager.entities.size, 'entities');
             
-            // Double-check: remove any goombas that might have slipped through
+            // Ensure no goombas remain in regular enemies array
             game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
-            console.log('FIRST LOAD - After filtering, game.enemies has', game.enemies.length, 'non-goomba enemies');
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
@@ -2236,9 +2229,7 @@ async function createMarioGame(settings) {
             game.entityManager.entities.clear();
             
             game.enemies = [];
-            console.log('RESET - Processing', layout.enemies.length, 'enemies from layout');
-            layout.enemies.forEach((enemy, index) => {
-                console.log(`Enemy ${index}: type=${enemy.type}, x=${enemy.x}`);
+            layout.enemies.forEach(enemy => {
                 if (enemy.type === 'goomba') {
                     // Create entity for goomba
                     const goombaEntity = game.entityManager.create()
@@ -2246,19 +2237,14 @@ async function createMarioGame(settings) {
                         .add('physics', new Physics(-1, 0))
                         .add('sprite', new Sprite('#8B4513'))
                         .add('ai', new AI('patrol'));
-                    console.log('Converted goomba to entity at', enemy.x);
                 } else {
                     // Keep other enemies as regular objects
                     game.enemies.push(enemy);
-                    console.log('Kept', enemy.type, 'as regular enemy at', enemy.x);
                 }
             });
-            console.log('RESET - Final game.enemies array has', game.enemies.length, 'regular enemies');
-            console.log('RESET - EntityManager has', game.entityManager.entities.size, 'entities');
             
-            // Double-check: remove any goombas that might have slipped through
+            // Ensure no goombas remain in regular enemies array
             game.enemies = game.enemies.filter(enemy => enemy.type !== 'goomba');
-            console.log('RESET - After filtering, game.enemies has', game.enemies.length, 'non-goomba enemies');
             
             game.coins = layout.coins || [];
             game.pits = layout.pits || [];
