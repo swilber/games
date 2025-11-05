@@ -67,6 +67,16 @@ class Collectible {
     }
 }
 
+class Projectile {
+    constructor(type = 'fireball', damage = 1) {
+        this.type = type;
+        this.damage = damage;
+        this.bounces = 0;
+        this.maxBounces = 8;
+        this.bounceCooldown = 0; // Prevent multiple bounces per frame
+    }
+}
+
 class Camera {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -120,6 +130,18 @@ class PhysicsSystem {
             
             // Skip physics for piranha plants (they handle their own movement)
             if (entity.id.startsWith('piranha')) {
+                return;
+            }
+            
+            // Skip physics for projectiles (ProjectileSystem handles their collision)
+            if (entity.has('projectile')) {
+                // Apply gravity and velocity but no collision
+                physics.vy += 0.5;
+                transform.x += physics.vx;
+                transform.y += physics.vy;
+                
+                // Terminal velocity
+                if (physics.vy > 15) physics.vy = 15;
                 return;
             }
             
@@ -473,6 +495,87 @@ class CollectibleSystem {
     }
 }
 
+class ProjectileSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const projectiles = entityManager.query('transform', 'physics', 'projectile');
+        
+        projectiles.forEach(entity => {
+            const transform = entity.get('transform');
+            const physics = entity.get('physics');
+            const projectile = entity.get('projectile');
+            
+            // Update bounce cooldown
+            if (projectile.bounceCooldown > 0) {
+                projectile.bounceCooldown--;
+            }
+            
+            // Remove if too many bounces
+            if (projectile.bounces >= projectile.maxBounces) {
+                entityManager.entities.delete(entity.id);
+                return;
+            }
+            
+            // Check collision with platforms and blocks for bouncing
+            if (projectile.bounceCooldown === 0) {
+                const allSolids = [...this.game.platforms, ...this.game.blocks];
+                let bounced = false;
+                
+                for (const solid of allSolids) {
+                    if (transform.x < solid.x + solid.width &&
+                        transform.x + transform.width > solid.x &&
+                        transform.y < solid.y + solid.height &&
+                        transform.y + transform.height > solid.y) {
+                        
+                        // Simple ground bounce check - if moving down and hitting top of platform
+                        if (physics.vy > 0 && transform.y < solid.y) {
+                            transform.y = solid.y - transform.height;
+                            physics.vy = -4;
+                            projectile.bounces++;
+                            projectile.bounceCooldown = 10; // Longer cooldown
+                            bounced = true;
+                            break; // Only bounce once per frame
+                        }
+                        // Wall collision - delete fireball
+                        else if (physics.vx > 0 && transform.x < solid.x) {
+                            entityManager.entities.delete(entity.id);
+                            return;
+                        }
+                        else if (physics.vx < 0 && transform.x > solid.x) {
+                            entityManager.entities.delete(entity.id);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Check collision with enemies
+            const enemies = entityManager.query('transform', 'ai');
+            enemies.forEach(enemy => {
+                const enemyTransform = enemy.get('transform');
+                if (transform.x < enemyTransform.x + enemyTransform.width &&
+                    transform.x + transform.width > enemyTransform.x &&
+                    transform.y < enemyTransform.y + enemyTransform.height &&
+                    transform.y + transform.height > enemyTransform.y) {
+                    
+                    // Hit enemy - remove both
+                    entityManager.entities.delete(enemy.id);
+                    entityManager.entities.delete(entity.id);
+                    this.game.player.score += 100;
+                }
+            });
+            
+            // Remove if off screen (increased bounds)
+            if (transform.x < -100 || transform.x > 3500 || transform.y > 600) {
+                entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
 class CollisionSystem {
     constructor(game, resetLevel) {
         this.game = game;
@@ -806,12 +909,23 @@ class ImprovedRenderSystem {
             } else if (entity.id.startsWith('coin')) {
                 // Render coin
                 this.renderCoin(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
+            } else if (entity.id.startsWith('fireball')) {
+                // Render fireball
+                this.renderFireball(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
                 ctx.fillRect(screenX, screenY, transform.width, transform.height);
             }
         });
+    }
+    
+    renderFireball(ctx, fireball) {
+        // Orange fireball with yellow center (same as original)
+        ctx.fillStyle = '#FF4500';
+        ctx.fillRect(fireball.x, fireball.y, fireball.width, fireball.height);
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(fireball.x + 1, fireball.y + 1, fireball.width - 2, fireball.height - 2);
     }
     
     renderCoin(ctx, coin) {
@@ -1948,6 +2062,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new InteractiveSystem(game));
     game.entityManager.addSystem(new PowerUpSystem(game));
     game.entityManager.addSystem(new CollectibleSystem(game));
+    game.entityManager.addSystem(new ProjectileSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -2844,79 +2959,6 @@ async function createMarioGame(settings) {
         });
     }
     
-    function updateFireballs() {
-        game.fireballs.forEach((fireball, index) => {
-            // Move fireball
-            fireball.x += fireball.vx;
-            fireball.y += fireball.vy;
-            
-            // Add gravity
-            fireball.vy += 0.2;
-            
-            // Bounce off ground and walls
-            [...game.platforms, ...game.blocks].forEach(solid => {
-                if (fireball.x < solid.x + solid.width &&
-                    fireball.x + fireball.width > solid.x &&
-                    fireball.y < solid.y + solid.height &&
-                    fireball.y + fireball.height > solid.y) {
-                    
-                    const overlapLeft = (fireball.x + fireball.width) - solid.x;
-                    const overlapRight = (solid.x + solid.width) - fireball.x;
-                    const overlapTop = (fireball.y + fireball.height) - solid.y;
-                    const overlapBottom = (solid.y + solid.height) - fireball.y;
-                    
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-                    
-                    // Ground bounce (hitting from above)
-                    if (minOverlap === overlapTop && fireball.vy > 0) {
-                        fireball.y = solid.y - fireball.height;
-                        fireball.vy = -3; // Bounce
-                        fireball.bounces++;
-                    }
-                    // Wall collision from right
-                    else if (minOverlap === overlapLeft && fireball.vx > 0) {
-                        fireball.x = solid.x - fireball.width;
-                        fireball.vx *= -1; // Reverse direction
-                    }
-                    // Wall collision from left
-                    else if (minOverlap === overlapRight && fireball.vx < 0) {
-                        fireball.x = solid.x + solid.width;
-                        fireball.vx *= -1; // Reverse direction
-                    }
-                }
-            });
-            
-            // Hit enemies (now using entity system)
-            const entities = game.entityManager.query('transform', 'ai');
-            entities.forEach(entity => {
-                const transform = entity.get('transform');
-                if (fireball.x < transform.x + transform.width &&
-                    fireball.x + fireball.width > transform.x &&
-                    fireball.y < transform.y + transform.height &&
-                    fireball.y + fireball.height > transform.y) {
-                    
-                    // Kill enemy based on type
-                    if (entity.id.startsWith('goomba')) {
-                        game.entityManager.entities.delete(entity.id);
-                    } else if (entity.id.startsWith('koopa')) {
-                        game.entityManager.entities.delete(entity.id);
-                    } else {
-                        game.entityManager.entities.delete(entity.id);
-                    }
-                    
-                    game.player.score += 100;
-                    game.fireballs.splice(index, 1);
-                    return; // Fireball destroyed on enemy hit
-                }
-            });
-            
-            // Remove fireball if it bounced too many times or went off screen
-            if (fireball.bounces > fireball.maxBounces || fireball.x < -50 || fireball.x > 5000 || fireball.y > 500) {
-                game.fireballs.splice(index, 1);
-            }
-        });
-    }
-    
     function nextLevel() {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
@@ -2966,16 +3008,20 @@ async function createMarioGame(settings) {
         if ((game.keys['KeyX'] || game.keys['KeyZ']) && game.player.powerState === 'fire') {
             // Prevent rapid fire - only shoot if key was just pressed
             if (!game.player.shootCooldown) {
-                game.fireballs.push({
-                    x: game.player.x + (game.player.facingRight ? game.player.width : -10),
-                    y: game.player.y + 10,
-                    vx: game.player.facingRight ? 3 : -3,
-                    vy: -1,
-                    width: 8,
-                    height: 8,
-                    bounces: 0,
-                    maxBounces: 3
-                });
+                // Create fireball entity
+                const fireballEntity = game.entityManager.create(`fireball_${Date.now()}`)
+                    .add('transform', new Transform(
+                        game.player.x + (game.player.facingRight ? game.player.width : -10),
+                        game.player.y + 10,
+                        8, 8
+                    ))
+                    .add('physics', new Physics(
+                        game.player.facingRight ? 3 : -3,
+                        -1
+                    ))
+                    .add('sprite', new Sprite('#FF4500', 'fireball'))
+                    .add('projectile', new Projectile('fireball', 1));
+                
                 game.player.shootCooldown = 15; // Cooldown frames
             }
         }
@@ -3565,14 +3611,6 @@ async function createMarioGame(settings) {
         ctx.save();
         ctx.translate(-game.camera.x, 0);
         
-        // Fireballs
-        game.fireballs.forEach(fireball => {
-            ctx.fillStyle = '#FF4500';
-            ctx.fillRect(fireball.x, fireball.y, fireball.width, fireball.height);
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(fireball.x + 1, fireball.y + 1, fireball.width - 2, fireball.height - 2);
-        });
-        
         // Player (with invincibility flashing)
         if (!game.player.invincible || Math.floor(Date.now() / 100) % 2 === 0) {
             SpriteRenderer.player.mario(ctx, game.player);
@@ -3663,7 +3701,6 @@ async function createMarioGame(settings) {
         game.frameCount++;
         updatePlayer();
         updateMovingPlatforms();
-        updateFireballs();
         updateParticles();
         
         // Update Entity System - Phase 1
