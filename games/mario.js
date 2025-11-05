@@ -115,6 +115,10 @@ class AISystem {
 }
 
 class CollisionSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
     update(entityManager) {
         const goombaEntities = entityManager.query('transform', 'ai');
         
@@ -122,35 +126,35 @@ class CollisionSystem {
             const transform = entity.get('transform');
             
             // Check collision with player
-            if (!game.player.invincible &&
-                game.player.x < transform.x + transform.width &&
-                game.player.x + game.player.width > transform.x &&
-                game.player.y < transform.y + transform.height &&
-                game.player.y + game.player.height > transform.y) {
+            if (!this.game.player.invincible &&
+                this.game.player.x < transform.x + transform.width &&
+                this.game.player.x + this.game.player.width > transform.x &&
+                this.game.player.y < transform.y + transform.height &&
+                this.game.player.y + this.game.player.height > transform.y) {
                 
-                if (game.player.vy > 0 && game.player.y < transform.y) {
+                if (this.game.player.vy > 0 && this.game.player.y < transform.y) {
                     // Stomp goomba
                     entityManager.entities.delete(entity.id);
-                    game.player.vy = -8;
-                    game.player.score += 100;
+                    this.game.player.vy = -8;
+                    this.game.player.score += 100;
                     console.log('Stomped goomba entity!');
                 } else {
                     // Take damage
-                    if (game.player.powerState === 'big' || game.player.powerState === 'fire') {
-                        game.player.powerState = 'small';
-                        game.player.width = 16;
-                        game.player.height = 16;
-                        game.player.y += 16;
+                    if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                        this.game.player.powerState = 'small';
+                        this.game.player.width = 16;
+                        this.game.player.height = 16;
+                        this.game.player.y += 16;
                     } else {
-                        game.player.lives--;
-                        if (game.player.lives <= 0) {
-                            game.gameOver = true;
+                        this.game.player.lives--;
+                        if (this.game.player.lives <= 0) {
+                            this.game.gameOver = true;
                         } else {
                             resetLevel();
                         }
                     }
-                    game.player.invincible = true;
-                    game.player.invincibleTimer = 120;
+                    this.game.player.invincible = true;
+                    this.game.player.invincibleTimer = 120;
                 }
             }
         });
@@ -2181,7 +2185,7 @@ async function createMarioGame(settings) {
             // Initialize Entity System - Phase 2
             game.entityManager.addSystem(new PhysicsSystem());
             game.entityManager.addSystem(new AISystem());
-            game.entityManager.addSystem(new CollisionSystem());
+            game.entityManager.addSystem(new CollisionSystem(game));
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
