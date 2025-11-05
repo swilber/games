@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mario Entity System Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        #game-area {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-area">
+        <h1 style="text-align: center;">Mario Entity System Demo</h1>
+        <p style="text-align: center;">Loading...</p>
+    </div>
+
+    <script type="module">
+        // Entity System Classes (inline for demo)
+        class Entity {
+            constructor(id = null) {
+                this.id = id || Math.random().toString(36).substr(2, 9);
+                this.components = new Map();
+                this.active = true;
+            }
+            
+            add(name, component) {
+                this.components.set(name, component);
+                return this;
+            }
+            
+            get(name) {
+                return this.components.get(name);
+            }
+            
+            has(name) {
+                return this.components.has(name);
+            }
+        }
+
+        class Transform {
+            constructor(x = 0, y = 0, width = 16, height = 16) {
+                this.x = x; this.y = y; this.width = width; this.height = height;
+            }
+        }
+
+        class Physics {
+            constructor(vx = 0, vy = 0) {
+                this.vx = vx; this.vy = vy; this.gravity = 0.5; this.onGround = false;
+            }
+        }
+
+        class Sprite {
+            constructor(color = '#FF0000') {
+                this.color = color;
+            }
+        }
+
+        class AI {
+            constructor(type = 'patrol') {
+                this.type = type; this.direction = -1;
+            }
+        }
+
+        class EntityManager {
+            constructor() {
+                this.entities = new Map();
+                this.systems = [];
+            }
+            
+            create(id = null) {
+                const entity = new Entity(id);
+                this.entities.set(entity.id, entity);
+                return entity;
+            }
+            
+            query(...componentNames) {
+                return Array.from(this.entities.values()).filter(entity =>
+                    componentNames.every(name => entity.has(name))
+                );
+            }
+            
+            addSystem(system) {
+                this.systems.push(system);
+            }
+            
+            update() {
+                this.systems.forEach(system => system.update(this));
+            }
+        }
+
+        class PhysicsSystem {
+            update(entityManager) {
+                const entities = entityManager.query('transform', 'physics');
+                entities.forEach(entity => {
+                    const transform = entity.get('transform');
+                    const physics = entity.get('physics');
+                    
+                    physics.vy += physics.gravity;
+                    transform.x += physics.vx;
+                    transform.y += physics.vy;
+                    
+                    if (transform.y > 350) {
+                        transform.y = 350;
+                        physics.vy = 0;
+                        physics.onGround = true;
+                    } else {
+                        physics.onGround = false;
+                    }
+                });
+            }
+        }
+
+        class AISystem {
+            update(entityManager) {
+                const entities = entityManager.query('transform', 'physics', 'ai');
+                entities.forEach(entity => {
+                    const transform = entity.get('transform');
+                    const physics = entity.get('physics');
+                    const ai = entity.get('ai');
+                    
+                    physics.vx = ai.direction;
+                    
+                    if (transform.x <= 0 || transform.x >= 800 - transform.width) {
+                        ai.direction *= -1;
+                    }
+                });
+            }
+        }
+
+        class RenderSystem {
+            render(ctx, entityManager) {
+                const entities = entityManager.query('transform', 'sprite');
+                entities.forEach(entity => {
+                    const transform = entity.get('transform');
+                    const sprite = entity.get('sprite');
+                    
+                    ctx.fillStyle = sprite.color;
+                    ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
+                });
+            }
+        }
+
+        // Demo
+        function startDemo() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 400;
+            canvas.style.border = '2px solid #000';
+            
+            const ctx = canvas.getContext('2d');
+            const entityManager = new EntityManager();
+            
+            entityManager.addSystem(new PhysicsSystem());
+            entityManager.addSystem(new AISystem());
+            const renderSystem = new RenderSystem();
+            
+            // Create entities
+            const player = new Entity('player')
+                .add('transform', new Transform(50, 300, 16, 16))
+                .add('physics', new Physics(0, 0))
+                .add('sprite', new Sprite('#FF0000'));
+                
+            const goomba = new Entity()
+                .add('transform', new Transform(200, 334, 16, 16))
+                .add('physics', new Physics(-1, 0))
+                .add('sprite', new Sprite('#8B4513'))
+                .add('ai', new AI('patrol'));
+                
+            const platform = new Entity()
+                .add('transform', new Transform(0, 366, 800, 34))
+                .add('sprite', new Sprite('#00AA00'));
+            
+            // Input
+            const keys = {};
+            document.addEventListener('keydown', (e) => keys[e.code] = true);
+            document.addEventListener('keyup', (e) => keys[e.code] = false);
+            
+            function gameLoop() {
+                const playerTransform = player.get('transform');
+                const playerPhysics = player.get('physics');
+                
+                if (keys['ArrowLeft'] || keys['KeyA']) {
+                    playerPhysics.vx = -3;
+                } else if (keys['ArrowRight'] || keys['KeyD']) {
+                    playerPhysics.vx = 3;
+                } else {
+                    playerPhysics.vx *= 0.8;
+                }
+                
+                if ((keys['ArrowUp'] || keys['Space']) && playerPhysics.onGround) {
+                    playerPhysics.vy = -12;
+                }
+                
+                entityManager.update();
+                
+                ctx.fillStyle = '#5C94FC';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                renderSystem.render(ctx, entityManager);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Entities: ${entityManager.entities.size}`, 10, 30);
+                
+                requestAnimationFrame(gameLoop);
+            }
+            
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = '';
+            
+            const title = document.createElement('h2');
+            title.textContent = 'Entity System Demo';
+            title.style.textAlign = 'center';
+            
+            const instructions = document.createElement('p');
+            instructions.textContent = 'Arrow keys or WASD to move, Space to jump';
+            instructions.style.textAlign = 'center';
+            
+            gameArea.appendChild(title);
+            gameArea.appendChild(instructions);
+            gameArea.appendChild(canvas);
+            
+            gameLoop();
+        }
+        
+        startDemo();
+    </script>
+</body>
+</html>
