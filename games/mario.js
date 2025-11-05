@@ -383,16 +383,57 @@ class InteractiveSystem {
                     powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
                 }
                 
-                this.game.powerUps.push({
-                    x: block.x, y: block.y - 32,
-                    width: 32, height: 32,
-                    type: powerUpType, 
-                    vx: powerUpType === 'fireflower' ? 0 : 1, // Fire flowers don't move
-                    vy: 0
-                });
+                // Create power-up entity instead of adding to array
+                const powerUpEntity = this.game.entityManager.create(`powerup_${Date.now()}`)
+                    .add('transform', new Transform(block.x, block.y - 32, 32, 32))
+                    .add('physics', new Physics(powerUpType === 'fireflower' ? 0 : 1, 0))
+                    .add('sprite', new Sprite('#FF0000', powerUpType));
             }
             block.content = null;
         }
+    }
+}
+
+class PowerUpSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const powerUps = entityManager.query('transform', 'physics', 'sprite');
+        
+        powerUps.forEach(entity => {
+            const sprite = entity.get('sprite');
+            if (!sprite.type || !['mushroom', 'fireflower', 'star'].includes(sprite.type)) return;
+            
+            const transform = entity.get('transform');
+            const physics = entity.get('physics');
+            
+            // Check collision with player
+            if (this.game.player.x < transform.x + transform.width &&
+                this.game.player.x + this.game.player.width > transform.x &&
+                this.game.player.y < transform.y + transform.height &&
+                this.game.player.y + this.game.player.height > transform.y) {
+                
+                // Power up Mario
+                if (sprite.type === 'mushroom') {
+                    if (this.game.player.powerState === 'small') {
+                        this.game.player.powerState = 'big';
+                        this.game.player.width = 16;
+                        this.game.player.height = 32;
+                        this.game.player.y -= 16;
+                    }
+                } else if (sprite.type === 'fireflower') {
+                    this.game.player.powerState = 'fire';
+                    this.game.player.width = 16;
+                    this.game.player.height = 32;
+                    if (this.game.player.height === 16) this.game.player.y -= 16;
+                }
+                
+                this.game.player.score += 1000;
+                entityManager.entities.delete(entity.id);
+            }
+        });
     }
 }
 
@@ -723,12 +764,54 @@ class ImprovedRenderSystem {
                 fakeObject.type = 'koopa';
                 fakeObject.state = 'shell';
                 this.spriteRenderer.enemies.koopa(ctx, fakeObject);
+            } else if (entity.id.startsWith('powerup')) {
+                // Render power-up
+                this.renderPowerUp(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height, type: sprite.type });
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
                 ctx.fillRect(screenX, screenY, transform.width, transform.height);
             }
         });
+    }
+    
+    renderPowerUp(ctx, powerUp) {
+        if (powerUp.type === 'mushroom') {
+            // Super Mushroom - red with white spots
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(powerUp.x + 3, powerUp.y + 12, 18, 12);
+            ctx.fillRect(powerUp.x + 6, powerUp.y + 9, 12, 3);
+            
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(powerUp.x + 7, powerUp.y + 14, 3, 3);
+            ctx.fillRect(powerUp.x + 14, powerUp.y + 14, 3, 3);
+            ctx.fillRect(powerUp.x + 10, powerUp.y + 18, 3, 3);
+            
+            ctx.fillStyle = '#FFDBAC';
+            ctx.fillRect(powerUp.x + 10, powerUp.y + 24, 4, 8);
+            
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(powerUp.x + 11, powerUp.y + 25, 2, 6);
+            
+        } else if (powerUp.type === 'fireflower') {
+            // Fire Flower
+            ctx.fillStyle = '#00AA00';
+            ctx.fillRect(powerUp.x + 11, powerUp.y + 16, 2, 12);
+            ctx.fillRect(powerUp.x + 7, powerUp.y + 18, 4, 2);
+            ctx.fillRect(powerUp.x + 13, powerUp.y + 18, 4, 2);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(powerUp.x + 4, powerUp.y + 10, 16, 6);
+            ctx.fillRect(powerUp.x + 6, powerUp.y + 8, 12, 10);
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(powerUp.x + 6, powerUp.y + 11, 12, 4);
+            ctx.fillRect(powerUp.x + 8, powerUp.y + 9, 8, 8);
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(powerUp.x + 8, powerUp.y + 12, 8, 2);
+            ctx.fillRect(powerUp.x + 10, powerUp.y + 10, 4, 6);
+        }
     }
 }
 
@@ -1816,6 +1899,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
     game.entityManager.addSystem(new SquishSystem());
     game.entityManager.addSystem(new InteractiveSystem(game));
+    game.entityManager.addSystem(new PowerUpSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -3435,82 +3519,10 @@ async function createMarioGame(settings) {
             ThemeSystem.renderBlock(ctx, block);
         });
         
-        // Power-ups
-        game.powerUps.forEach(powerUp => {
-            if (powerUp.type === 'mushroom') {
-                // Super Mushroom - red with white spots (1.5x size)
-                ctx.fillStyle = '#FF0000';
-                ctx.fillRect(powerUp.x + 3, powerUp.y + 12, 18, 12); // Mushroom cap
-                ctx.fillRect(powerUp.x + 6, powerUp.y + 9, 12, 3);   // Cap top
-                
-                // White spots on cap
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 14, 3, 3);
-                ctx.fillRect(powerUp.x + 14, powerUp.y + 14, 3, 3);
-                ctx.fillRect(powerUp.x + 10, powerUp.y + 18, 3, 3);
-                
-                // Mushroom stem - beige/tan (smaller)
-                ctx.fillStyle = '#FFDBAC';
-                ctx.fillRect(powerUp.x + 10, powerUp.y + 24, 4, 8);
-                
-                // Stem shading
-                ctx.fillStyle = '#DEB887';
-                ctx.fillRect(powerUp.x + 11, powerUp.y + 25, 2, 6);
-                
-            } else if (powerUp.type === 'fireflower') {
-                // Fire Flower - authentic Mario style with short/wide concentric ovals
-                
-                // Green stem
-                ctx.fillStyle = '#00AA00';
-                ctx.fillRect(powerUp.x + 11, powerUp.y + 16, 2, 12);
-                
-                // Green leaves on stem
-                ctx.fillStyle = '#00AA00';
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 18, 4, 2);  // Left leaf
-                ctx.fillRect(powerUp.x + 13, powerUp.y + 18, 4, 2); // Right leaf
-                
-                // Outermost oval - White (short and wide)
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(powerUp.x + 4, powerUp.y + 10, 16, 6);  // Wide horizontal
-                ctx.fillRect(powerUp.x + 6, powerUp.y + 8, 12, 10);  // Rounded ends
-                
-                // Middle oval - Yellow (shorter and narrower)
-                ctx.fillStyle = '#FFFF00';
-                ctx.fillRect(powerUp.x + 6, powerUp.y + 11, 12, 4);  // Wide horizontal
-                ctx.fillRect(powerUp.x + 8, powerUp.y + 9, 8, 8);    // Rounded ends
-                
-                // Inner oval - Red (smallest, short and wide)
-                ctx.fillStyle = '#FF0000';
-                ctx.fillRect(powerUp.x + 8, powerUp.y + 12, 8, 2);   // Wide horizontal
-                ctx.fillRect(powerUp.x + 10, powerUp.y + 10, 4, 6);  // Rounded ends
-                ctx.fillRect(powerUp.x + 9, powerUp.y + 24, 2, 1);
-                
-            } else if (powerUp.type === 'star') {
-                // Super Star - yellow with animated sparkle
-                ctx.fillStyle = '#FFD700';
-                
-                // Star shape (simplified as diamond with points)
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 2, 2, 4);   // Top point
-                ctx.fillRect(powerUp.x + 5, powerUp.y + 6, 6, 4);   // Middle section
-                ctx.fillRect(powerUp.x + 3, powerUp.y + 8, 2, 2);   // Left point
-                ctx.fillRect(powerUp.x + 11, powerUp.y + 8, 2, 2);  // Right point
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 10, 2, 4);  // Bottom point
-                
-                // Sparkle effect (animated)
-                ctx.fillStyle = '#FFF';
-                const sparkleOffset = Math.floor(Date.now() / 100) % 4;
-                ctx.fillRect(powerUp.x + 1 + sparkleOffset, powerUp.y + 4, 1, 1);
-                ctx.fillRect(powerUp.x + 14 - sparkleOffset, powerUp.y + 12, 1, 1);
-            }
-        });
-        
         // Enemies - all now handled by entity system
         // (Piranha plants and other enemies now rendered by ImprovedRenderSystem)
         
         ctx.restore();
-        
-        // Entity System Rendering - Phase 2 (render in screen coordinates)
-        game.improvedRenderSystem.render(ctx, game.entityManager, game.camera);
         
         ctx.save();
         ctx.translate(-game.camera.x, 0);
@@ -3601,6 +3613,11 @@ async function createMarioGame(settings) {
             ctx.font = '18px Arial';
             ctx.fillText('Press R to restart', canvas.width/2, canvas.height/2 + 40);
         }
+        
+        // Render entities (power-ups, etc.) - in untranslated context
+        if (game.improvedRenderSystem) {
+            game.improvedRenderSystem.render(ctx, game.entityManager, game.camera);
+        }
     }
     
     function gameLoop() {
@@ -3619,7 +3636,6 @@ async function createMarioGame(settings) {
         game.frameCount++;
         updatePlayer();
         updateMovingPlatforms();
-        updatePowerUps();
         updateFireballs();
         updateParticles();
         
