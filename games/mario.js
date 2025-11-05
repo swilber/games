@@ -156,6 +156,8 @@ class CollisionSystem {
         });
     }
 }
+
+class RenderSystem {
     render(ctx, entityManager) {
         const entities = entityManager.query('transform', 'sprite');
         entities.forEach(entity => {
