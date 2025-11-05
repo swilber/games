@@ -162,12 +162,7 @@ class PhysicsSystem {
                 }
             });
             
-            // Fallback ground collision if no platform collision
-            if (!physics.onGround && transform.y + transform.height >= 380) {
-                transform.y = 380 - transform.height;
-                physics.vy = 0;
-                physics.onGround = true;
-            }
+            // Remove fallback ground collision - let entities fall into pits
             
             // Screen boundaries
             if (transform.x <= 0 && physics.vx < 0) {
@@ -189,14 +184,35 @@ class AISystem {
     }
     
     update(entityManager) {
-        const entities = entityManager.query('transform', 'physics', 'ai');
+        const entities = entityManager.query('transform', 'ai');
         
         entities.forEach(entity => {
             const transform = entity.get('transform');
-            const physics = entity.get('physics');
+            const physics = entity.get('physics'); // May be null for parakoopas
             const ai = entity.get('ai');
             
-            if (ai.type === 'piranha') {
+            if (ai.type === 'flying') {
+                // Parakoopa flying behavior - simple vertical oscillation
+                if (!ai.topY) ai.topY = transform.y; // Starting position is top of flight
+                if (!ai.flyDirection) ai.flyDirection = 1; // Start flying down
+                if (!ai.flySpeed) ai.flySpeed = 1;
+                
+                // Move vertically only
+                transform.y += ai.flyDirection * ai.flySpeed;
+                
+                // Check flight limits (120 pixels total range)
+                const distanceFromTop = transform.y - ai.topY;
+                
+                if (ai.flyDirection === 1 && distanceFromTop >= 120) {
+                    // Flying down and reached bottom limit, start flying up
+                    ai.flyDirection = -1;
+                } else if (ai.flyDirection === -1 && distanceFromTop <= 0) {
+                    // Flying up and reached top limit, start flying down
+                    ai.flyDirection = 1;
+                }
+                
+                // No physics needed - direct position control
+            } else if (ai.type === 'piranha') {
                 // Piranha plant behavior - hide when Mario is nearby
                 if (!ai.timer) ai.timer = 0;
                 if (!ai.piranhaState) ai.piranhaState = 'hidden';
@@ -244,29 +260,36 @@ class AISystem {
                 return; // Skip normal AI processing
             }
             
-            // Normal enemy AI (goombas, koopas, etc.)
+            // Normal enemy AI (goombas, koopas, etc.) - only for entities with physics
+            if (!physics) return; // Skip if no physics component
+            
             // Ensure entity always has movement velocity
             if (physics.vx === 0) {
                 physics.vx = ai.direction;
             }
             
-            // Check for pits ahead
-            const checkX = transform.x + (ai.direction > 0 ? transform.width + 5 : -5);
-            const checkY = transform.y + transform.height + 10; // Look below feet
+            // Check for pits ahead (only for patrolling enemies on ground, not falling or shells)
+            const sprite = entity.get('sprite');
+            const isShell = sprite && (sprite.state === 'shell' || sprite.state === 'shellMoving');
             
-            let foundGround = false;
-            // Check platforms for ground ahead
-            this.game.platforms.forEach(platform => {
-                if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                    checkY >= platform.y && checkY <= platform.y + platform.height) {
-                    foundGround = true;
+            if (physics.onGround && !isShell) {
+                const checkX = transform.x + (ai.direction > 0 ? transform.width + 5 : -5);
+                const checkY = transform.y + transform.height + 10; // Look below feet
+                
+                let foundGround = false;
+                // Check platforms for ground ahead
+                this.game.platforms.forEach(platform => {
+                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
+                        checkY >= platform.y && checkY <= platform.y + platform.height) {
+                        foundGround = true;
+                    }
+                });
+                
+                // Turn around if no ground ahead (pit detection for patrolling enemies)
+                if (!foundGround) {
+                    ai.direction *= -1;
+                    physics.vx = ai.direction;
                 }
-            });
-            
-            // Turn around if no ground ahead (pit detection)
-            if (!foundGround && physics.onGround) {
-                ai.direction *= -1;
-                physics.vx = ai.direction;
             }
             
             // Check boundaries and reverse direction if needed
@@ -413,6 +436,19 @@ class ImprovedCollisionSystem {
                         enemy.components.delete('physics'); // Remove physics
                         enemySprite.state = 'shell';
                         enemySprite.kickable = true;
+                    } else if (enemy.id.startsWith('parakoopa')) {
+                        // Parakoopa: Convert to regular koopa when stomped
+                        const ai = enemy.get('ai');
+                        ai.type = 'patrol'; // Change to regular koopa AI
+                        // Add physics component for walking behavior
+                        const newPhysics = new Physics(-1, 0);
+                        newPhysics.onGround = false; // Allow it to fall initially
+                        enemy.add('physics', newPhysics);
+                        enemySprite.state = 'walking';
+                        // Remove flying properties
+                        delete ai.topY;
+                        delete ai.flyDirection;
+                        delete ai.flySpeed;
                     } else if (enemy.id.startsWith('piranha')) {
                         // Piranha plants can't be stomped - damage player instead
                         if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
@@ -441,6 +477,10 @@ class ImprovedCollisionSystem {
                         playerBounced = true;
                     }
                     this.game.player.score += 100;
+                    
+                    // Brief invincibility after stomping to prevent immediate damage
+                    this.game.player.invincible = true;
+                    this.game.player.invincibleTimer = 10;
                 } else {
                     // Side collision - damage player (only if not invincible)
                     if (!this.game.player.invincible) {
@@ -574,8 +614,16 @@ class ImprovedRenderSystem {
                 fakeObject.type = 'goomba';
                 fakeObject.state = sprite.state || 'walking';
                 this.spriteRenderer.enemies.goomba(ctx, fakeObject);
-            } else if (entity.id.startsWith('koopa')) {
-                // Render koopa using enemy sprite system
+            } else if (entity.id.startsWith('koopa') || (entity.id.startsWith('parakoopa') && entity.get('ai')?.type === 'patrol')) {
+                // Render koopa (including converted parakoopas)
+                fakeObject.type = 'koopa';
+                fakeObject.state = sprite.state || 'walking';
+                this.spriteRenderer.enemies.koopa(ctx, fakeObject);
+            } else if (entity.id.startsWith('parakoopa')) {
+                // Render parakoopa (still flying)
+                fakeObject.type = 'parakoopa';
+                fakeObject.state = sprite.state || 'flying';
+                this.spriteRenderer.enemies.parakoopa(ctx, fakeObject);
                 fakeObject.type = 'koopa';
                 fakeObject.state = sprite.state || 'walking';
                 this.spriteRenderer.enemies.koopa(ctx, fakeObject);
@@ -2197,6 +2245,13 @@ async function createMarioGame(settings) {
                             .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'parakoopa') {
+                        koopaCount++;
+                        // Create entity for parakoopa (flying koopa) - NO PHYSICS
+                        const parakoopaEntity = game.entityManager.create(`parakoopa${koopaCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 280, 20, 24))
+                            .add('sprite', new Sprite('#00AA00', 'flying'))
+                            .add('ai', new AI('flying'));
                     } else if (enemy.type === 'piranha') {
                         enemyCount++;
                         // Create entity for piranha plant
@@ -2630,6 +2685,13 @@ async function createMarioGame(settings) {
                             .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
+                    } else if (enemy.type === 'parakoopa') {
+                        koopaCount++;
+                        // Create entity for parakoopa (flying koopa) - NO PHYSICS
+                        const parakoopaEntity = game.entityManager.create(`parakoopa${koopaCount}`)
+                            .add('transform', new Transform(enemy.x, enemy.y || 314, 20, 24))
+                            .add('sprite', new Sprite('#00AA00', 'flying'))
+                            .add('ai', new AI('flying'));
                     } else if (enemy.type === 'piranha') {
                         enemyCount++;
                         // Create entity for piranha plant
