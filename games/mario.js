@@ -80,7 +80,6 @@ class PhysicsSystem {
     
     update(entityManager) {
         const entities = entityManager.query('transform', 'physics');
-        console.log('PhysicsSystem processing', entities.length, 'entities');
         
         entities.forEach((entity, index) => {
             const transform = entity.get('transform');
@@ -2292,17 +2291,6 @@ async function createMarioGame(settings) {
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
-            
-            // Debug: Check what components each entity has
-            let entityIndex = 0;
-            for (const [id, entity] of game.entityManager.entities) {
-                const hasTransform = entity.has('transform');
-                const hasPhysics = entity.has('physics');
-                const hasAI = entity.has('ai');
-                const hasSprite = entity.has('sprite');
-                console.log(`Entity ${entityIndex}: T:${hasTransform} P:${hasPhysics} A:${hasAI} S:${hasSprite}`);
-                entityIndex++;
-            }
             
         } catch (error) {
             console.error('Failed to load map:', error);
