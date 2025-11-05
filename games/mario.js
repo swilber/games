@@ -3550,23 +3550,6 @@ async function createMarioGame(settings) {
         }
         
         game.frameCount++;
-        
-        // Log all goomba positions every second
-        const currentTime = Date.now();
-        if (currentTime - game.lastLogTime >= 1000) {
-            game.lastLogTime = currentTime;
-            console.log('=== GOOMBA POSITIONS (Camera X:', game.camera.x, ') ===');
-            let entityIndex = 0;
-            for (const [id, entity] of game.entityManager.entities) {
-                const transform = entity.get('transform');
-                if (transform) {
-                    console.log(`Goomba ${entityIndex}: World(${transform.x}, ${transform.y}) Screen(${transform.x - game.camera.x}, ${transform.y})`);
-                    entityIndex++;
-                }
-            }
-            console.log('=== END GOOMBA POSITIONS ===');
-        }
-        
         updatePlayer();
         updateMovingPlatforms();
         updateEnemies();
