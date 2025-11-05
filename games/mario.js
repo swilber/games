@@ -3458,26 +3458,31 @@ async function createMarioGame(settings) {
                 ctx.fillRect(powerUp.x + 11, powerUp.y + 25, 2, 6);
                 
             } else if (powerUp.type === 'fireflower') {
-                // Fire Flower - orange petals with yellow center
-                ctx.fillStyle = '#FF4500';
-                
-                // Flower petals (4 petals in cross pattern)
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 4, 2, 6);  // Top petal
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 14, 2, 6); // Bottom petal
-                ctx.fillRect(powerUp.x + 3, powerUp.y + 10, 6, 2); // Left petal
-                ctx.fillRect(powerUp.x + 11, powerUp.y + 10, 6, 2); // Right petal
-                
-                // Yellow center
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(powerUp.x + 6, powerUp.y + 9, 4, 4);
+                // Fire Flower - authentic Mario style with short/wide concentric ovals
                 
                 // Green stem
-                ctx.fillStyle = '#228B22';
-                ctx.fillRect(powerUp.x + 7, powerUp.y + 20, 2, 8);
+                ctx.fillStyle = '#00AA00';
+                ctx.fillRect(powerUp.x + 11, powerUp.y + 16, 2, 12);
                 
-                // Small leaves on stem
-                ctx.fillStyle = '#32CD32';
-                ctx.fillRect(powerUp.x + 5, powerUp.y + 22, 2, 1);
+                // Green leaves on stem
+                ctx.fillStyle = '#00AA00';
+                ctx.fillRect(powerUp.x + 7, powerUp.y + 18, 4, 2);  // Left leaf
+                ctx.fillRect(powerUp.x + 13, powerUp.y + 18, 4, 2); // Right leaf
+                
+                // Outermost oval - White (short and wide)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(powerUp.x + 4, powerUp.y + 10, 16, 6);  // Wide horizontal
+                ctx.fillRect(powerUp.x + 6, powerUp.y + 8, 12, 10);  // Rounded ends
+                
+                // Middle oval - Yellow (shorter and narrower)
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillRect(powerUp.x + 6, powerUp.y + 11, 12, 4);  // Wide horizontal
+                ctx.fillRect(powerUp.x + 8, powerUp.y + 9, 8, 8);    // Rounded ends
+                
+                // Inner oval - Red (smallest, short and wide)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(powerUp.x + 8, powerUp.y + 12, 8, 2);   // Wide horizontal
+                ctx.fillRect(powerUp.x + 10, powerUp.y + 10, 4, 6);  // Rounded ends
                 ctx.fillRect(powerUp.x + 9, powerUp.y + 24, 2, 1);
                 
             } else if (powerUp.type === 'star') {
