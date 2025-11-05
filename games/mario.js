@@ -236,7 +236,13 @@ class RenderSystem {
         entities.forEach((entity, index) => {
             const transform = entity.get('transform');
             
+            // Debug first entity to see coordinate issue
+            if (index === 0) {
+                console.log('Entity 0 render: world=', transform.x, 'camera=', game.camera.x, 'screen=', transform.x - game.camera.x);
+            }
+            
             // Create a fake enemy object for the sprite renderer
+            // NOTE: ctx is already translated by camera, so use world coordinates directly
             const fakeEnemy = {
                 x: transform.x,
                 y: transform.y,
