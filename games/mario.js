@@ -1311,6 +1311,11 @@ async function createMarioGame(settings) {
     // Initialize RenderSystem now that SpriteRenderer is defined
     game.renderSystem = new RenderSystem(SpriteRenderer);
     
+    // Initialize Entity Systems once (not on every reset)
+    game.entityManager.addSystem(new PhysicsSystem(game));
+    game.entityManager.addSystem(new AISystem(game));
+    // CollisionSystem will be added after resetLevel function is defined
+    
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
         '#': { type: 'platform', variant: 'ground' },
@@ -2267,11 +2272,6 @@ async function createMarioGame(settings) {
             game.gameOver = false;
             game.won = false;
             
-            // Initialize Entity System - Phase 2
-            game.entityManager.addSystem(new PhysicsSystem(game));
-            game.entityManager.addSystem(new AISystem(game));
-            game.entityManager.addSystem(new CollisionSystem(game, resetLevel));
-            
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
             
@@ -2301,6 +2301,9 @@ async function createMarioGame(settings) {
         game.needsLevelReset = true;
         game.livesToRestore = currentLives;
     }
+    
+    // Initialize CollisionSystem now that resetLevel function is defined
+    game.entityManager.addSystem(new CollisionSystem(game, resetLevel));
     
     function checkScreenBoundary() {
         // Check if Mario fell below the screen
