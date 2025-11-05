@@ -1249,7 +1249,6 @@ async function createMarioGame(settings) {
         camera: { x: 0 },
         platforms: [],
         blocks: [],
-        powerUps: [],
         enemies: [],
         coins: [],
         particles: [],
@@ -2591,74 +2590,6 @@ async function createMarioGame(settings) {
     }
     
     
-    function updatePowerUps() {
-        game.powerUps.forEach((powerUp, index) => {
-            // Only move non-fire flower power-ups
-            if (powerUp.type !== 'fireflower') {
-                // Horizontal movement
-                powerUp.x += powerUp.vx;
-            
-            // Add gravity
-            if (!powerUp.vy) powerUp.vy = 0;
-            powerUp.vy += 0.3; // Gravity
-            powerUp.y += powerUp.vy;
-            
-            // Check collision with platforms and blocks (power-ups land on them)
-            let onGround = false;
-            [...game.platforms, ...game.blocks].forEach(solid => {
-                if (powerUp.x < solid.x + solid.width &&
-                    powerUp.x + powerUp.width > solid.x &&
-                    powerUp.y < solid.y + solid.height &&
-                    powerUp.y + powerUp.height > solid.y) {
-                    
-                    // Landing on top
-                    if (powerUp.vy > 0 && powerUp.y < solid.y) {
-                        powerUp.y = solid.y - powerUp.height;
-                        powerUp.vy = 0;
-                        onGround = true;
-                    }
-                    // Side collision - bounce off walls
-                    else if (powerUp.vx > 0 && powerUp.x < solid.x) {
-                        powerUp.x = solid.x - powerUp.width;
-                        powerUp.vx *= -1;
-                    } else if (powerUp.vx < 0 && powerUp.x > solid.x) {
-                        powerUp.x = solid.x + solid.width;
-                        powerUp.vx *= -1;
-                    }
-                }
-            });
-            
-            // Turn around at level edges
-            if (powerUp.x <= 0 || powerUp.x >= game.levelWidth - powerUp.width) {
-                powerUp.vx *= -1;
-            }
-            }
-            
-            // Player collision
-            if (game.player.x < powerUp.x + powerUp.width &&
-                game.player.x + game.player.width > powerUp.x &&
-                game.player.y < powerUp.y + powerUp.height &&
-                game.player.y + game.player.height > powerUp.y) {
-                
-                if (powerUp.type === 'mushroom') {
-                    game.player.powerState = 'big';
-                    game.player.y -= 16; // Move Mario up to prevent falling through platform
-                    game.player.width = 20;
-                    game.player.height = 32;
-                } else if (powerUp.type === 'fireflower') {
-                    game.player.powerState = 'fire';
-                    if (game.player.height === 16) { // Only adjust if currently small
-                        game.player.y -= 16; // Move Mario up to prevent falling through platform
-                    }
-                    game.player.width = 20;
-                    game.player.height = 32;
-                }
-                game.player.score += 1000;
-                game.powerUps.splice(index, 1);
-            }
-        });
-    }
-    
     function updateParticles() {
         game.particles = game.particles.filter(particle => {
             particle.x += particle.vx;
@@ -2812,7 +2743,6 @@ async function createMarioGame(settings) {
             game.camera.x = 0;
             
             // Reset other game state
-            game.powerUps = [];
             game.particles = [];
             game.fireballs = [];
             game.gameOver = false;
