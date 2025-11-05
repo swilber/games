@@ -2292,6 +2292,10 @@ async function createMarioGame(settings) {
             
             console.log('Game state initialized: Mario at', game.player.x, game.player.y, 'Lives:', game.player.lives);
             console.log('Entity system initialized with', game.entityManager.entities.size, 'entities');
+            console.log('Regular enemies array has', game.enemies.length, 'enemies');
+            game.enemies.forEach((enemy, i) => {
+                console.log(`Regular enemy ${i}: type=${enemy.type} at x=${enemy.x}`);
+            });
             
             // Initialize position logging timer
             game.lastLogTime = Date.now();
