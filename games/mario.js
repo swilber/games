@@ -230,7 +230,7 @@ class RenderSystem {
         this.spriteRenderer = spriteRenderer;
     }
     
-    render(ctx, entityManager) {
+    render(ctx, entityManager, camera) {
         const entities = entityManager.query('transform', 'sprite', 'ai');
         
         entities.forEach((entity, index) => {
@@ -238,7 +238,7 @@ class RenderSystem {
             
             // Debug first entity to see coordinate issue
             if (index === 0) {
-                console.log('Entity 0 render: world=', transform.x, 'camera=', game.camera.x, 'screen=', transform.x - game.camera.x);
+                console.log('Entity 0 render: world=', transform.x, 'camera=', camera.x, 'screen=', transform.x - camera.x);
             }
             
             // Create a fake enemy object for the sprite renderer
@@ -3452,7 +3452,7 @@ async function createMarioGame(settings) {
         // Entity System Rendering - Phase 2 (in world coordinates)
         ctx.save();
         ctx.translate(-game.camera.x, 0);
-        game.renderSystem.render(ctx, game.entityManager);
+        game.renderSystem.render(ctx, game.entityManager, game.camera);
         ctx.restore();
         
         // Coins
