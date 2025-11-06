@@ -563,6 +563,12 @@ class CollectibleSystem {
     }
     
     update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerComp = playerEntity.get('player');
+        
         const collectibles = entityManager.query('transform', 'collectible');
         
         collectibles.forEach(entity => {
@@ -572,13 +578,13 @@ class CollectibleSystem {
             if (collectible.collected) return;
             
             // Check collision with player
-            if (this.game.player.x < transform.x + transform.width &&
-                this.game.player.x + this.game.player.width > transform.x &&
-                this.game.player.y < transform.y + transform.height &&
-                this.game.player.y + this.game.player.height > transform.y) {
+            if (playerTransform.x < transform.x + transform.width &&
+                playerTransform.x + playerTransform.width > transform.x &&
+                playerTransform.y < transform.y + transform.height &&
+                playerTransform.y + playerTransform.height > transform.y) {
                 
                 collectible.collected = true;
-                this.game.player.score += collectible.value;
+                playerComp.score += collectible.value;
                 entityManager.entities.delete(entity.id);
             }
         });
@@ -591,6 +597,7 @@ class ProjectileSystem {
     }
     
     update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
         const projectiles = entityManager.query('transform', 'physics', 'projectile');
         
         projectiles.forEach(entity => {
@@ -651,10 +658,15 @@ class ProjectileSystem {
                     transform.y < enemyTransform.y + enemyTransform.height &&
                     transform.y + transform.height > enemyTransform.y) {
                     
-                    // Hit enemy - remove both
+                    // Hit enemy - remove both and award score
                     entityManager.entities.delete(enemy.id);
                     entityManager.entities.delete(entity.id);
-                    this.game.player.score += 100;
+                    
+                    // Award score to player entity
+                    if (playerEntity) {
+                        const playerComp = playerEntity.get('player');
+                        playerComp.score += 100;
+                    }
                 }
             });
             
@@ -742,40 +754,47 @@ class CollisionSystem {
     }
     
     update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerPhysics = playerEntity.get('physics');
+        const playerComp = playerEntity.get('player');
+        
         const goombaEntities = entityManager.query('transform', 'ai');
         
         goombaEntities.forEach(entity => {
             const transform = entity.get('transform');
             
             // Check collision with player (both in world coordinates)
-            if (!this.game.player.invincible &&
-                this.game.player.x < transform.x + transform.width &&
-                this.game.player.x + this.game.player.width > transform.x &&
-                this.game.player.y < transform.y + transform.height &&
-                this.game.player.y + this.game.player.height > transform.y) {
+            if (!playerComp.invincible &&
+                playerTransform.x < transform.x + transform.width &&
+                playerTransform.x + playerTransform.width > transform.x &&
+                playerTransform.y < transform.y + transform.height &&
+                playerTransform.y + playerTransform.height > transform.y) {
                 
-                if (this.game.player.vy > 0 && this.game.player.y < transform.y) {
+                if (playerPhysics.vy > 0 && playerTransform.y < transform.y) {
                     // Stomp goomba
                     entityManager.entities.delete(entity.id);
-                    this.game.player.vy = -8;
-                    this.game.player.score += 100;
+                    playerPhysics.vy = -8;
+                    playerComp.score += 100;
                 } else {
                     // Take damage
-                    if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
-                        this.game.player.powerState = 'small';
-                        this.game.player.width = 16;
-                        this.game.player.height = 16;
-                        this.game.player.y += 16;
+                    if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                        playerComp.powerState = 'small';
+                        playerTransform.width = 16;
+                        playerTransform.height = 16;
+                        playerTransform.y += 16;
                     } else {
-                        this.game.player.lives--;
-                        if (this.game.player.lives <= 0) {
+                        playerComp.lives--;
+                        if (playerComp.lives <= 0) {
                             this.game.gameOver = true;
                         } else {
                             this.resetLevel();
                         }
                     }
-                    this.game.player.invincible = true;
-                    this.game.player.invincibleTimer = 120;
+                    playerComp.invincible = true;
+                    playerComp.invincibleTimer = 120;
                 }
             }
         });
@@ -2954,10 +2973,16 @@ async function createMarioGame(settings) {
     // Old CollisionSystem removed - using ImprovedCollisionSystem instead
     
     function checkScreenBoundary() {
+        const playerEntity = game.entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerComp = playerEntity.get('player');
+        
         // Check if Mario fell below the screen
-        if (game.player.y > 500) {
-            game.player.lives--;
-            if (game.player.lives <= 0) {
+        if (playerTransform.y > 500) {
+            playerComp.lives--;
+            if (playerComp.lives <= 0) {
                 game.gameOver = true;
             } else {
                 resetLevel();
@@ -3219,7 +3244,12 @@ async function createMarioGame(settings) {
     }
     
     function checkWin() {
-        if (game.flag && game.player.x + game.player.width > game.flag.x) {
+        const playerEntity = game.entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        
+        if (game.flag && playerTransform.x + playerTransform.width > game.flag.x) {
             nextLevel();
         }
     }
