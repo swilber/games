@@ -181,7 +181,7 @@ class PhysicsSystem {
                 
                 // Handle platform collision for player with swept collision
                 physics.onGround = false;
-                const allSolids = [...this.game.platforms, ...this.game.blocks];
+                const allSolids = [...this.game.platforms]; // Remove blocks - InteractiveSystem handles them
                 
                 allSolids.forEach(solid => {
                     // Check if moving into collision
@@ -431,48 +431,53 @@ class InteractiveSystem {
     }
     
     update(entityManager) {
-        const player = this.game.player;
+        const playerEntity = entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerPhysics = playerEntity.get('physics');
+        const playerComp = playerEntity.get('player');
         
         // Handle all player-block collisions (both interactive and solid)
         this.game.blocks.forEach(block => {
-            if (player.x < block.x + block.width &&
-                player.x + player.width > block.x &&
-                player.y < block.y + block.height &&
-                player.y + player.height > block.y) {
+            if (playerTransform.x < block.x + block.width &&
+                playerTransform.x + playerTransform.width > block.x &&
+                playerTransform.y < block.y + block.height &&
+                playerTransform.y + playerTransform.height > block.y) {
                 
                 // Landing on top
-                if (player.vy > 0 && player.y < block.y) {
-                    player.y = block.y - player.height;
-                    player.vy = 0;
-                    player.onGround = true;
+                if (playerPhysics.vy > 0 && playerTransform.y < block.y) {
+                    playerTransform.y = block.y - playerTransform.height;
+                    playerPhysics.vy = 0;
+                    playerPhysics.onGround = true;
                 }
                 // Hitting from below
-                else if (player.vy < 0 && player.y > block.y) {
-                    player.y = block.y + block.height;
-                    player.vy = 0;
+                else if (playerPhysics.vy < 0 && playerTransform.y > block.y) {
+                    playerTransform.y = block.y + block.height;
+                    playerPhysics.vy = 0;
                     
                     // Only trigger interaction if block is question type and not hit
                     if (block.type === 'question' && !block.hit) {
-                        this.handleBlockHit(block);
+                        this.handleBlockHit(block, playerComp);
                     }
                 }
                 // Side collision
-                else if (player.vx > 0) {
-                    player.x = block.x - player.width;
-                } else if (player.vx < 0) {
-                    player.x = block.x + block.width;
+                else if (playerPhysics.vx > 0) {
+                    playerTransform.x = block.x - playerTransform.width;
+                } else if (playerPhysics.vx < 0) {
+                    playerTransform.x = block.x + block.width;
                 }
             }
         });
     }
     
-    handleBlockHit(block) {
+    handleBlockHit(block, playerComp) {
         if (block.hit) return;
         block.hit = true;
         
         if (block.type === 'question' && block.content) {
             if (block.content === 'coin') {
-                this.game.player.score += 200;
+                playerComp.score += 200;
                 
                 // Add coin animation above the block
                 this.game.particles.push({
@@ -489,7 +494,7 @@ class InteractiveSystem {
             } else {
                 // Determine power-up type based on Mario's current state
                 let powerUpType = block.content;
-                if (block.content === 'fireflower' && this.game.player.powerState === 'small') {
+                if (block.content === 'fireflower' && playerComp.powerState === 'small') {
                     powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
                 }
                 
