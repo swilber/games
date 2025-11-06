@@ -515,6 +515,12 @@ class PowerUpSystem {
     }
     
     update(entityManager) {
+        const playerEntity = entityManager.entities.get('player');
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        const playerComp = playerEntity.get('player');
+        
         const powerUps = entityManager.query('transform', 'physics', 'sprite');
         
         powerUps.forEach(entity => {
@@ -522,30 +528,29 @@ class PowerUpSystem {
             if (!sprite.type || !['mushroom', 'fireflower', 'star'].includes(sprite.type)) return;
             
             const transform = entity.get('transform');
-            const physics = entity.get('physics');
             
             // Check collision with player
-            if (this.game.player.x < transform.x + transform.width &&
-                this.game.player.x + this.game.player.width > transform.x &&
-                this.game.player.y < transform.y + transform.height &&
-                this.game.player.y + this.game.player.height > transform.y) {
+            if (playerTransform.x < transform.x + transform.width &&
+                playerTransform.x + playerTransform.width > transform.x &&
+                playerTransform.y < transform.y + transform.height &&
+                playerTransform.y + playerTransform.height > transform.y) {
                 
                 // Power up Mario
                 if (sprite.type === 'mushroom') {
-                    if (this.game.player.powerState === 'small') {
-                        this.game.player.powerState = 'big';
-                        this.game.player.width = 16;
-                        this.game.player.height = 32;
-                        this.game.player.y -= 16;
+                    if (playerComp.powerState === 'small') {
+                        playerComp.powerState = 'big';
+                        playerTransform.width = 16;
+                        playerTransform.height = 32;
+                        playerTransform.y -= 16;
                     }
                 } else if (sprite.type === 'fireflower') {
-                    this.game.player.powerState = 'fire';
-                    this.game.player.width = 16;
-                    this.game.player.height = 32;
-                    if (this.game.player.height === 16) this.game.player.y -= 16;
+                    playerComp.powerState = 'fire';
+                    playerTransform.width = 16;
+                    playerTransform.height = 32;
+                    if (playerTransform.height === 16) playerTransform.y -= 16;
                 }
                 
-                this.game.player.score += 1000;
+                playerComp.score += 1000;
                 entityManager.entities.delete(entity.id);
             }
         });
