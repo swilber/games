@@ -77,6 +77,27 @@ class Projectile {
     }
 }
 
+class Player {
+    constructor() {
+        this.lives = 3;
+        this.score = 0;
+        this.powerState = 'small'; // 'small', 'big', 'fire'
+        this.facingRight = true;
+        this.invincible = false;
+        this.invincibleTimer = 0;
+        this.shootCooldown = 0;
+    }
+}
+
+class Input {
+    constructor() {
+        this.left = false;
+        this.right = false;
+        this.jump = false;
+        this.shoot = false;
+    }
+}
+
 class Camera {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -139,6 +160,65 @@ class PhysicsSystem {
                 physics.vy += 0.5;
                 transform.x += physics.vx;
                 transform.y += physics.vy;
+                
+                // Terminal velocity
+                if (physics.vy > 15) physics.vy = 15;
+                return;
+            }
+            
+            // Special handling for player entity
+            if (entity.id === 'player') {
+                // Apply gravity
+                physics.vy += 0.5;
+                
+                // Store previous position for swept collision
+                const prevX = transform.x;
+                const prevY = transform.y;
+                
+                // Apply velocity
+                transform.x += physics.vx;
+                transform.y += physics.vy;
+                
+                // Handle platform collision for player with swept collision
+                physics.onGround = false;
+                const allSolids = [...this.game.platforms, ...this.game.blocks];
+                
+                allSolids.forEach(solid => {
+                    // Check if moving into collision
+                    if (transform.x < solid.x + solid.width &&
+                        transform.x + transform.width > solid.x &&
+                        transform.y < solid.y + solid.height &&
+                        transform.y + transform.height > solid.y) {
+                        
+                        let verticalCollisionHandled = false;
+                        
+                        // Check vertical collision first (prioritize when falling)
+                        if (physics.vy > 0 && prevY + transform.height <= solid.y) {
+                            // Landing on top from above
+                            transform.y = solid.y - transform.height;
+                            physics.vy = 0;
+                            physics.onGround = true;
+                            verticalCollisionHandled = true;
+                        }
+                        else if (physics.vy < 0 && prevY >= solid.y + solid.height) {
+                            // Hitting ceiling from below
+                            transform.y = solid.y + solid.height;
+                            physics.vy = 0;
+                            verticalCollisionHandled = true;
+                        }
+                        
+                        // Only handle horizontal collision if no vertical collision occurred
+                        if (!verticalCollisionHandled) {
+                            if (physics.vx > 0 && prevX + transform.width <= solid.x) {
+                                // Hit right side of solid
+                                transform.x = solid.x - transform.width;
+                            } else if (physics.vx < 0 && prevX >= solid.x + solid.width) {
+                                // Hit left side of solid
+                                transform.x = solid.x + solid.width;
+                            }
+                        }
+                    }
+                });
                 
                 // Terminal velocity
                 if (physics.vy > 15) physics.vy = 15;
@@ -576,6 +656,75 @@ class ProjectileSystem {
     }
 }
 
+class PlayerInputSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const player = entityManager.entities.get('player');
+        if (!player) return;
+        
+        const transform = player.get('transform');
+        const physics = player.get('physics');
+        const playerComp = player.get('player');
+        const input = player.get('input');
+        
+        // Update input state
+        input.left = this.game.keys['ArrowLeft'] || this.game.keys['KeyA'];
+        input.right = this.game.keys['ArrowRight'] || this.game.keys['KeyD'];
+        input.jump = this.game.keys['ArrowUp'] || this.game.keys['KeyW'] || this.game.keys['Space'];
+        input.shoot = this.game.keys['KeyX'] || this.game.keys['KeyZ'];
+        
+        // Handle movement
+        if (input.left) {
+            physics.vx = Math.max(physics.vx - 0.5, -5);
+            playerComp.facingRight = false;
+        } else if (input.right) {
+            physics.vx = Math.min(physics.vx + 0.5, 5);
+            playerComp.facingRight = true;
+        } else {
+            physics.vx *= 0.8;
+        }
+        
+        // Handle jumping
+        if (input.jump && physics.onGround) {
+            physics.vy = -12;
+            physics.onGround = false;
+        }
+        
+        // Handle shooting
+        if (input.shoot && playerComp.powerState === 'fire' && !playerComp.shootCooldown) {
+            const fireballEntity = entityManager.create(`fireball_${Date.now()}`)
+                .add('transform', new Transform(
+                    transform.x + (playerComp.facingRight ? transform.width : -10),
+                    transform.y + 10,
+                    8, 8
+                ))
+                .add('physics', new Physics(
+                    playerComp.facingRight ? 3 : -3,
+                    -1
+                ))
+                .add('sprite', new Sprite('#FF4500', 'fireball'))
+                .add('projectile', new Projectile('fireball', 1));
+            
+            playerComp.shootCooldown = 15;
+        }
+        
+        // Update timers
+        if (playerComp.shootCooldown > 0) playerComp.shootCooldown--;
+        if (playerComp.invincible) {
+            playerComp.invincibleTimer--;
+            if (playerComp.invincibleTimer <= 0) {
+                playerComp.invincible = false;
+            }
+        }
+        
+        // Update camera
+        this.game.camera.x = Math.max(0, transform.x - 300);
+    }
+}
+
 class CollisionSystem {
     constructor(game, resetLevel) {
         this.game = game;
@@ -633,15 +782,22 @@ class PlayerSyncSystem {
         if (playerEntity && this.game.player) {
             const transform = playerEntity.get('transform');
             const physics = playerEntity.get('physics');
+            const playerComp = playerEntity.get('player');
             
-            // Sync entity with player object (both ways)
-            transform.x = this.game.player.x;
-            transform.y = this.game.player.y;
-            transform.width = this.game.player.width;
-            transform.height = this.game.player.height;
-            physics.vx = this.game.player.vx;
-            physics.vy = this.game.player.vy;
-            physics.onGround = this.game.player.onGround;
+            // Sync FROM entity TO game.player (reverse direction)
+            this.game.player.x = transform.x;
+            this.game.player.y = transform.y;
+            this.game.player.width = transform.width;
+            this.game.player.height = transform.height;
+            this.game.player.vx = physics.vx;
+            this.game.player.vy = physics.vy;
+            this.game.player.onGround = physics.onGround;
+            this.game.player.powerState = playerComp.powerState;
+            this.game.player.facingRight = playerComp.facingRight;
+            this.game.player.invincible = playerComp.invincible;
+            this.game.player.invincibleTimer = playerComp.invincibleTimer;
+            this.game.player.lives = playerComp.lives;
+            this.game.player.score = playerComp.score;
         }
     }
 }
@@ -2054,6 +2210,7 @@ async function createMarioGame(settings) {
     
     // Initialize Entity Systems once (not on every reset) - using improved versions
     game.entityManager.addSystem(new PhysicsSystem(game));
+    game.entityManager.addSystem(new PlayerInputSystem(game));
     game.entityManager.addSystem(new PlayerSyncSystem(game));
     game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
@@ -2340,9 +2497,11 @@ async function createMarioGame(settings) {
             
             // Add player entity for tracking
             const playerEntity = game.entityManager.create('player')
-                .add('transform', new Transform(game.player.x, game.player.y, game.player.width, game.player.height))
+                .add('transform', new Transform(layout.startX || 50, layout.startY || 300, 16, 16))
                 .add('physics', new Physics(0, 0))
-                .add('sprite', new Sprite('#FF0000'));
+                .add('sprite', new Sprite('#FF0000'))
+                .add('player', new Player())
+                .add('input', new Input());
             
             game.pits = layout.pits || [];
             game.flag = layout.flag;
@@ -2714,9 +2873,11 @@ async function createMarioGame(settings) {
             
             // Add player entity for tracking
             const playerEntity = game.entityManager.create('player')
-                .add('transform', new Transform(game.player.x, game.player.y, game.player.width, game.player.height))
+                .add('transform', new Transform(layout.startX || 50, layout.startY || 300, 16, 16))
                 .add('physics', new Physics(0, 0))
-                .add('sprite', new Sprite('#FF0000'));
+                .add('sprite', new Sprite('#FF0000'))
+                .add('player', new Player())
+                .add('input', new Input());
             
             game.pits = layout.pits || [];
             game.flag = layout.flag;
@@ -3629,7 +3790,7 @@ async function createMarioGame(settings) {
         }
         
         game.frameCount++;
-        updatePlayer();
+        // updatePlayer(); // Disabled - now handled by PlayerInputSystem
         updateMovingPlatforms();
         updateParticles();
         
