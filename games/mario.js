@@ -51,6 +51,15 @@ class AI {
     }
 }
 
+class Platform {
+    constructor(type = 'ground', moving = false) {
+        this.type = type;
+        this.moving = moving;
+        this.vx = 0;
+        this.vy = 0;
+    }
+}
+
 class Interactive {
     constructor(type = 'question', contents = 'coin') {
         this.type = type;
@@ -618,7 +627,15 @@ class ProjectileSystem {
             
             // Check collision with platforms and blocks for bouncing
             if (projectile.bounceCooldown === 0) {
-                const allSolids = [...this.game.platforms, ...this.game.blocks];
+                const platformEntities = entityManager.query('transform', 'platform');
+                const allSolids = [...this.game.blocks]; // Keep blocks for now
+                
+                // Add platform entities to collision check
+                platformEntities.forEach(platformEntity => {
+                    const platformTransform = platformEntity.get('transform');
+                    allSolids.push(platformTransform);
+                });
+                
                 let bounced = false;
                 
                 for (const solid of allSolids) {
@@ -843,6 +860,130 @@ class SquishSystem {
             
             if (sprite.squishTimer <= 0) {
                 entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
+class PlatformMigrationSystem {
+    constructor(game) {
+        this.game = game;
+        this.migrated = false;
+        this.lastPlatformCount = 0;
+    }
+    
+    update(entityManager) {
+        // Check if we need to re-migrate (more reliable detection)
+        const existingPlatformEntities = entityManager.query('transform', 'platform');
+        const shouldHavePlatforms = this.game.platforms.length > 0;
+        
+        if (shouldHavePlatforms && existingPlatformEntities.length === 0) {
+            // Platforms exist in array but no entities - level was reloaded
+            this.migrated = false;
+        }
+        
+        // Check if platforms array has changed (backup detection)
+        if (this.game.platforms.length !== this.lastPlatformCount) {
+            this.migrated = false;
+            
+            // Clear existing platform entities
+            existingPlatformEntities.forEach(entity => {
+                entityManager.entities.delete(entity.id);
+            });
+        }
+        
+        // Only migrate once per level
+        if (!this.migrated) {
+            // Create platform entities from existing platforms array
+            this.game.platforms.forEach((platform, index) => {
+                const isMoving = platform.moving || platform.type === 'horizontal_moving' || platform.type === 'vertical_moving' || platform.type === 'moving_up' || platform.type === 'moving_down';
+                
+                const platformEntity = entityManager.create(`platform_${index}`)
+                    .add('transform', new Transform(platform.x, platform.y, platform.width, platform.height))
+                    .add('platform', new Platform(platform.type, isMoving));
+                
+                // Copy movement properties if they exist
+                if (isMoving) {
+                    const platformComp = platformEntity.get('platform');
+                    platformComp.vx = platform.vx || 0;
+                    platformComp.vy = platform.vy || 0;
+                    
+                    // Initialize movement for horizontal platforms if not set
+                    if (platform.type === 'horizontal_moving' && platformComp.vx === 0) {
+                        platformComp.vx = 1;
+                    }
+                    // Initialize movement for vertical platforms if not set  
+                    if (platform.type === 'vertical_moving' && platformComp.vy === 0) {
+                        platformComp.vy = -1;
+                    }
+                }
+            });
+            
+            this.migrated = true;
+            this.lastPlatformCount = this.game.platforms.length;
+        }
+        
+        // Sync platform entities back to array (only for collision detection now)
+        const platformEntities = entityManager.query('transform', 'platform');
+        platformEntities.forEach((entity, index) => {
+            if (index < this.game.platforms.length) {
+                const transform = entity.get('transform');
+                const platform = entity.get('platform');
+                
+                // Only sync moving platforms back to array for collision detection
+                if (platform.moving) {
+                    this.game.platforms[index].x = transform.x;
+                    this.game.platforms[index].y = transform.y;
+                }
+            }
+        });
+    }
+}
+
+class PlatformMovementSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const movingPlatforms = entityManager.query('transform', 'platform').filter(entity => 
+            entity.get('platform').moving
+        );
+        
+        movingPlatforms.forEach(entity => {
+            const transform = entity.get('transform');
+            const platform = entity.get('platform');
+            
+            // Move platform based on type
+            if (platform.type === 'moving_up' || platform.type === 'moving_down') {
+                transform.y += platform.vy;
+                
+                if (transform.y <= -50) {
+                    transform.y = 400;
+                } else if (transform.y >= 400) {
+                    transform.y = -50;
+                }
+            } else if (platform.type === 'vertical_moving') {
+                transform.y += platform.vy;
+                
+                if (transform.y <= 50 || transform.y >= 300) {
+                    platform.vy *= -1;
+                }
+            } else if (platform.type === 'horizontal_moving') {
+                transform.x += platform.vx;
+                
+                // Use the original platform's leftX and rightX bounds if available
+                const originalPlatform = this.game.platforms[parseInt(entity.id.split('_')[1])];
+                if (originalPlatform && originalPlatform.leftX !== undefined && originalPlatform.rightX !== undefined) {
+                    if (transform.x <= originalPlatform.leftX || transform.x >= originalPlatform.rightX) {
+                        platform.vx *= -1;
+                    }
+                } else {
+                    // Fallback to screen bounds
+                    if (transform.x <= 0 || transform.x >= 3200) {
+                        platform.vx *= -1;
+                    }
+                }
             }
         });
     }
@@ -2248,6 +2389,8 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new PowerUpSystem(game));
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
+    game.entityManager.addSystem(new PlatformMigrationSystem(game));
+    game.entityManager.addSystem(new PlatformMovementSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -2964,6 +3107,9 @@ async function createMarioGame(settings) {
         // Store current lives count
         const currentLives = game.player.lives;
         
+        // Increment reset counter for platform migration system
+        game.levelResetCounter = (game.levelResetCounter || 0) + 1;
+        
         
         // Set flag to reload level on next frame
         game.needsLevelReset = true;
@@ -3666,34 +3812,36 @@ async function createMarioGame(settings) {
         });
         
         // Platforms
-        game.platforms.forEach(platform => {
-            if (platform.type === 'pipe') {
+        const platformEntities = game.entityManager.query('transform', 'platform');
+        platformEntities.forEach(entity => {
+            const transform = entity.get('transform');
+            const platformComp = entity.get('platform');
+            
+            if (platformComp.type === 'pipe') {
                 // Pipe body - green
                 ctx.fillStyle = ThemeSystem.getColor('pipe');
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
                 
                 // Pipe rim (top edge) - lighter green
                 ctx.fillStyle = '#32CD32';
-                ctx.fillRect(platform.x - 2, platform.y - 8, platform.width + 4, 12);
+                ctx.fillRect(transform.x - 2, transform.y - 8, transform.width + 4, 12);
                 
                 // Pipe highlights
                 ctx.fillStyle = '#90EE90';
-                ctx.fillRect(platform.x + 2, platform.y, 2, platform.height);
+                ctx.fillRect(transform.x + 2, transform.y, 2, transform.height);
                 
                 // Pipe shadows
                 ctx.fillStyle = ThemeSystem.getColor('pipeShadow');
-                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
-                
-                // Pipe highlights
-                ctx.fillStyle = '#90EE90';
-                ctx.fillRect(platform.x + 2, platform.y, 2, platform.height);
-                
-                // Pipe shadows
-                ctx.fillStyle = ThemeSystem.getColor('pipeShadow');
-                ctx.fillRect(platform.x + platform.width - 2, platform.y, 2, platform.height);
+                ctx.fillRect(transform.x + transform.width - 2, transform.y, 2, transform.height);
             } else {
                 // Use theme system for platform rendering
-                ThemeSystem.renderPlatform(ctx, platform);
+                ThemeSystem.renderPlatform(ctx, {
+                    x: transform.x,
+                    y: transform.y,
+                    width: transform.width,
+                    height: transform.height,
+                    type: platformComp.type
+                });
             }
         });
         
@@ -3831,7 +3979,7 @@ async function createMarioGame(settings) {
         
         game.frameCount++;
         // updatePlayer(); // Disabled - now handled by PlayerInputSystem
-        updateMovingPlatforms();
+        // updateMovingPlatforms(); // Disabled - now handled by PlatformMovementSystem
         updateParticles();
         
         // Update Entity System - Phase 1
