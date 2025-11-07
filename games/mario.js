@@ -3822,13 +3822,22 @@ async function createMarioGame(settings) {
         
         ctx.restore();
         
-        // UI
+        // UI - ensure it's not affected by camera
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
+        
         const textColor = (ThemeSystem.current?.name === 'Underground' || ThemeSystem.current?.name === 'Castle') ? '#FFF' : '#000';
         ctx.fillStyle = textColor;
-        ctx.font = '20px Arial';
-        ctx.fillText(`Lives: ${game.player.lives}`, 10, 30);
-        ctx.fillText(`Score: ${game.player.score}`, 10, 60);
-        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 10, 90);
+        ctx.font = '16px monospace'; // Retro 8-bit style font
+        ctx.textAlign = 'left';
+        
+        // Position text with proper spacing from edges
+        const margin = 20;
+        ctx.fillText(`LIVES: ${game.player.lives}`, margin, 30);
+        ctx.fillText(`SCORE: ${game.player.score}`, margin, 50);
+        ctx.fillText(`LEVEL: ${game.levelsCompleted + 1}/${game.levelsToWin}`, margin, 70);
+        
+        ctx.restore();
         
         if (!game.gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
