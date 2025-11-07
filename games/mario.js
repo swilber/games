@@ -1387,7 +1387,7 @@ const convertASCIIToLevel = (asciiLines) => {
         };
     });
     
-    const level = { tiles: [], enemies: [], blocks: [], width: 0, castle: null };
+    const level = { tiles: [], width: 0, castle: null };
     
     // Find ground line (line with # symbols)
     const groundLineIndex = asciiLines.findIndex(line => line.includes('#'));
@@ -1506,7 +1506,7 @@ const LevelMapper = {
     },
     
     createFromMap: (mapData) => {
-        const level = { platforms: [], blocks: [], pits: [], enemies: [], coins: [], castle: null };
+        const level = { pits: [], castle: null };
         let currentGroundStart = null;
         let currentGroundWidth = 0;
         
@@ -1610,11 +1610,6 @@ async function createMarioGame(settings) {
             facingRight: true, shootCooldown: 0
         },
         camera: { x: 0 },
-        platforms: [],
-        blocks: [],
-        enemies: [],
-        coins: [],
-        fireballs: [],
         pits: [],
         currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
@@ -3112,9 +3107,6 @@ async function createMarioGame(settings) {
             game.fireballs = [];
             game.gameOver = false;
             game.won = false;
-            
-            game.enemies.forEach((enemy, i) => {
-            });
             
             // Initialize position logging timer
             game.lastLogTime = Date.now();
