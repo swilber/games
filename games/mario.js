@@ -101,6 +101,16 @@ class Projectile {
     }
 }
 
+class Particle {
+    constructor(type = 'debris', life = 60, vx = 0, vy = 0) {
+        this.type = type;
+        this.life = life;
+        this.maxLife = life;
+        this.vx = vx;
+        this.vy = vy;
+    }
+}
+
 class Player {
     constructor() {
         this.lives = 3;
@@ -516,17 +526,18 @@ class InteractiveSystem {
                         // Add brick destruction particles
                         const blockTransform = blockEntity.get('transform');
                         for (let i = 0; i < 4; i++) {
-                            this.game.particles.push({
-                                x: blockTransform.x + (i % 2) * blockTransform.width/2,
-                                y: blockTransform.y + Math.floor(i / 2) * blockTransform.height/2,
-                                vx: (i % 2 === 0 ? -1 : 1) * (2 + Math.random()),
-                                vy: -3 - Math.random() * 2,
-                                life: 60,
-                                maxLife: 60,
-                                type: 'brick',
-                                width: 8,
-                                height: 8
-                            });
+                            const particle = entityManager.create();
+                            particle.add('transform', new Transform(
+                                blockTransform.x + (i % 2) * blockTransform.width/2,
+                                blockTransform.y + Math.floor(i / 2) * blockTransform.height/2,
+                                8, 8
+                            ));
+                            particle.add('particle', new Particle(
+                                'debris',
+                                60,
+                                (i % 2 === 0 ? -1 : 1) * (2 + Math.random()),
+                                -3 - Math.random() * 2
+                            ));
                         }
                         
                         // Remove brick block
@@ -556,17 +567,13 @@ class InteractiveSystem {
                 playerComp.score += 200;
                 
                 // Add coin animation above the block
-                this.game.particles.push({
-                    x: blockTransform.x + blockTransform.width/2 - 8,
-                    y: blockTransform.y - 16,
-                    vx: 0,
-                    vy: -2,
-                    life: 30,
-                    maxLife: 30,
-                    type: 'coin',
-                    width: 16,
-                    height: 16
-                });
+                const particle = entityManager.create();
+                particle.add('transform', new Transform(
+                    blockTransform.x + blockTransform.width/2 - 8,
+                    blockTransform.y - 16,
+                    16, 16
+                ));
+                particle.add('particle', new Particle('coin', 30, 0, -2));
             } else {
                 // Determine power-up type based on Mario's current state
                 let powerUpType = blockComp.content;
@@ -1493,6 +1500,38 @@ class ImprovedRenderSystem {
     }
 }
 
+class ParticleSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const particles = entityManager.query('transform', 'particle');
+        
+        particles.forEach(entity => {
+            const transform = entity.get('transform');
+            const particle = entity.get('particle');
+            
+            // Update position
+            transform.x += particle.vx;
+            transform.y += particle.vy;
+            
+            // Apply gravity for debris particles
+            if (particle.type === 'debris') {
+                particle.vy += 0.3;
+            }
+            
+            // Decrease life
+            particle.life--;
+            
+            // Remove dead particles
+            if (particle.life <= 0) {
+                entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
 class RenderSystem {
     constructor(spriteRenderer) {
         this.spriteRenderer = spriteRenderer;
@@ -1768,7 +1807,7 @@ async function createMarioGame(settings) {
         blocks: [],
         enemies: [],
         coins: [],
-        particles: [],
+        fireballs: [],
         pits: [],
         currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
@@ -2579,6 +2618,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new PowerUpSystem(game));
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
+    game.entityManager.addSystem(new ParticleSystem(game));
     game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     game.entityManager.addSystem(new BlockMigrationSystem(game));
@@ -3113,24 +3153,6 @@ async function createMarioGame(settings) {
     }
     
     
-    function updateParticles() {
-        game.particles = game.particles.filter(particle => {
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-            particle.life--;
-            
-            if (particle.type === 'coin') {
-                // Coin floats up and fades
-                particle.vy += 0.1; // Slight gravity
-            } else if (particle.type === 'brick') {
-                // Brick pieces fall with gravity
-                particle.vy += 0.3; // Gravity
-            }
-            
-            return particle.life > 0;
-        });
-    }
-    
     function resetMarioPosition() {
         // Reset Mario to starting position and state
         game.player.x = game.currentLayout?.startX || 50;
@@ -3271,7 +3293,7 @@ async function createMarioGame(settings) {
             game.camera.x = 0;
             
             // Reset other game state
-            game.particles = [];
+            game.fireballs = [];
             game.gameOver = false;
             game.won = false;
             
@@ -3328,6 +3350,101 @@ async function createMarioGame(settings) {
                 resetLevel();
             }
         }
+    }
+    
+    function handlePlatformCollision(entity) {
+        entity.onGround = false;
+        
+        // Store previous position
+        const prevX = entity.x - entity.vx;
+        const prevY = entity.y - entity.vy;
+        
+        game.platforms.forEach(platform => {
+            // Skip moving platforms - they're handled separately
+            if (platform.moving) return;
+            
+            // Check if entity is currently overlapping platform
+            if (entity.x < platform.x + platform.width &&
+                entity.x + entity.width > platform.x &&
+                entity.y < platform.y + platform.height &&
+                entity.y + entity.height > platform.y) {
+                
+                // Check if entity was NOT overlapping in previous frame
+                const wasOverlapping = prevX < platform.x + platform.width &&
+                                     prevX + entity.width > platform.x &&
+                                     prevY < platform.y + platform.height &&
+                                     prevY + entity.height > platform.y;
+                
+                if (!wasOverlapping) {
+                    // Calculate intersection point for each axis
+                    let collisionTime = 1.0;
+                    let collisionAxis = null;
+                    
+                    // Vertical collision (top/bottom)
+                    if (entity.vy !== 0) {
+                        let timeY;
+                        if (entity.vy > 0) {
+                            // Moving down - check when bottom edge hits top of platform
+                            timeY = (platform.y - (prevY + entity.height)) / entity.vy;
+                        } else {
+                            // Moving up - check when top edge hits bottom of platform
+                            timeY = (platform.y + platform.height - prevY) / entity.vy;
+                        }
+                        
+                        if (timeY >= 0 && timeY <= 1 && timeY < collisionTime) {
+                            collisionTime = timeY;
+                            collisionAxis = 'y';
+                        }
+                    }
+                    
+                    // Horizontal collision (left/right)
+                    if (entity.vx !== 0) {
+                        let timeX;
+                        if (entity.vx > 0) {
+                            // Moving right - check collision with left of platform
+                            timeX = (platform.x - (prevX + entity.width)) / entity.vx;
+                        } else {
+                            // Moving left - check collision with right of platform
+                            timeX = (platform.x + platform.width - prevX) / entity.vx;
+                        }
+                        
+                        if (timeX >= 0 && timeX <= 1 && timeX < collisionTime) {
+                            collisionTime = timeX;
+                            collisionAxis = 'x';
+                        }
+                    }
+                    
+                    // Apply collision response
+                    if (collisionAxis === 'y') {
+                        if (entity.vy > 0) {
+                            // Landing on top - position feet on platform surface
+                            entity.y = platform.y - entity.height;
+                            entity.vy = 0;
+                            entity.onGround = true;
+                            
+                            // Move entity with moving platform
+                            if (platform.moving && entity === game.player) {
+                                entity.y += platform.vy;
+                            }
+                        } else {
+                            // Hitting from below - position head against platform bottom
+                            entity.y = platform.y + platform.height;
+                            entity.vy = 0;
+                        }
+                    } else if (collisionAxis === 'x') {
+                        if (entity.vx > 0) {
+                            // Hit from left
+                            entity.x = platform.x - entity.width;
+                            if (entity.vx !== undefined) entity.vx = 0;
+                        } else {
+                            // Hit from right
+                            entity.x = platform.x + platform.width;
+                            if (entity.vx !== undefined) entity.vx = 0;
+                        }
+                    }
+                }
+            }
+        });
     }
     
     function nextLevel() {
@@ -3413,6 +3530,79 @@ async function createMarioGame(settings) {
         
         // Block collision now handled by entity system
         game.camera.x = Math.max(0, game.player.x - 300);
+    }
+    
+    function updateMovingPlatforms() {
+        if (game.gameOver || game.won || !game.gameStarted) return;
+        
+        game.platforms.forEach(platform => {
+            if (platform.moving) {
+                // Check if Mario is on this moving platform
+                const marioOnPlatform = 
+                    game.player.x + game.player.width > platform.x &&
+                    game.player.x < platform.x + platform.width &&
+                    game.player.y + game.player.height >= platform.y - 2 &&
+                    game.player.y + game.player.height <= platform.y + 8;
+                
+                if (marioOnPlatform) {
+                    // Mario is on this platform - override gravity
+                    game.player.onGround = true;
+                    game.player.y = platform.y - game.player.height;
+                    
+                    // Move Mario with platform
+                    if (platform.vy) {
+                        if (platform.vy < 0) {
+                            // Moving up
+                            game.player.y += platform.vy;
+                            game.player.vy = 0;
+                        } else {
+                            // Moving down
+                            game.player.vy = platform.vy;
+                        }
+                    } else {
+                        game.player.vy = 0;
+                    }
+                    
+                    if (platform.vx) {
+                        game.player.x += platform.vx;
+                    }
+                }
+                
+                // Move platform based on type
+                if (platform.type === 'moving_up' || platform.type === 'moving_down') {
+                    // Original girder platforms - wrap around screen
+                    platform.y += platform.vy;
+                    
+                    if (platform.vy < 0 && platform.y < -platform.height) {
+                        platform.y = 400;
+                    } else if (platform.vy > 0 && platform.y > 400) {
+                        platform.y = -platform.height;
+                    }
+                } else if (platform.type === 'vertical_moving') {
+                    // W platforms - bounce between top and bottom
+                    platform.y += platform.vy;
+                    
+                    if (platform.vy > 0 && platform.y >= platform.bottomY) {
+                        platform.y = platform.bottomY;
+                        platform.vy = -1; // Start moving up
+                    } else if (platform.vy < 0 && platform.y <= platform.topY) {
+                        platform.y = platform.topY;
+                        platform.vy = 1; // Start moving down
+                    }
+                } else if (platform.type === 'horizontal_moving') {
+                    // Z platforms - bounce between left and right
+                    platform.x += platform.vx;
+                    
+                    if (platform.vx > 0 && platform.x >= platform.rightX) {
+                        platform.x = platform.rightX;
+                        platform.vx = -1; // Start moving left
+                    } else if (platform.vx < 0 && platform.x <= platform.leftX) {
+                        platform.x = platform.leftX;
+                        platform.vx = 1; // Start moving right
+                    }
+                }
+            }
+        });
     }
     
     function checkWin() {
@@ -3934,26 +4124,30 @@ async function createMarioGame(settings) {
         }
         
         // Particles (coins, effects)
-        game.particles.forEach(particle => {
+        const particleEntities = game.entityManager.query('transform', 'particle');
+        particleEntities.forEach(entity => {
+            const transform = entity.get('transform');
+            const particle = entity.get('particle');
+            
             if (particle.type === 'coin') {
                 // Render animated coin
                 ctx.fillStyle = '#FFD700';
-                ctx.fillRect(particle.x, particle.y, particle.width, particle.height);
+                ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
                 ctx.fillStyle = '#FFA500';
-                ctx.fillRect(particle.x + 2, particle.y + 2, particle.width - 4, particle.height - 4);
+                ctx.fillRect(transform.x + 2, transform.y + 2, transform.width - 4, transform.height - 4);
                 
                 // Add score text
                 ctx.fillStyle = '#FFF';
                 ctx.font = '12px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('200', particle.x + particle.width/2, particle.y - 5);
+                ctx.fillText('200', transform.x + transform.width/2, transform.y - 5);
                 ctx.textAlign = 'left';
-            } else if (particle.type === 'brick') {
+            } else if (particle.type === 'debris') {
                 // Render brick fragments
                 ctx.fillStyle = '#CD853F';
-                ctx.fillRect(particle.x, particle.y, particle.width, particle.height);
+                ctx.fillRect(transform.x, transform.y, transform.width, transform.height);
                 ctx.fillStyle = '#8B4513';
-                ctx.fillRect(particle.x + 1, particle.y + 1, particle.width - 2, particle.height - 2);
+                ctx.fillRect(transform.x + 1, transform.y + 1, transform.width - 2, transform.height - 2);
             }
         });
         
@@ -4018,7 +4212,7 @@ async function createMarioGame(settings) {
         game.frameCount++;
         // updatePlayer(); // Disabled - now handled by PlayerInputSystem
         // updateMovingPlatforms(); // Disabled - now handled by PlatformMovementSystem
-        updateParticles();
+        // updateParticles(); // Disabled - now handled by ParticleSystem
         
         // Update Entity System - Phase 1
         game.entityManager.update();
