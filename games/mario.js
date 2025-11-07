@@ -946,81 +946,6 @@ class SquishSystem {
     }
 }
 
-class PlatformMigrationSystem {
-    constructor(game) {
-        this.game = game;
-        this.migrated = false;
-        this.lastPlatformCount = 0;
-    }
-    
-    update(entityManager) {
-        // Check if we need to re-migrate (more reliable detection)
-        const existingPlatformEntities = entityManager.query('transform', 'platform');
-        const shouldHavePlatforms = this.game.platforms.length > 0;
-        
-        if (shouldHavePlatforms && existingPlatformEntities.length === 0) {
-            // Platforms exist in array but no entities - level was reloaded
-            this.migrated = false;
-        }
-        
-        // Check if platforms array has changed (backup detection)
-        if (this.game.platforms.length !== this.lastPlatformCount) {
-            this.migrated = false;
-            
-            // Clear existing platform entities
-            existingPlatformEntities.forEach(entity => {
-                entityManager.entities.delete(entity.id);
-            });
-        }
-        
-        // Only migrate once per level
-        if (!this.migrated) {
-            // Create platform entities from existing platforms array
-            this.game.platforms.forEach((platform, index) => {
-                const isMoving = platform.moving || platform.type === 'horizontal_moving' || platform.type === 'vertical_moving' || platform.type === 'moving_up' || platform.type === 'moving_down';
-                
-                const platformEntity = entityManager.create(`platform_${index}`)
-                    .add('transform', new Transform(platform.x, platform.y, platform.width, platform.height))
-                    .add('platform', new Platform(platform.type, isMoving));
-                
-                // Copy movement properties if they exist
-                if (isMoving) {
-                    const platformComp = platformEntity.get('platform');
-                    platformComp.vx = platform.vx || 0;
-                    platformComp.vy = platform.vy || 0;
-                    
-                    // Initialize movement for horizontal platforms if not set
-                    if (platform.type === 'horizontal_moving' && platformComp.vx === 0) {
-                        platformComp.vx = 1;
-                    }
-                    // Initialize movement for vertical platforms if not set  
-                    if (platform.type === 'vertical_moving' && platformComp.vy === 0) {
-                        platformComp.vy = -1;
-                    }
-                }
-            });
-            
-            this.migrated = true;
-            this.lastPlatformCount = this.game.platforms.length;
-        }
-        
-        // Sync platform entities back to array (only for collision detection now)
-        const platformEntities = entityManager.query('transform', 'platform');
-        platformEntities.forEach((entity, index) => {
-            if (index < this.game.platforms.length) {
-                const transform = entity.get('transform');
-                const platform = entity.get('platform');
-                
-                // Only sync moving platforms back to array for collision detection
-                if (platform.moving) {
-                    this.game.platforms[index].x = transform.x;
-                    this.game.platforms[index].y = transform.y;
-                }
-            }
-        });
-    }
-}
-
 class PlatformMovementSystem {
     constructor(game) {
         this.game = game;
@@ -1053,10 +978,9 @@ class PlatformMovementSystem {
             } else if (platform.type === 'horizontal_moving') {
                 transform.x += platform.vx;
                 
-                // Use the original platform's leftX and rightX bounds if available
-                const originalPlatform = this.game.platforms[parseInt(entity.id.split('_')[1])];
-                if (originalPlatform && originalPlatform.leftX !== undefined && originalPlatform.rightX !== undefined) {
-                    if (transform.x <= originalPlatform.leftX || transform.x >= originalPlatform.rightX) {
+                // Use boundary info stored in platform component
+                if (platform.leftX !== undefined && platform.rightX !== undefined) {
+                    if (transform.x <= platform.leftX || transform.x >= platform.rightX) {
                         platform.vx *= -1;
                     }
                 } else {
@@ -2502,7 +2426,6 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
     game.entityManager.addSystem(new ParticleSystem(game));
-    game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
@@ -2797,6 +2720,9 @@ async function createMarioGame(settings) {
             
             // Convert blocks to entities
             convertBlocksToEntities(layout);
+            
+            // Convert platforms to entities
+            convertPlatformsToEntities(layout);
             
             // Use the same function for initial load
             resetMarioPosition();
@@ -3161,6 +3087,9 @@ async function createMarioGame(settings) {
             
             // Convert blocks to entities
             convertBlocksToEntities(layout);
+            
+            // Convert platforms to entities
+            convertPlatformsToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -3939,6 +3868,43 @@ async function createMarioGame(settings) {
             const blockEntity = game.entityManager.create(`block${blockCount}`)
                 .add('transform', new Transform(block.x, block.y, block.width, block.height))
                 .add('block', new Block(block.type, block.content));
+        });
+    }
+    
+    // Convert all platforms to entities
+    function convertPlatformsToEntities(layout) {
+        if (!layout.platforms) return;
+        
+        let platformCount = 0;
+        layout.platforms.forEach(platform => {
+            platformCount++;
+            const isMoving = platform.moving || platform.type === 'horizontal_moving' || platform.type === 'vertical_moving' || platform.type === 'moving_up' || platform.type === 'moving_down';
+            
+            const platformEntity = game.entityManager.create(`platform${platformCount}`)
+                .add('transform', new Transform(platform.x, platform.y, platform.width, platform.height))
+                .add('platform', new Platform(platform.type, isMoving));
+            
+            // Copy movement properties if they exist
+            if (isMoving) {
+                const platformComp = platformEntity.get('platform');
+                platformComp.vx = platform.vx || 0;
+                platformComp.vy = platform.vy || 0;
+                
+                // Store boundary information for horizontal platforms
+                if (platform.type === 'horizontal_moving') {
+                    platformComp.leftX = platform.leftX;
+                    platformComp.rightX = platform.rightX;
+                }
+                
+                // Initialize movement for horizontal platforms if not set
+                if (platform.type === 'horizontal_moving' && platformComp.vx === 0) {
+                    platformComp.vx = 1;
+                }
+                // Initialize movement for vertical platforms if not set  
+                if (platform.type === 'vertical_moving' && platformComp.vy === 0) {
+                    platformComp.vy = -1;
+                }
+            }
         });
     }
     
