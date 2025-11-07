@@ -1063,19 +1063,21 @@ class ImprovedCollisionSystem {
                         delete ai.flySpeed;
                     } else if (enemy.id.startsWith('piranha')) {
                         // Piranha plants can't be stomped - damage player instead
-                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
-                            this.game.player.powerState = 'small';
-                            this.game.player.width = 16;
-                            this.game.player.height = 16;
-                            this.game.player.y += 16;
+                        const playerSprite = playerEntity.get('sprite');
+                        if (playerSprite.powerState === 'big' || playerSprite.powerState === 'fire') {
+                            playerSprite.powerState = 'small';
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
                         } else {
-                            this.game.player.lives--;
-                            if (this.game.player.lives <= 0) {
+                            const playerComp = playerEntity.get('player');
+                            playerComp.lives--;
+                            if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             }
                         }
-                        this.game.player.invincible = true;
-                        this.game.player.invincibleTimer = 120;
+                        playerSprite.invincible = true;
+                        playerSprite.invincibleTimer = 120;
                         return; // Skip player bounce
                     } else {
                         // Other enemies: Remove
@@ -1085,30 +1087,33 @@ class ImprovedCollisionSystem {
                     // Player bounce (only once per frame)
                     if (!playerBounced) {
                         playerPhysics.vy = -8;
-                        this.game.player.vy = -8;
                         playerBounced = true;
                     }
-                    this.game.player.score += 100;
+                    const playerComp = playerEntity.get('player');
+                    playerComp.score += 100;
                     
                     // Brief invincibility after stomping to prevent immediate damage
-                    this.game.player.invincible = true;
-                    this.game.player.invincibleTimer = 10;
+                    const playerSprite = playerEntity.get('sprite');
+                    playerSprite.invincible = true;
+                    playerSprite.invincibleTimer = 10;
                 } else {
                     // Side collision - damage player (only if not invincible)
-                    if (!this.game.player.invincible) {
-                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
-                            this.game.player.powerState = 'small';
-                            this.game.player.width = 16;
-                            this.game.player.height = 16;
-                            this.game.player.y += 16;
+                    const playerSprite = playerEntity.get('sprite');
+                    if (!playerSprite.invincible) {
+                        if (playerSprite.powerState === 'big' || playerSprite.powerState === 'fire') {
+                            playerSprite.powerState = 'small';
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
                         } else {
-                            this.game.player.lives--;
-                            if (this.game.player.lives <= 0) {
+                            const playerComp = playerEntity.get('player');
+                            playerComp.lives--;
+                            if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             }
                         }
-                        this.game.player.invincible = true;
-                        this.game.player.invincibleTimer = 120;
+                        playerSprite.invincible = true;
+                        playerSprite.invincibleTimer = 120;
                     }
                 }
             }
@@ -1154,7 +1159,11 @@ class ImprovedCollisionSystem {
                         } else {
                             entityManager.entities.delete(enemy.id);
                         }
-                        this.game.player.score += 100;
+                        const playerEntity = entityManager.entities.get('player');
+                        if (playerEntity) {
+                            const playerComp = playerEntity.get('player');
+                            playerComp.score += 100;
+                        }
                     }
                 }
             });
