@@ -1069,18 +1069,18 @@ class ImprovedCollisionSystem {
                             playerTransform.width = 16;
                             playerTransform.height = 16;
                             playerTransform.y += 16;
+                            playerComp.invincible = true;
+                            playerComp.invincibleTimer = 120;
                         } else {
+                            // Small Mario dies immediately
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             } else {
-                                // Set flag to reset level when Mario dies but still has lives
                                 this.game.needsLevelReset = true;
                                 this.game.livesToRestore = playerComp.lives;
                             }
                         }
-                        playerComp.invincible = true;
-                        playerComp.invincibleTimer = 120;
                         return; // Skip player bounce
                     } else {
                         // Other enemies: Remove
@@ -1107,18 +1107,18 @@ class ImprovedCollisionSystem {
                             playerTransform.width = 16;
                             playerTransform.height = 16;
                             playerTransform.y += 16;
+                            playerComp.invincible = true;
+                            playerComp.invincibleTimer = 120;
                         } else {
+                            // Small Mario dies immediately
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             } else {
-                                // Set flag to reset level when Mario dies but still has lives
                                 this.game.needsLevelReset = true;
                                 this.game.livesToRestore = playerComp.lives;
                             }
                         }
-                        playerComp.invincible = true;
-                        playerComp.invincibleTimer = 120;
                     }
                 }
             }
