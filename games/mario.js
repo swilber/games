@@ -3245,25 +3245,25 @@ async function createMarioGame(settings) {
         }
     }
     
-    function nextLevel() {
+    async function nextLevel() {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
         } else {
             // Progress to next level while preserving Mario's state
             game.currentLevel = game.levelsCompleted + 1;
-            initializeLevel(true); // Pass true to preserve state
+            await initializeLevel(true); // Await the async function
         }
     }
     
-    function checkWin() {
+    async function checkWin() {
         const playerEntity = game.entityManager.entities.get('player');
         if (!playerEntity) return;
         
         const playerTransform = playerEntity.get('transform');
         
         if (game.flag && playerTransform.x + playerTransform.width > game.flag.x) {
-            nextLevel();
+            await nextLevel();
         }
     }
     
