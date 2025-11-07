@@ -1073,6 +1073,10 @@ class ImprovedCollisionSystem {
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
+                            } else {
+                                // Set flag to reset level when Mario dies but still has lives
+                                this.game.needsLevelReset = true;
+                                this.game.livesToRestore = playerComp.lives;
                             }
                         }
                         playerComp.invincible = true;
@@ -1107,6 +1111,10 @@ class ImprovedCollisionSystem {
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
+                            } else {
+                                // Set flag to reset level when Mario dies but still has lives
+                                this.game.needsLevelReset = true;
+                                this.game.livesToRestore = playerComp.lives;
                             }
                         }
                         playerComp.invincible = true;
