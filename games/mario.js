@@ -2731,6 +2731,9 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
+            // Set correct lives count
+            const playerComp = playerEntity.get('player');
+            playerComp.lives = currentLives;            
             game.flag = layout.flag;
             
             // Convert coins to entities
@@ -3102,6 +3105,9 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
+            // Set correct lives count
+            const playerComp = playerEntity.get('player');
+            playerComp.lives = currentLives;            
             game.flag = layout.flag;
             
             // Convert coins to entities
