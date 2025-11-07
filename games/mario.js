@@ -1129,64 +1129,6 @@ class BlockMigrationSystem {
     }
 }
 
-class CoinMigrationSystem {
-    constructor(game) {
-        this.game = game;
-        this.migrated = false;
-        this.lastCoinCount = 0;
-    }
-    
-    update(entityManager) {
-        // Check if we need to re-migrate (more reliable detection)
-        const existingCoinEntities = entityManager.query('transform', 'coin');
-        const shouldHaveCoins = this.game.coins.length > 0;
-        
-        if (shouldHaveCoins && existingCoinEntities.length === 0) {
-            // Coins exist in array but no entities - level was reloaded
-            this.migrated = false;
-        }
-        
-        // Check if coins array has changed (backup detection)
-        if (this.game.coins.length !== this.lastCoinCount) {
-            this.migrated = false;
-            
-            // Clear existing coin entities
-            existingCoinEntities.forEach(entity => {
-                entityManager.entities.delete(entity.id);
-            });
-        }
-        
-        // Only migrate once per level
-        if (!this.migrated) {
-            // Create coin entities from existing coins array
-            this.game.coins.forEach((coin, index) => {
-                const coinEntity = entityManager.create(`coin_${index}`)
-                    .add('transform', new Transform(coin.x, coin.y, coin.width, coin.height))
-                    .add('coin', new Coin(coin.value || 200));
-                
-                // Copy collected state if it exists
-                if (coin.collected !== undefined) {
-                    coinEntity.get('coin').collected = coin.collected;
-                }
-            });
-            
-            this.migrated = true;
-            this.lastCoinCount = this.game.coins.length;
-        }
-        
-        // Sync coin entities with array (for collision detection)
-        const coinEntities = entityManager.query('transform', 'coin');
-        coinEntities.forEach((entity, index) => {
-            if (index < this.game.coins.length) {
-                const coin = entity.get('coin');
-                
-                // Sync FROM entity TO array (for state changes like collected)
-                this.game.coins[index].collected = coin.collected;
-            }
-        });
-    }
-}
-
 class ImprovedCollisionSystem {
     constructor(game) {
         this.game = game;
@@ -2622,7 +2564,6 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     game.entityManager.addSystem(new BlockMigrationSystem(game));
-    game.entityManager.addSystem(new CoinMigrationSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
