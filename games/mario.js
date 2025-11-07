@@ -3203,6 +3203,8 @@ async function createMarioGame(settings) {
                 } else {
                     transform.width = 16;
                     transform.height = 32;
+                    // Adjust Y position so big Mario doesn't spawn in ground
+                    transform.y -= 16;
                 }
             }
         }
