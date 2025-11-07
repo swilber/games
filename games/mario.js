@@ -3161,8 +3161,50 @@ async function createMarioGame(settings) {
         }
     }
     
-    async function initializeLevel() {
-        return initializeGameState(false); // Fresh start with 3 lives
+    function getMarioState() {
+        const playerEntity = game.entityManager.entities.get('player');
+        if (playerEntity) {
+            const playerComp = playerEntity.get('player');
+            return {
+                lives: playerComp.lives,
+                score: playerComp.score,
+                powerState: playerComp.powerState
+            };
+        }
+        // Fallback to legacy player object
+        return {
+            lives: game.player.lives,
+            score: game.player.score,
+            powerState: game.player.powerState
+        };
+    }
+    
+    async function initializeLevel(preserveState = false) {
+        const marioState = preserveState ? getMarioState() : null;
+        const result = await initializeGameState(false);
+        
+        // Restore Mario state if preserving
+        if (preserveState && marioState) {
+            const playerEntity = game.entityManager.entities.get('player');
+            if (playerEntity) {
+                const playerComp = playerEntity.get('player');
+                playerComp.lives = marioState.lives;
+                playerComp.score = marioState.score;
+                playerComp.powerState = marioState.powerState;
+                
+                // Update transform size based on power state
+                const transform = playerEntity.get('transform');
+                if (marioState.powerState === 'small') {
+                    transform.width = 16;
+                    transform.height = 16;
+                } else {
+                    transform.width = 16;
+                    transform.height = 32;
+                }
+            }
+        }
+        
+        return result;
     }
     
     function resetLevel() {
@@ -3204,9 +3246,9 @@ async function createMarioGame(settings) {
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
         } else {
-            // Progress to next level
+            // Progress to next level while preserving Mario's state
             game.currentLevel = game.levelsCompleted + 1;
-            initializeLevel();
+            initializeLevel(true); // Pass true to preserve state
         }
     }
     
