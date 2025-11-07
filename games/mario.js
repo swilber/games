@@ -1063,21 +1063,20 @@ class ImprovedCollisionSystem {
                         delete ai.flySpeed;
                     } else if (enemy.id.startsWith('piranha')) {
                         // Piranha plants can't be stomped - damage player instead
-                        const playerSprite = playerEntity.get('sprite');
-                        if (playerSprite.powerState === 'big' || playerSprite.powerState === 'fire') {
-                            playerSprite.powerState = 'small';
+                        const playerComp = playerEntity.get('player');
+                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                            playerComp.powerState = 'small';
                             playerTransform.width = 16;
                             playerTransform.height = 16;
                             playerTransform.y += 16;
                         } else {
-                            const playerComp = playerEntity.get('player');
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             }
                         }
-                        playerSprite.invincible = true;
-                        playerSprite.invincibleTimer = 120;
+                        playerComp.invincible = true;
+                        playerComp.invincibleTimer = 120;
                         return; // Skip player bounce
                     } else {
                         // Other enemies: Remove
@@ -1093,27 +1092,25 @@ class ImprovedCollisionSystem {
                     playerComp.score += 100;
                     
                     // Brief invincibility after stomping to prevent immediate damage
-                    const playerSprite = playerEntity.get('sprite');
-                    playerSprite.invincible = true;
-                    playerSprite.invincibleTimer = 10;
+                    playerComp.invincible = true;
+                    playerComp.invincibleTimer = 10;
                 } else {
                     // Side collision - damage player (only if not invincible)
-                    const playerSprite = playerEntity.get('sprite');
-                    if (!playerSprite.invincible) {
-                        if (playerSprite.powerState === 'big' || playerSprite.powerState === 'fire') {
-                            playerSprite.powerState = 'small';
+                    const playerComp = playerEntity.get('player');
+                    if (!playerComp.invincible) {
+                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                            playerComp.powerState = 'small';
                             playerTransform.width = 16;
                             playerTransform.height = 16;
                             playerTransform.y += 16;
                         } else {
-                            const playerComp = playerEntity.get('player');
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
                                 this.game.gameOver = true;
                             }
                         }
-                        playerSprite.invincible = true;
-                        playerSprite.invincibleTimer = 120;
+                        playerComp.invincible = true;
+                        playerComp.invincibleTimer = 120;
                     }
                 }
             }
