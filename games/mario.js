@@ -60,6 +60,14 @@ class Platform {
     }
 }
 
+class Block {
+    constructor(type = 'brick', content = null) {
+        this.type = type;
+        this.content = content;
+        this.hit = false;
+    }
+}
+
 class Interactive {
     constructor(type = 'question', contents = 'coin') {
         this.type = type;
@@ -190,7 +198,14 @@ class PhysicsSystem {
                 
                 // Handle platform collision for player with swept collision
                 physics.onGround = false;
-                const allSolids = [...this.game.platforms]; // Remove blocks - InteractiveSystem handles them
+                const platformEntities = entityManager.query('transform', 'platform');
+                const allSolids = [];
+                
+                // Add platform entities to collision check
+                platformEntities.forEach(platformEntity => {
+                    const platformTransform = platformEntity.get('transform');
+                    allSolids.push(platformTransform);
+                });
                 
                 allSolids.forEach(solid => {
                     // Check if moving into collision
@@ -245,7 +260,21 @@ class PhysicsSystem {
             physics.onGround = false;
             
             // Platform and block collision
-            const allSolids = [...this.game.platforms, ...this.game.blocks];
+            const platformEntities = entityManager.query('transform', 'platform');
+            const blockEntities = entityManager.query('transform', 'block');
+            const allSolids = [];
+            
+            // Add platform entities to collision check
+            platformEntities.forEach(platformEntity => {
+                const platformTransform = platformEntity.get('transform');
+                allSolids.push(platformTransform);
+            });
+            
+            // Add block entities to collision check
+            blockEntities.forEach(blockEntity => {
+                const blockTransform = blockEntity.get('transform');
+                allSolids.push(blockTransform);
+            });
             
             allSolids.forEach(solid => {
                 if (transform.x < solid.x + solid.width &&
@@ -404,10 +433,12 @@ class AISystem {
                 const checkY = transform.y + transform.height + 10; // Look below feet
                 
                 let foundGround = false;
-                // Check platforms for ground ahead
-                this.game.platforms.forEach(platform => {
-                    if (checkX >= platform.x && checkX <= platform.x + platform.width &&
-                        checkY >= platform.y && checkY <= platform.y + platform.height) {
+                // Check platform entities for ground ahead
+                const platformEntities = entityManager.query('transform', 'platform');
+                platformEntities.forEach(platformEntity => {
+                    const platformTransform = platformEntity.get('transform');
+                    if (checkX >= platformTransform.x && checkX <= platformTransform.x + platformTransform.width &&
+                        checkY >= platformTransform.y && checkY <= platformTransform.y + platformTransform.height) {
                         foundGround = true;
                     }
                 });
@@ -628,12 +659,19 @@ class ProjectileSystem {
             // Check collision with platforms and blocks for bouncing
             if (projectile.bounceCooldown === 0) {
                 const platformEntities = entityManager.query('transform', 'platform');
-                const allSolids = [...this.game.blocks]; // Keep blocks for now
+                const blockEntities = entityManager.query('transform', 'block');
+                const allSolids = [];
                 
                 // Add platform entities to collision check
                 platformEntities.forEach(platformEntity => {
                     const platformTransform = platformEntity.get('transform');
                     allSolids.push(platformTransform);
+                });
+                
+                // Add block entities to collision check
+                blockEntities.forEach(blockEntity => {
+                    const blockTransform = blockEntity.get('transform');
+                    allSolids.push(blockTransform);
                 });
                 
                 let bounced = false;
@@ -984,6 +1022,65 @@ class PlatformMovementSystem {
                         platform.vx *= -1;
                     }
                 }
+            }
+        });
+    }
+}
+
+class BlockMigrationSystem {
+    constructor(game) {
+        this.game = game;
+        this.migrated = false;
+        this.lastBlockCount = 0;
+    }
+    
+    update(entityManager) {
+        // Check if we need to re-migrate (more reliable detection)
+        const existingBlockEntities = entityManager.query('transform', 'block');
+        const shouldHaveBlocks = this.game.blocks.length > 0;
+        
+        if (shouldHaveBlocks && existingBlockEntities.length === 0) {
+            // Blocks exist in array but no entities - level was reloaded
+            this.migrated = false;
+        }
+        
+        // Check if blocks array has changed (backup detection)
+        if (this.game.blocks.length !== this.lastBlockCount) {
+            this.migrated = false;
+            
+            // Clear existing block entities
+            existingBlockEntities.forEach(entity => {
+                entityManager.entities.delete(entity.id);
+            });
+        }
+        
+        // Only migrate once per level
+        if (!this.migrated) {
+            // Create block entities from existing blocks array
+            this.game.blocks.forEach((block, index) => {
+                const blockEntity = entityManager.create(`block_${index}`)
+                    .add('transform', new Transform(block.x, block.y, block.width, block.height))
+                    .add('block', new Block(block.type, block.content));
+                
+                // Copy hit state if it exists
+                if (block.hit !== undefined) {
+                    blockEntity.get('block').hit = block.hit;
+                }
+            });
+            
+            this.migrated = true;
+            this.lastBlockCount = this.game.blocks.length;
+        }
+        
+        // Sync block entities with array (only for collision detection now)
+        const blockEntities = entityManager.query('transform', 'block');
+        blockEntities.forEach((entity, index) => {
+            if (index < this.game.blocks.length) {
+                const block = entity.get('block');
+                
+                // Sync FROM array TO entity (for state changes like hit)
+                block.hit = this.game.blocks[index].hit;
+                block.content = this.game.blocks[index].content;
             }
         });
     }
@@ -2391,6 +2488,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new ProjectileSystem(game));
     game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
+    game.entityManager.addSystem(new BlockMigrationSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -3878,8 +3976,20 @@ async function createMarioGame(settings) {
         }
         
         // Blocks
-        game.blocks.forEach(block => {
-            ThemeSystem.renderBlock(ctx, block);
+        const blockEntities = game.entityManager.query('transform', 'block');
+        blockEntities.forEach(entity => {
+            const transform = entity.get('transform');
+            const blockComp = entity.get('block');
+            
+            ThemeSystem.renderBlock(ctx, {
+                x: transform.x,
+                y: transform.y,
+                width: transform.width,
+                height: transform.height,
+                type: blockComp.type,
+                content: blockComp.content,
+                hit: blockComp.hit
+            });
         });
         
         // Enemies - all now handled by entity system
