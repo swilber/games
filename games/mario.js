@@ -479,50 +479,79 @@ class InteractiveSystem {
         const playerComp = playerEntity.get('player');
         
         // Handle all player-block collisions (both interactive and solid)
-        this.game.blocks.forEach(block => {
-            if (playerTransform.x < block.x + block.width &&
-                playerTransform.x + playerTransform.width > block.x &&
-                playerTransform.y < block.y + block.height &&
-                playerTransform.y + playerTransform.height > block.y) {
+        const blockEntities = entityManager.query('transform', 'block');
+        blockEntities.forEach(blockEntity => {
+            const blockTransform = blockEntity.get('transform');
+            const blockComp = blockEntity.get('block');
+            
+            if (playerTransform.x < blockTransform.x + blockTransform.width &&
+                playerTransform.x + playerTransform.width > blockTransform.x &&
+                playerTransform.y < blockTransform.y + blockTransform.height &&
+                playerTransform.y + playerTransform.height > blockTransform.y) {
                 
                 // Landing on top
-                if (playerPhysics.vy > 0 && playerTransform.y < block.y) {
-                    playerTransform.y = block.y - playerTransform.height;
+                if (playerPhysics.vy > 0 && playerTransform.y < blockTransform.y) {
+                    playerTransform.y = blockTransform.y - playerTransform.height;
                     playerPhysics.vy = 0;
                     playerPhysics.onGround = true;
                 }
                 // Hitting from below
-                else if (playerPhysics.vy < 0 && playerTransform.y > block.y) {
-                    playerTransform.y = block.y + block.height;
+                else if (playerPhysics.vy < 0 && playerTransform.y > blockTransform.y) {
+                    playerTransform.y = blockTransform.y + blockTransform.height;
                     playerPhysics.vy = 0;
                     
                     // Only trigger interaction if block is question type and not hit
-                    if (block.type === 'question' && !block.hit) {
-                        this.handleBlockHit(block, playerComp);
+                    if (blockComp.type === 'question' && !blockComp.hit) {
+                        this.handleBlockHit(blockEntity, playerComp, entityManager);
+                    }
+                    // Handle brick destruction for big Mario
+                    else if (blockComp.type === 'brick' && playerComp.powerState !== 'small') {
+                        // Add brick destruction particles
+                        const blockTransform = blockEntity.get('transform');
+                        for (let i = 0; i < 4; i++) {
+                            this.game.particles.push({
+                                x: blockTransform.x + (i % 2) * blockTransform.width/2,
+                                y: blockTransform.y + Math.floor(i / 2) * blockTransform.height/2,
+                                vx: (i % 2 === 0 ? -1 : 1) * (2 + Math.random()),
+                                vy: -3 - Math.random() * 2,
+                                life: 60,
+                                maxLife: 60,
+                                type: 'brick',
+                                width: 8,
+                                height: 8
+                            });
+                        }
+                        
+                        // Remove brick block
+                        entityManager.entities.delete(blockEntity.id);
+                        playerComp.score += 50;
                     }
                 }
                 // Side collision
                 else if (playerPhysics.vx > 0) {
-                    playerTransform.x = block.x - playerTransform.width;
+                    playerTransform.x = blockTransform.x - playerTransform.width;
                 } else if (playerPhysics.vx < 0) {
-                    playerTransform.x = block.x + block.width;
+                    playerTransform.x = blockTransform.x + blockTransform.width;
                 }
             }
         });
     }
     
-    handleBlockHit(block, playerComp) {
-        if (block.hit) return;
-        block.hit = true;
+    handleBlockHit(blockEntity, playerComp, entityManager) {
+        const blockComp = blockEntity.get('block');
+        const blockTransform = blockEntity.get('transform');
         
-        if (block.type === 'question' && block.content) {
-            if (block.content === 'coin') {
+        if (blockComp.hit) return;
+        blockComp.hit = true;
+        
+        if (blockComp.type === 'question' && blockComp.content) {
+            if (blockComp.content === 'coin') {
                 playerComp.score += 200;
                 
                 // Add coin animation above the block
                 this.game.particles.push({
-                    x: block.x + block.width/2 - 8,
-                    y: block.y - 16,
+                    x: blockTransform.x + blockTransform.width/2 - 8,
+                    y: blockTransform.y - 16,
                     vx: 0,
                     vy: -2,
                     life: 30,
@@ -533,18 +562,18 @@ class InteractiveSystem {
                 });
             } else {
                 // Determine power-up type based on Mario's current state
-                let powerUpType = block.content;
-                if (block.content === 'fireflower' && playerComp.powerState === 'small') {
+                let powerUpType = blockComp.content;
+                if (blockComp.content === 'fireflower' && playerComp.powerState === 'small') {
                     powerUpType = 'mushroom'; // Small Mario gets mushroom instead of fire flower
                 }
                 
                 // Create power-up entity instead of adding to array
                 const powerUpEntity = this.game.entityManager.create(`powerup_${Date.now()}`)
-                    .add('transform', new Transform(block.x, block.y - 32, 32, 32))
+                    .add('transform', new Transform(blockTransform.x, blockTransform.y - 32, 32, 32))
                     .add('physics', new Physics(powerUpType === 'fireflower' ? 0 : 1, 0))
                     .add('sprite', new Sprite('#FF0000', powerUpType));
             }
-            block.content = null;
+            blockComp.content = null;
         }
     }
 }
@@ -1072,15 +1101,15 @@ class BlockMigrationSystem {
             this.lastBlockCount = this.game.blocks.length;
         }
         
-        // Sync block entities with array (only for collision detection now)
+        // Sync block entities with array (both ways for collision detection)
         const blockEntities = entityManager.query('transform', 'block');
         blockEntities.forEach((entity, index) => {
             if (index < this.game.blocks.length) {
                 const block = entity.get('block');
                 
-                // Sync FROM array TO entity (for state changes like hit)
-                block.hit = this.game.blocks[index].hit;
-                block.content = this.game.blocks[index].content;
+                // Sync FROM entity TO array (for state changes like hit)
+                this.game.blocks[index].hit = block.hit;
+                this.game.blocks[index].content = block.content;
             }
         });
     }
@@ -3028,6 +3057,9 @@ async function createMarioGame(settings) {
             if (particle.type === 'coin') {
                 // Coin floats up and fades
                 particle.vy += 0.1; // Slight gravity
+            } else if (particle.type === 'brick') {
+                // Brick pieces fall with gravity
+                particle.vy += 0.3; // Gravity
             }
             
             return particle.life > 0;
