@@ -1079,6 +1079,7 @@ class ImprovedCollisionSystem {
                             } else {
                                 this.game.needsLevelReset = true;
                                 this.game.livesToRestore = playerComp.lives;
+                                this.game.scoreToRestore = playerComp.score;
                             }
                         }
                         return; // Skip player bounce
@@ -1117,6 +1118,7 @@ class ImprovedCollisionSystem {
                             } else {
                                 this.game.needsLevelReset = true;
                                 this.game.livesToRestore = playerComp.lives;
+                                this.game.scoreToRestore = playerComp.score;
                             }
                         }
                     }
@@ -3007,6 +3009,7 @@ async function createMarioGame(settings) {
     
     async function initializeGameState(preserveLives = false) {
         const currentLives = preserveLives ? game.livesToRestore : 3;
+        const currentScore = preserveLives ? (game.scoreToRestore || 0) : 0;
         
         try {
             let mapFile, theme;
@@ -3237,6 +3240,7 @@ async function createMarioGame(settings) {
             } else {
                 game.needsLevelReset = true;
                 game.livesToRestore = playerComp.lives;
+                game.scoreToRestore = playerComp.score;
             }
         }
     }
