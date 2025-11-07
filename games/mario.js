@@ -68,6 +68,13 @@ class Block {
     }
 }
 
+class Coin {
+    constructor(value = 200) {
+        this.value = value;
+        this.collected = false;
+    }
+}
+
 class Interactive {
     constructor(type = 'question', contents = 'coin') {
         this.type = type;
@@ -1115,6 +1122,64 @@ class BlockMigrationSystem {
     }
 }
 
+class CoinMigrationSystem {
+    constructor(game) {
+        this.game = game;
+        this.migrated = false;
+        this.lastCoinCount = 0;
+    }
+    
+    update(entityManager) {
+        // Check if we need to re-migrate (more reliable detection)
+        const existingCoinEntities = entityManager.query('transform', 'coin');
+        const shouldHaveCoins = this.game.coins.length > 0;
+        
+        if (shouldHaveCoins && existingCoinEntities.length === 0) {
+            // Coins exist in array but no entities - level was reloaded
+            this.migrated = false;
+        }
+        
+        // Check if coins array has changed (backup detection)
+        if (this.game.coins.length !== this.lastCoinCount) {
+            this.migrated = false;
+            
+            // Clear existing coin entities
+            existingCoinEntities.forEach(entity => {
+                entityManager.entities.delete(entity.id);
+            });
+        }
+        
+        // Only migrate once per level
+        if (!this.migrated) {
+            // Create coin entities from existing coins array
+            this.game.coins.forEach((coin, index) => {
+                const coinEntity = entityManager.create(`coin_${index}`)
+                    .add('transform', new Transform(coin.x, coin.y, coin.width, coin.height))
+                    .add('coin', new Coin(coin.value || 200));
+                
+                // Copy collected state if it exists
+                if (coin.collected !== undefined) {
+                    coinEntity.get('coin').collected = coin.collected;
+                }
+            });
+            
+            this.migrated = true;
+            this.lastCoinCount = this.game.coins.length;
+        }
+        
+        // Sync coin entities with array (for collision detection)
+        const coinEntities = entityManager.query('transform', 'coin');
+        coinEntities.forEach((entity, index) => {
+            if (index < this.game.coins.length) {
+                const coin = entity.get('coin');
+                
+                // Sync FROM entity TO array (for state changes like collected)
+                this.game.coins[index].collected = coin.collected;
+            }
+        });
+    }
+}
+
 class ImprovedCollisionSystem {
     constructor(game) {
         this.game = game;
@@ -1704,7 +1769,6 @@ async function createMarioGame(settings) {
         enemies: [],
         coins: [],
         particles: [],
-        fireballs: [],
         pits: [],
         currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
@@ -2518,6 +2582,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     game.entityManager.addSystem(new BlockMigrationSystem(game));
+    game.entityManager.addSystem(new CoinMigrationSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -3207,7 +3272,6 @@ async function createMarioGame(settings) {
             
             // Reset other game state
             game.particles = [];
-            game.fireballs = [];
             game.gameOver = false;
             game.won = false;
             
@@ -3264,101 +3328,6 @@ async function createMarioGame(settings) {
                 resetLevel();
             }
         }
-    }
-    
-    function handlePlatformCollision(entity) {
-        entity.onGround = false;
-        
-        // Store previous position
-        const prevX = entity.x - entity.vx;
-        const prevY = entity.y - entity.vy;
-        
-        game.platforms.forEach(platform => {
-            // Skip moving platforms - they're handled separately
-            if (platform.moving) return;
-            
-            // Check if entity is currently overlapping platform
-            if (entity.x < platform.x + platform.width &&
-                entity.x + entity.width > platform.x &&
-                entity.y < platform.y + platform.height &&
-                entity.y + entity.height > platform.y) {
-                
-                // Check if entity was NOT overlapping in previous frame
-                const wasOverlapping = prevX < platform.x + platform.width &&
-                                     prevX + entity.width > platform.x &&
-                                     prevY < platform.y + platform.height &&
-                                     prevY + entity.height > platform.y;
-                
-                if (!wasOverlapping) {
-                    // Calculate intersection point for each axis
-                    let collisionTime = 1.0;
-                    let collisionAxis = null;
-                    
-                    // Vertical collision (top/bottom)
-                    if (entity.vy !== 0) {
-                        let timeY;
-                        if (entity.vy > 0) {
-                            // Moving down - check when bottom edge hits top of platform
-                            timeY = (platform.y - (prevY + entity.height)) / entity.vy;
-                        } else {
-                            // Moving up - check when top edge hits bottom of platform
-                            timeY = (platform.y + platform.height - prevY) / entity.vy;
-                        }
-                        
-                        if (timeY >= 0 && timeY <= 1 && timeY < collisionTime) {
-                            collisionTime = timeY;
-                            collisionAxis = 'y';
-                        }
-                    }
-                    
-                    // Horizontal collision (left/right)
-                    if (entity.vx !== 0) {
-                        let timeX;
-                        if (entity.vx > 0) {
-                            // Moving right - check collision with left of platform
-                            timeX = (platform.x - (prevX + entity.width)) / entity.vx;
-                        } else {
-                            // Moving left - check collision with right of platform
-                            timeX = (platform.x + platform.width - prevX) / entity.vx;
-                        }
-                        
-                        if (timeX >= 0 && timeX <= 1 && timeX < collisionTime) {
-                            collisionTime = timeX;
-                            collisionAxis = 'x';
-                        }
-                    }
-                    
-                    // Apply collision response
-                    if (collisionAxis === 'y') {
-                        if (entity.vy > 0) {
-                            // Landing on top - position feet on platform surface
-                            entity.y = platform.y - entity.height;
-                            entity.vy = 0;
-                            entity.onGround = true;
-                            
-                            // Move entity with moving platform
-                            if (platform.moving && entity === game.player) {
-                                entity.y += platform.vy;
-                            }
-                        } else {
-                            // Hitting from below - position head against platform bottom
-                            entity.y = platform.y + platform.height;
-                            entity.vy = 0;
-                        }
-                    } else if (collisionAxis === 'x') {
-                        if (entity.vx > 0) {
-                            // Hit from left
-                            entity.x = platform.x - entity.width;
-                            if (entity.vx !== undefined) entity.vx = 0;
-                        } else {
-                            // Hit from right
-                            entity.x = platform.x + platform.width;
-                            if (entity.vx !== undefined) entity.vx = 0;
-                        }
-                    }
-                }
-            }
-        });
     }
     
     function nextLevel() {
@@ -3444,79 +3413,6 @@ async function createMarioGame(settings) {
         
         // Block collision now handled by entity system
         game.camera.x = Math.max(0, game.player.x - 300);
-    }
-    
-    function updateMovingPlatforms() {
-        if (game.gameOver || game.won || !game.gameStarted) return;
-        
-        game.platforms.forEach(platform => {
-            if (platform.moving) {
-                // Check if Mario is on this moving platform
-                const marioOnPlatform = 
-                    game.player.x + game.player.width > platform.x &&
-                    game.player.x < platform.x + platform.width &&
-                    game.player.y + game.player.height >= platform.y - 2 &&
-                    game.player.y + game.player.height <= platform.y + 8;
-                
-                if (marioOnPlatform) {
-                    // Mario is on this platform - override gravity
-                    game.player.onGround = true;
-                    game.player.y = platform.y - game.player.height;
-                    
-                    // Move Mario with platform
-                    if (platform.vy) {
-                        if (platform.vy < 0) {
-                            // Moving up
-                            game.player.y += platform.vy;
-                            game.player.vy = 0;
-                        } else {
-                            // Moving down
-                            game.player.vy = platform.vy;
-                        }
-                    } else {
-                        game.player.vy = 0;
-                    }
-                    
-                    if (platform.vx) {
-                        game.player.x += platform.vx;
-                    }
-                }
-                
-                // Move platform based on type
-                if (platform.type === 'moving_up' || platform.type === 'moving_down') {
-                    // Original girder platforms - wrap around screen
-                    platform.y += platform.vy;
-                    
-                    if (platform.vy < 0 && platform.y < -platform.height) {
-                        platform.y = 400;
-                    } else if (platform.vy > 0 && platform.y > 400) {
-                        platform.y = -platform.height;
-                    }
-                } else if (platform.type === 'vertical_moving') {
-                    // W platforms - bounce between top and bottom
-                    platform.y += platform.vy;
-                    
-                    if (platform.vy > 0 && platform.y >= platform.bottomY) {
-                        platform.y = platform.bottomY;
-                        platform.vy = -1; // Start moving up
-                    } else if (platform.vy < 0 && platform.y <= platform.topY) {
-                        platform.y = platform.topY;
-                        platform.vy = 1; // Start moving down
-                    }
-                } else if (platform.type === 'horizontal_moving') {
-                    // Z platforms - bounce between left and right
-                    platform.x += platform.vx;
-                    
-                    if (platform.vx > 0 && platform.x >= platform.rightX) {
-                        platform.x = platform.rightX;
-                        platform.vx = -1; // Start moving left
-                    } else if (platform.vx < 0 && platform.x <= platform.leftX) {
-                        platform.x = platform.leftX;
-                        platform.vx = 1; // Start moving right
-                    }
-                }
-            }
-        });
     }
     
     function checkWin() {
