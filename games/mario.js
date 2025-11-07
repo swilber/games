@@ -3823,7 +3823,8 @@ async function createMarioGame(settings) {
         ctx.restore();
         
         // UI
-        ctx.fillStyle = '#000';
+        const textColor = (ThemeSystem.current?.name === 'Underground' || ThemeSystem.current?.name === 'Castle') ? '#FFF' : '#000';
+        ctx.fillStyle = textColor;
         ctx.font = '20px Arial';
         ctx.fillText(`Lives: ${game.player.lives}`, 10, 30);
         ctx.fillText(`Score: ${game.player.score}`, 10, 60);
