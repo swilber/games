@@ -1640,7 +1640,7 @@ async function createMarioGame(settings) {
         camera: { x: 0 },
         currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
-        levelsToWin: 3, // Three levels now
+        levelsToWin: 4, // Four levels now
         levelWidth: 4000,
         gameOver: false,
         won: false,
