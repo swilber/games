@@ -3193,7 +3193,8 @@ async function createMarioGame(settings) {
             if (playerComp.lives <= 0) {
                 game.gameOver = true;
             } else {
-                resetLevel();
+                game.needsLevelReset = true;
+                game.livesToRestore = playerComp.lives;
             }
         }
     }
