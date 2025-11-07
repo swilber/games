@@ -1070,65 +1070,6 @@ class PlatformMovementSystem {
     }
 }
 
-class BlockMigrationSystem {
-    constructor(game) {
-        this.game = game;
-        this.migrated = false;
-        this.lastBlockCount = 0;
-    }
-    
-    update(entityManager) {
-        // Check if we need to re-migrate (more reliable detection)
-        const existingBlockEntities = entityManager.query('transform', 'block');
-        const shouldHaveBlocks = this.game.blocks.length > 0;
-        
-        if (shouldHaveBlocks && existingBlockEntities.length === 0) {
-            // Blocks exist in array but no entities - level was reloaded
-            this.migrated = false;
-        }
-        
-        // Check if blocks array has changed (backup detection)
-        if (this.game.blocks.length !== this.lastBlockCount) {
-            this.migrated = false;
-            
-            // Clear existing block entities
-            existingBlockEntities.forEach(entity => {
-                entityManager.entities.delete(entity.id);
-            });
-        }
-        
-        // Only migrate once per level
-        if (!this.migrated) {
-            // Create block entities from existing blocks array
-            this.game.blocks.forEach((block, index) => {
-                const blockEntity = entityManager.create(`block_${index}`)
-                    .add('transform', new Transform(block.x, block.y, block.width, block.height))
-                    .add('block', new Block(block.type, block.content));
-                
-                // Copy hit state if it exists
-                if (block.hit !== undefined) {
-                    blockEntity.get('block').hit = block.hit;
-                }
-            });
-            
-            this.migrated = true;
-            this.lastBlockCount = this.game.blocks.length;
-        }
-        
-        // Sync block entities with array (both ways for collision detection)
-        const blockEntities = entityManager.query('transform', 'block');
-        blockEntities.forEach((entity, index) => {
-            if (index < this.game.blocks.length) {
-                const block = entity.get('block');
-                
-                // Sync FROM entity TO array (for state changes like hit)
-                this.game.blocks[index].hit = block.hit;
-                this.game.blocks[index].content = block.content;
-            }
-        });
-    }
-}
-
 class ImprovedCollisionSystem {
     constructor(game) {
         this.game = game;
@@ -2563,7 +2504,6 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new ParticleSystem(game));
     game.entityManager.addSystem(new PlatformMigrationSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
-    game.entityManager.addSystem(new BlockMigrationSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
     const MapCharacters = {
@@ -2854,6 +2794,9 @@ async function createMarioGame(settings) {
             
             // Convert coins to entities
             convertCoinsToEntities(layout);
+            
+            // Convert blocks to entities
+            convertBlocksToEntities(layout);
             
             // Use the same function for initial load
             resetMarioPosition();
@@ -3215,6 +3158,9 @@ async function createMarioGame(settings) {
             
             // Convert coins to entities
             convertCoinsToEntities(layout);
+            
+            // Convert blocks to entities
+            convertBlocksToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -3980,6 +3926,19 @@ async function createMarioGame(settings) {
                 .add('transform', new Transform(coin.x, coin.y, coin.width, coin.height))
                 .add('sprite', new Sprite('#FFD700', 'coin'))
                 .add('collectible', new Collectible('coin', 200));
+        });
+    }
+    
+    // Convert all blocks to entities
+    function convertBlocksToEntities(layout) {
+        if (!layout.blocks) return;
+        
+        let blockCount = 0;
+        layout.blocks.forEach(block => {
+            blockCount++;
+            const blockEntity = game.entityManager.create(`block${blockCount}`)
+                .add('transform', new Transform(block.x, block.y, block.width, block.height))
+                .add('block', new Block(block.type, block.content));
         });
     }
     
