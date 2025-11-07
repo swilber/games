@@ -111,6 +111,12 @@ class Particle {
     }
 }
 
+class Pit {
+    constructor(type = 'standard') {
+        this.type = type;
+    }
+}
+
 class Player {
     constructor() {
         this.lives = 3;
@@ -1610,7 +1616,6 @@ async function createMarioGame(settings) {
             facingRight: true, shootCooldown: 0
         },
         camera: { x: 0 },
-        pits: [],
         currentLevel: levelId, // Use selected level
         levelsCompleted: 0,
         levelsToWin: 3, // Three levels now
@@ -2706,7 +2711,6 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
-            game.pits = layout.pits || [];
             game.flag = layout.flag;
             game.castles = layout.castles || [];
             
@@ -2718,6 +2722,9 @@ async function createMarioGame(settings) {
             
             // Convert platforms to entities
             convertPlatformsToEntities(layout);
+            
+            // Convert pits to entities
+            convertPitsToEntities(layout);
             
             // Use the same function for initial load
             resetMarioPosition();
@@ -3073,7 +3080,6 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
-            game.pits = layout.pits || [];
             game.flag = layout.flag;
             game.castles = layout.castles || [];
             
@@ -3085,6 +3091,9 @@ async function createMarioGame(settings) {
             
             // Convert platforms to entities
             convertPlatformsToEntities(layout);
+            
+            // Convert pits to entities
+            convertPitsToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -3628,8 +3637,12 @@ async function createMarioGame(settings) {
         });
         
         // Pits (render lava for castle theme)
-        if (game.pits && game.pits.length > 0) {
-            game.pits.forEach(pit => {
+        const pitEntities = game.entityManager.query('transform', 'pit');
+        if (pitEntities.length > 0) {
+            pitEntities.forEach(entity => {
+                const transform = entity.get('transform');
+                const pit = entity.get('pit');
+                
                 if (ThemeSystem.current?.name === 'Castle') {
                     // Bubbling lava pit
                     const lavaY = 380; // Ground level
@@ -3637,14 +3650,14 @@ async function createMarioGame(settings) {
                     
                     // Base lava
                     ctx.fillStyle = ThemeSystem.getColor('lava');
-                    ctx.fillRect(pit.x, lavaY, pit.width, lavaHeight);
+                    ctx.fillRect(transform.x, lavaY, transform.width, lavaHeight);
                     
                     // Animated bubbles
                     const time = game.frameCount * 0.1;
-                    const bubbleCount = Math.floor(pit.width / 8);
+                    const bubbleCount = Math.floor(transform.width / 8);
                     
                     for (let i = 0; i < bubbleCount; i++) {
-                        const bubbleX = pit.x + (i * 8) + Math.sin(time + i) * 2;
+                        const bubbleX = transform.x + (i * 8) + Math.sin(time + i) * 2;
                         const bubbleY = lavaY + 10 + Math.sin(time * 2 + i * 0.5) * 5;
                         const bubbleSize = 2 + Math.sin(time * 3 + i) * 1;
                         
@@ -3654,7 +3667,7 @@ async function createMarioGame(settings) {
                     
                     // Lava glow effect
                     ctx.fillStyle = '#FF6500';
-                    ctx.fillRect(pit.x, lavaY, pit.width, 3);
+                    ctx.fillRect(transform.x, lavaY, transform.width, 3);
                 }
             });
         }
@@ -3897,6 +3910,19 @@ async function createMarioGame(settings) {
                     platformComp.vy = -1;
                 }
             }
+        });
+    }
+    
+    // Convert all pits to entities
+    function convertPitsToEntities(layout) {
+        if (!layout.pits) return;
+        
+        let pitCount = 0;
+        layout.pits.forEach(pit => {
+            pitCount++;
+            const pitEntity = game.entityManager.create(`pit${pitCount}`)
+                .add('transform', new Transform(pit.x, pit.y || 380, pit.width, pit.height || 100))
+                .add('pit', new Pit(pit.type || 'standard'));
         });
     }
     
