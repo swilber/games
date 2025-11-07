@@ -2436,12 +2436,12 @@ async function createMarioGame(settings) {
     
     // Initialize Entity Systems once (not on every reset) - using improved versions
     game.entityManager.addSystem(new PhysicsSystem(game));
+    game.entityManager.addSystem(new InteractiveSystem(game)); // Move before PlayerInputSystem
     game.entityManager.addSystem(new PlayerInputSystem(game));
     game.entityManager.addSystem(new PlayerSyncSystem(game));
     game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
     game.entityManager.addSystem(new SquishSystem());
-    game.entityManager.addSystem(new InteractiveSystem(game));
     game.entityManager.addSystem(new PowerUpSystem(game));
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
