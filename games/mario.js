@@ -1615,8 +1615,8 @@ async function createMarioGame(settings) {
         return;
     }
     
-    // Normal mode - start with level 3 (current default)
-    startMarioGame(3);
+    // Normal mode - start with level 1
+    startMarioGame(1);
     
     function startMarioGame(levelId) {
         // Use only level 1-1 for now
@@ -1639,7 +1639,7 @@ async function createMarioGame(settings) {
         },
         camera: { x: 0 },
         currentLevel: levelId, // Use selected level
-        levelsCompleted: 0,
+        levelsCompleted: levelId - 1, // Levels completed = current level - 1
         levelsToWin: 4, // Four levels now
         levelWidth: 4000,
         gameOver: false,
