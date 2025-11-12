@@ -1,0 +1,17 @@
+{
+  "gameplay": {
+    "gameSpeed": 150,
+    "requiredScore": 5,
+    "boardSize": 400,
+    "gridSize": 20
+  },
+  "snake": {
+    "startLength": 1,
+    "growthRate": 1,
+    "startX": 200,
+    "startY": 200
+  },
+  "scoring": {
+    "foodValue": 1
+  }
+}

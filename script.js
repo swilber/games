@@ -100,6 +100,8 @@ function generateConfigForm(gameType, config) {
         generateMarioConfigForm(config, content);
     } else if (gameType === 'pacman') {
         generatePacmanConfigForm(config, content);
+    } else if (gameType === 'snake') {
+        generateSnakeConfigForm(config, content);
     }
     // Add other games later
 }
@@ -182,6 +184,29 @@ function generatePacmanConfigForm(config, container) {
         { key: 'ghosts', title: 'Ghost Settings' },
         { key: 'powerups', title: 'Power-up Settings' },
         { key: 'gameplay', title: 'Gameplay Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateSnakeConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'snake', title: 'Snake Settings' },
+        { key: 'scoring', title: 'Scoring Settings' }
     ];
     
     sections.forEach(section => {
@@ -384,6 +409,19 @@ Promise.all([
     console.error('Error loading game data:', error);
 });
 
+function updateLevelButtons() {
+    const levelButtons = document.querySelectorAll('.level-button');
+    levelButtons.forEach((button, index) => {
+        if (unlockedLevels[index]) {
+            button.classList.remove('locked');
+            button.onclick = () => selectLevel(index);
+        } else {
+            button.classList.add('locked');
+            button.onclick = () => selectLevel(index); // Use new system for all levels
+        }
+    });
+}
+
 function showLevelSelect() {
     document.getElementById('level-select').classList.remove('hidden');
     document.getElementById('game-screen').classList.add('hidden');
@@ -501,7 +539,7 @@ async function initializeLevel() {
             createMemoryGame(await getDifficulty('memory'));
             break;
         case 'snake':
-            createSnakeGame(await getDifficulty('snake'));
+            await createSnakeGame(await getDifficulty('snake'));
             break;
         case 'quiz':
             createQuizGame(await getDifficulty('quiz'));

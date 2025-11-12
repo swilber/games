@@ -1,14 +1,30 @@
-function createSnakeGame(settings) {
+async function createSnakeGame(settings) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load Snake configuration using ConfigManager (same as Mario/Pac-Man)
+    let snakeConfig = {};
+    if (typeof configManager !== 'undefined') {
+        snakeConfig = await configManager.loadConfig('snake');
+        console.log('Snake config loaded via ConfigManager:', snakeConfig);
+    } else {
+        // Fallback to default values
+        console.warn('Could not load Snake config, using defaults');
+        snakeConfig = {
+            gameplay: { gameSpeed: 150, requiredScore: 5, boardSize: 400, gridSize: 20 },
+            snake: { startLength: 1, growthRate: 1, startX: 200, startY: 200 },
+            scoring: { foodValue: 1 }
+        };
+    }
+    
     const canvas = document.createElement('canvas');
-    canvas.width = settings.boardSize;
-    canvas.height = settings.boardSize;
+    canvas.width = snakeConfig.gameplay.boardSize;
+    canvas.height = snakeConfig.gameplay.boardSize;
     canvas.style.border = '2px solid #000';
     
     const ctx = canvas.getContext('2d');
-    const gridSize = 20;
+    const gridSize = snakeConfig.gameplay.gridSize;
     
-    let snake = [{x: 200, y: 200}];
+    let snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
     let food = {x: 100, y: 100};
     let dx = 0, dy = 0;
     let score = 0;
@@ -29,7 +45,7 @@ function createSnakeGame(settings) {
         
         ctx.fillStyle = '#fff';
         ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${score}/${settings.requiredScore}`, 10, 30);
+        ctx.fillText(`Score: ${score}/${snakeConfig.gameplay.requiredScore}`, 10, 30);
         
         if (!gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -59,8 +75,8 @@ function createSnakeGame(settings) {
         snake.unshift(head);
         
         if(head.x === food.x && head.y === food.y) {
-            score++;
-            if(score >= settings.requiredScore) {
+            score += snakeConfig.scoring.foodValue;
+            if(score >= snakeConfig.gameplay.requiredScore) {
                 gameWon = true;
                 showQuestion();
                 return;
@@ -79,7 +95,7 @@ function createSnakeGame(settings) {
     }
     
     function resetGame() {
-        snake = [{x: 200, y: 200}];
+        snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
         dx = 0; dy = 0;
         score = 0;
         gameStarted = false;
@@ -105,7 +121,7 @@ function createSnakeGame(settings) {
     gameInterval = setInterval(() => {
         moveSnake();
         drawGame();
-    }, settings.gameSpeed);
+    }, snakeConfig.gameplay.gameSpeed);
     
     drawGame();
 }
