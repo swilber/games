@@ -525,6 +525,64 @@ async function startLevel() {
     }
 }
 
+// Callback-based game creation wrapper
+async function createGameWithCallbacks(gameType, settings) {
+    const gameCallbacks = {
+        onGameStart: async (gameId) => {
+            // Check if there's a pending question to answer
+            if (typeof questionSystem !== 'undefined') {
+                return new Promise((resolve) => {
+                    questionSystem.showAnswerPrompt(() => resolve());
+                });
+            }
+        },
+        onGameComplete: (gameId, questionData) => {
+            // Show question and handle progression
+            if (typeof questionSystem !== 'undefined' && questionData) {
+                questionSystem.showQuestion(gameId);
+            }
+            // Set global flags for level system
+            gameWon = true;
+            showQuestion();
+        },
+        onLevelComplete: () => {
+            // Handle individual level completion within a game
+            proceedToNextLevel();
+        }
+    };
+    
+    // Create games with callbacks
+    switch(gameType) {
+        case 'mario':
+            return await createMarioGame(settings, gameCallbacks);
+        case 'pacman':
+            return await createPacmanGame(settings, gameCallbacks);
+        case 'snake':
+            return await createSnakeGame(settings, gameCallbacks);
+        default:
+            // Fallback for games without callback support yet
+            return await createGameLegacy(gameType, settings);
+    }
+}
+
+// Legacy game creation for backward compatibility
+async function createGameLegacy(gameType, settings) {
+    switch(gameType) {
+        case 'memory':
+            return createMemoryGame(settings);
+        case 'quiz':
+            return createQuizGame(settings);
+        case 'flappy':
+            return createFlappyGame(settings);
+        case 'frogger':
+            return createFroggerGame(settings);
+        case 'maze3d':
+            return createMaze3DGame(settings);
+        case 'donkeykong':
+            return createDonkeyKongGame(settings);
+    }
+}
+
 async function initializeLevel() {
     const level = levels[currentLevel];
     document.getElementById('level-title').textContent = level.title;
@@ -536,35 +594,19 @@ async function initializeLevel() {
     
     switch(level.type) {
         case 'memory':
-            createMemoryGame(await getDifficulty('memory'));
-            break;
-        case 'snake':
-            await createSnakeGame(await getDifficulty('snake'));
-            break;
         case 'quiz':
-            createQuizGame(await getDifficulty('quiz'));
-            break;
         case 'flappy':
-            createFlappyGame(await getDifficulty('flappy'));
-            break;
         case 'frogger':
-            createFroggerGame(await getDifficulty('frogger'));
-            break;
         case 'maze3d':
-            createMaze3DGame(await getDifficulty('maze3d'));
+        case 'donkeykong':
+            // Legacy games without callback support
+            await createGameLegacy(level.type, await getDifficulty(level.type));
             break;
         case 'mario':
-            const marioSettings = await getDifficulty('mario');
-            // Enable debug mode only if ?debug=true is in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            marioSettings.debug = urlParams.get('debug') === 'true';
-            createMarioGame(marioSettings);
-            break;
-        case 'donkeykong':
-            createDonkeyKongGame(await getDifficulty('donkeykong'));
-            break;
         case 'pacman':
-            await createPacmanGame(await getDifficulty('pacman'));
+        case 'snake':
+            // Modern games with callback support
+            await createGameWithCallbacks(level.type, await getDifficulty(level.type));
             break;
     }
 }

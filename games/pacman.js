@@ -1,5 +1,10 @@
-async function createPacmanGame(settings) {
+async function createPacmanGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
+    
+    // Call onGameStart callback if provided
+    if (callbacks?.onGameStart) {
+        await callbacks.onGameStart('pacman');
+    }
     
     // Load Pac-Man configuration using ConfigManager (same as Mario)
     let pacmanConfig = {};
@@ -256,8 +261,15 @@ async function createPacmanGame(settings) {
         // Check win condition
         if (game.dotsRemaining === 0) {
             game.won = true;
-            gameWon = true;
-            setTimeout(showQuestion, 1000);
+            // Use callback if provided, otherwise fallback to global functions
+            if (callbacks?.onGameComplete) {
+                const currentLevelData = levels?.[currentLevel];
+                callbacks.onGameComplete('pacman', currentLevelData);
+            } else {
+                // Fallback to original global approach
+                gameWon = true;
+                setTimeout(showQuestion, 1000);
+            }
         }
     }
     

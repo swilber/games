@@ -2193,8 +2193,13 @@ const LevelMapper = {
     }
 };
 
-async function createMarioGame(settings) {
+async function createMarioGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
+    
+    // Call onGameStart callback if provided
+    if (callbacks?.onGameStart) {
+        await callbacks.onGameStart('mario');
+    }
     
     // Load Mario configuration using ConfigManager
     let marioConfig = {};
@@ -4104,8 +4109,15 @@ async function createMarioGame(settings) {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
-            gameWon = true; // Set global gameWon flag
-            showQuestion(); // Trigger question system like other games
+            // Use callback if provided, otherwise fallback to global functions
+            if (callbacks?.onGameComplete) {
+                const currentLevelData = levels?.[currentLevel];
+                callbacks.onGameComplete('mario', currentLevelData);
+            } else {
+                // Fallback to original global approach
+                gameWon = true;
+                showQuestion();
+            }
         } else {
             // Progress to next level while preserving Mario's state
             game.currentLevel = game.levelsCompleted + 1;

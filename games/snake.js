@@ -1,5 +1,10 @@
-async function createSnakeGame(settings) {
+async function createSnakeGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
+    
+    // Call onGameStart callback if provided
+    if (callbacks?.onGameStart) {
+        await callbacks.onGameStart('snake');
+    }
     
     // Load Snake configuration using ConfigManager (same as Mario/Pac-Man)
     let snakeConfig = {};
@@ -77,8 +82,15 @@ async function createSnakeGame(settings) {
         if(head.x === food.x && head.y === food.y) {
             score += snakeConfig.scoring.foodValue;
             if(score >= snakeConfig.gameplay.requiredScore) {
-                gameWon = true;
-                showQuestion();
+                // Use callback if provided, otherwise fallback to global functions
+                if (callbacks?.onGameComplete) {
+                    const currentLevelData = levels?.[currentLevel];
+                    callbacks.onGameComplete('snake', currentLevelData);
+                } else {
+                    // Fallback to original global approach
+                    gameWon = true;
+                    showQuestion();
+                }
                 return;
             }
             generateFood();
