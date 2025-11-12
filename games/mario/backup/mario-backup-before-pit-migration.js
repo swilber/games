@@ -111,18 +111,6 @@ class Particle {
     }
 }
 
-class Pit {
-    constructor(type = 'standard') {
-        this.type = type;
-    }
-}
-
-class Castle {
-    constructor(large = false) {
-        this.large = large;
-    }
-}
-
 class Player {
     constructor() {
         this.lives = 3;
@@ -1063,25 +1051,19 @@ class ImprovedCollisionSystem {
                         delete ai.flySpeed;
                     } else if (enemy.id.startsWith('piranha')) {
                         // Piranha plants can't be stomped - damage player instead
-                        const playerComp = playerEntity.get('player');
-                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
-                            playerComp.powerState = 'small';
-                            playerTransform.width = 16;
-                            playerTransform.height = 16;
-                            playerTransform.y += 16;
-                            playerComp.invincible = true;
-                            playerComp.invincibleTimer = 120;
+                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                            this.game.player.powerState = 'small';
+                            this.game.player.width = 16;
+                            this.game.player.height = 16;
+                            this.game.player.y += 16;
                         } else {
-                            // Small Mario dies immediately
-                            playerComp.lives--;
-                            if (playerComp.lives <= 0) {
+                            this.game.player.lives--;
+                            if (this.game.player.lives <= 0) {
                                 this.game.gameOver = true;
-                            } else {
-                                this.game.needsLevelReset = true;
-                                this.game.livesToRestore = playerComp.lives;
-                                this.game.scoreToRestore = playerComp.score;
                             }
                         }
+                        this.game.player.invincible = true;
+                        this.game.player.invincibleTimer = 120;
                         return; // Skip player bounce
                     } else {
                         // Other enemies: Remove
@@ -1091,36 +1073,30 @@ class ImprovedCollisionSystem {
                     // Player bounce (only once per frame)
                     if (!playerBounced) {
                         playerPhysics.vy = -8;
+                        this.game.player.vy = -8;
                         playerBounced = true;
                     }
-                    const playerComp = playerEntity.get('player');
-                    playerComp.score += 100;
+                    this.game.player.score += 100;
                     
                     // Brief invincibility after stomping to prevent immediate damage
-                    playerComp.invincible = true;
-                    playerComp.invincibleTimer = 10;
+                    this.game.player.invincible = true;
+                    this.game.player.invincibleTimer = 10;
                 } else {
                     // Side collision - damage player (only if not invincible)
-                    const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible) {
-                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
-                            playerComp.powerState = 'small';
-                            playerTransform.width = 16;
-                            playerTransform.height = 16;
-                            playerTransform.y += 16;
-                            playerComp.invincible = true;
-                            playerComp.invincibleTimer = 120;
+                    if (!this.game.player.invincible) {
+                        if (this.game.player.powerState === 'big' || this.game.player.powerState === 'fire') {
+                            this.game.player.powerState = 'small';
+                            this.game.player.width = 16;
+                            this.game.player.height = 16;
+                            this.game.player.y += 16;
                         } else {
-                            // Small Mario dies immediately
-                            playerComp.lives--;
-                            if (playerComp.lives <= 0) {
+                            this.game.player.lives--;
+                            if (this.game.player.lives <= 0) {
                                 this.game.gameOver = true;
-                            } else {
-                                this.game.needsLevelReset = true;
-                                this.game.livesToRestore = playerComp.lives;
-                                this.game.scoreToRestore = playerComp.score;
                             }
                         }
+                        this.game.player.invincible = true;
+                        this.game.player.invincibleTimer = 120;
                     }
                 }
             }
@@ -1166,11 +1142,7 @@ class ImprovedCollisionSystem {
                         } else {
                             entityManager.entities.delete(enemy.id);
                         }
-                        const playerEntity = entityManager.entities.get('player');
-                        if (playerEntity) {
-                            const playerComp = playerEntity.get('player');
-                            playerComp.score += 100;
-                        }
+                        this.game.player.score += 100;
                     }
                 }
             });
@@ -1615,8 +1587,8 @@ async function createMarioGame(settings) {
         return;
     }
     
-    // Normal mode - start with level 1
-    startMarioGame(1);
+    // Normal mode - start with level 3 (current default)
+    startMarioGame(3);
     
     function startMarioGame(levelId) {
         // Use only level 1-1 for now
@@ -1638,9 +1610,10 @@ async function createMarioGame(settings) {
             facingRight: true, shootCooldown: 0
         },
         camera: { x: 0 },
+        pits: [],
         currentLevel: levelId, // Use selected level
-        levelsCompleted: levelId - 1, // Levels completed = current level - 1
-        levelsToWin: 4, // Four levels now
+        levelsCompleted: 0,
+        levelsToWin: 3, // Three levels now
         levelWidth: 4000,
         gameOver: false,
         won: false,
@@ -2438,12 +2411,12 @@ async function createMarioGame(settings) {
     
     // Initialize Entity Systems once (not on every reset) - using improved versions
     game.entityManager.addSystem(new PhysicsSystem(game));
-    game.entityManager.addSystem(new InteractiveSystem(game)); // Move before PlayerInputSystem
     game.entityManager.addSystem(new PlayerInputSystem(game));
     game.entityManager.addSystem(new PlayerSyncSystem(game));
     game.entityManager.addSystem(new AISystem(game)); // Run after physics to restore velocity
     game.entityManager.addSystem(new ImprovedCollisionSystem(game));
     game.entityManager.addSystem(new SquishSystem());
+    game.entityManager.addSystem(new InteractiveSystem(game));
     game.entityManager.addSystem(new PowerUpSystem(game));
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
@@ -2733,10 +2706,9 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
-            // Set correct lives count
-            const playerComp = playerEntity.get('player');
-            playerComp.lives = currentLives;            
+            game.pits = layout.pits || [];
             game.flag = layout.flag;
+            game.castles = layout.castles || [];
             
             // Convert coins to entities
             convertCoinsToEntities(layout);
@@ -2746,12 +2718,6 @@ async function createMarioGame(settings) {
             
             // Convert platforms to entities
             convertPlatformsToEntities(layout);
-            
-            // Convert pits to entities
-            convertPitsToEntities(layout);
-            
-            // Convert castles to entities
-            convertCastlesToEntities(layout);
             
             // Use the same function for initial load
             resetMarioPosition();
@@ -3009,7 +2975,6 @@ async function createMarioGame(settings) {
     
     async function initializeGameState(preserveLives = false) {
         const currentLives = preserveLives ? game.livesToRestore : 3;
-        const currentScore = preserveLives ? (game.scoreToRestore || 0) : 0;
         
         try {
             let mapFile, theme;
@@ -3108,10 +3073,9 @@ async function createMarioGame(settings) {
                 .add('player', new Player())
                 .add('input', new Input());
             
-            // Set correct lives count
-            const playerComp = playerEntity.get('player');
-            playerComp.lives = currentLives;            
+            game.pits = layout.pits || [];
             game.flag = layout.flag;
+            game.castles = layout.castles || [];
             
             // Convert coins to entities
             convertCoinsToEntities(layout);
@@ -3121,12 +3085,6 @@ async function createMarioGame(settings) {
             
             // Convert platforms to entities
             convertPlatformsToEntities(layout);
-            
-            // Convert pits to entities
-            convertPitsToEntities(layout);
-            
-            // Convert castles to entities
-            convertCastlesToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -3161,55 +3119,12 @@ async function createMarioGame(settings) {
             game.enemies = [];
             game.pits = [];
             game.flag = {x: 1800, y: 200, width: 35, height: 150};
+            game.castles = [];
         }
     }
     
-    function getMarioState() {
-        const playerEntity = game.entityManager.entities.get('player');
-        if (playerEntity) {
-            const playerComp = playerEntity.get('player');
-            return {
-                lives: playerComp.lives,
-                score: playerComp.score,
-                powerState: playerComp.powerState
-            };
-        }
-        // Fallback to legacy player object
-        return {
-            lives: game.player.lives,
-            score: game.player.score,
-            powerState: game.player.powerState
-        };
-    }
-    
-    async function initializeLevel(preserveState = false) {
-        const marioState = preserveState ? getMarioState() : null;
-        const result = await initializeGameState(false);
-        
-        // Restore Mario state if preserving
-        if (preserveState && marioState) {
-            const playerEntity = game.entityManager.entities.get('player');
-            if (playerEntity) {
-                const playerComp = playerEntity.get('player');
-                playerComp.lives = marioState.lives;
-                playerComp.score = marioState.score;
-                playerComp.powerState = marioState.powerState;
-                
-                // Update transform size based on power state
-                const transform = playerEntity.get('transform');
-                if (marioState.powerState === 'small') {
-                    transform.width = 16;
-                    transform.height = 16;
-                } else {
-                    transform.width = 16;
-                    transform.height = 32;
-                    // Adjust Y position so big Mario doesn't spawn in ground
-                    transform.y -= 16;
-                }
-            }
-        }
-        
-        return result;
+    async function initializeLevel() {
+        return initializeGameState(false); // Fresh start with 3 lives
     }
     
     function resetLevel() {
@@ -3240,32 +3155,30 @@ async function createMarioGame(settings) {
             if (playerComp.lives <= 0) {
                 game.gameOver = true;
             } else {
-                game.needsLevelReset = true;
-                game.livesToRestore = playerComp.lives;
-                game.scoreToRestore = playerComp.score;
+                resetLevel();
             }
         }
     }
     
-    async function nextLevel() {
+    function nextLevel() {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
         } else {
-            // Progress to next level while preserving Mario's state
+            // Progress to next level
             game.currentLevel = game.levelsCompleted + 1;
-            await initializeLevel(true); // Await the async function
+            initializeLevel();
         }
     }
     
-    async function checkWin() {
+    function checkWin() {
         const playerEntity = game.entityManager.entities.get('player');
         if (!playerEntity) return;
         
         const playerTransform = playerEntity.get('transform');
         
         if (game.flag && playerTransform.x + playerTransform.width > game.flag.x) {
-            await nextLevel();
+            nextLevel();
         }
     }
     
@@ -3369,11 +3282,8 @@ async function createMarioGame(settings) {
         });
         
         // Castles (background elements - render before everything else)
-        const castleEntities = game.entityManager.query('transform', 'castle');
-        if (castleEntities.length > 0) {
-            castleEntities.forEach(entity => {
-            const transform = entity.get('transform');
-            const castle = entity.get('castle');
+        if (game.castles && game.castles.length > 0) {
+            game.castles.forEach(castle => {
             const isLarge = castle.large;
             
             // Helper function to draw brick pattern
@@ -3414,35 +3324,35 @@ async function createMarioGame(settings) {
                 const tierHeight = 60;
                 
                 // Tier 1 (bottom/largest) - draw first
-                drawBrickPattern(transform.x, transform.y + tierHeight * 2, tier1Width, tierHeight, '#A0A0A0', '#808080');
+                drawBrickPattern(castle.x, castle.y + tierHeight * 2, tier1Width, tierHeight, '#A0A0A0', '#808080');
                 ctx.fillStyle = '#B8B8B8';
-                ctx.fillRect(transform.x, transform.y + tierHeight * 2, 2, tierHeight);
-                ctx.fillRect(transform.x, transform.y + tierHeight * 2, tier1Width, 2);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2, tier1Width, 2);
                 ctx.fillStyle = '#696969';
-                ctx.fillRect(transform.x + tier1Width - 2, transform.y + tierHeight * 2, 2, tierHeight);
-                ctx.fillRect(transform.x, transform.y + tierHeight * 3 - 2, tier1Width, 2);
+                ctx.fillRect(castle.x + tier1Width - 2, castle.y + tierHeight * 2, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 3 - 2, tier1Width, 2);
                 
                 // Tier 2 (middle) - draw second
-                const tier2X = transform.x + (tier1Width - tier2Width) / 2;
-                drawBrickPattern(tier2X, transform.y + tierHeight, tier2Width, tierHeight, '#A0A0A0', '#808080');
+                const tier2X = castle.x + (tier1Width - tier2Width) / 2;
+                drawBrickPattern(tier2X, castle.y + tierHeight, tier2Width, tierHeight, '#A0A0A0', '#808080');
                 ctx.fillStyle = '#B8B8B8';
-                ctx.fillRect(tier2X, transform.y + tierHeight, 2, tierHeight);
-                ctx.fillRect(tier2X, transform.y + tierHeight, tier2Width, 2);
+                ctx.fillRect(tier2X, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight, tier2Width, 2);
                 ctx.fillStyle = '#696969';
-                ctx.fillRect(tier2X + tier2Width - 2, transform.y + tierHeight, 2, tierHeight);
-                ctx.fillRect(tier2X, transform.y + tierHeight * 2 - 2, tier2Width, 2);
+                ctx.fillRect(tier2X + tier2Width - 2, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight * 2 - 2, tier2Width, 2);
                 
                 // Tier 3 (top/smallest) - draw last with limited shading
-                const tier3X = transform.x + (tier1Width - tier3Width) / 2;
-                drawBrickPattern(tier3X, transform.y, tier3Width, tierHeight, '#A0A0A0', '#808080');
+                const tier3X = castle.x + (tier1Width - tier3Width) / 2;
+                drawBrickPattern(tier3X, castle.y, tier3Width, tierHeight, '#A0A0A0', '#808080');
                 ctx.fillStyle = '#B8B8B8';
-                ctx.fillRect(tier3X, transform.y, 2, tierHeight);
-                ctx.fillRect(tier3X, transform.y, tier3Width, 2);
+                ctx.fillRect(tier3X, castle.y, 2, tierHeight);
+                ctx.fillRect(tier3X, castle.y, tier3Width, 2);
                 ctx.fillStyle = '#696969';
                 // Only shade the right edge within the tier bounds
-                ctx.fillRect(tier3X + tier3Width - 2, transform.y, 2, tierHeight);
+                ctx.fillRect(tier3X + tier3Width - 2, castle.y, 2, tierHeight);
                 // Only shade the bottom edge within the tier bounds  
-                ctx.fillRect(tier3X, transform.y + tierHeight - 2, tier3Width, 2);
+                ctx.fillRect(tier3X, castle.y + tierHeight - 2, tier3Width, 2);
             } else {
                 // 2-tier castle - draw from bottom to top
                 const tier1Width = castleWidth;
@@ -3450,58 +3360,58 @@ async function createMarioGame(settings) {
                 const tierHeight = 70;
                 
                 // Tier 1 (bottom/larger) - draw first
-                drawBrickPattern(transform.x, transform.y + tierHeight, tier1Width, tierHeight, '#A0A0A0', '#808080');
+                drawBrickPattern(castle.x, castle.y + tierHeight, tier1Width, tierHeight, '#A0A0A0', '#808080');
                 ctx.fillStyle = '#B8B8B8';
-                ctx.fillRect(transform.x, transform.y + tierHeight, 2, tierHeight);
-                ctx.fillRect(transform.x, transform.y + tierHeight, tier1Width, 2);
+                ctx.fillRect(castle.x, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight, tier1Width, 2);
                 ctx.fillStyle = '#696969';
-                ctx.fillRect(transform.x + tier1Width - 2, transform.y + tierHeight, 2, tierHeight);
-                ctx.fillRect(transform.x, transform.y + tierHeight * 2 - 2, tier1Width, 2);
+                ctx.fillRect(castle.x + tier1Width - 2, castle.y + tierHeight, 2, tierHeight);
+                ctx.fillRect(castle.x, castle.y + tierHeight * 2 - 2, tier1Width, 2);
                 
                 // Tier 2 (top/smaller) - draw second with limited shading
-                const tier2X = transform.x + (tier1Width - tier2Width) / 2;
-                drawBrickPattern(tier2X, transform.y, tier2Width, tierHeight, '#A0A0A0', '#808080');
+                const tier2X = castle.x + (tier1Width - tier2Width) / 2;
+                drawBrickPattern(tier2X, castle.y, tier2Width, tierHeight, '#A0A0A0', '#808080');
                 ctx.fillStyle = '#B8B8B8';
-                ctx.fillRect(tier2X, transform.y, 2, tierHeight);
-                ctx.fillRect(tier2X, transform.y, tier2Width, 2);
+                ctx.fillRect(tier2X, castle.y, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y, tier2Width, 2);
                 ctx.fillStyle = '#696969';
                 // Only shade within tier bounds
-                ctx.fillRect(tier2X + tier2Width - 2, transform.y, 2, tierHeight);
-                ctx.fillRect(tier2X, transform.y + tierHeight - 2, tier2Width, 2);
+                ctx.fillRect(tier2X + tier2Width - 2, castle.y, 2, tierHeight);
+                ctx.fillRect(tier2X, castle.y + tierHeight - 2, tier2Width, 2);
             }
             
             // Left tower (positioned to reach ground) with shading - draw first
             const totalCastleHeight = isLarge ? 180 : 140;
-            drawBrickPattern(transform.x - 30, transform.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
+            drawBrickPattern(castle.x - 30, castle.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
             // Tower shading
             ctx.fillStyle = '#696969';
-            ctx.fillRect(transform.x - 30 + towerWidth - 2, transform.y + totalCastleHeight - towerHeight, 2, towerHeight);
-            ctx.fillRect(transform.x - 30, transform.y + totalCastleHeight - 2, towerWidth, 2);
+            ctx.fillRect(castle.x - 30 + towerWidth - 2, castle.y + totalCastleHeight - towerHeight, 2, towerHeight);
+            ctx.fillRect(castle.x - 30, castle.y + totalCastleHeight - 2, towerWidth, 2);
             
             // Right tower (positioned to reach ground) with shading - draw second
-            drawBrickPattern(transform.x + castleWidth - 10, transform.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
+            drawBrickPattern(castle.x + castleWidth - 10, castle.y + totalCastleHeight - towerHeight, towerWidth, towerHeight, '#A0A0A0', '#808080');
             // Tower shading
             ctx.fillStyle = '#696969';
-            ctx.fillRect(transform.x + castleWidth - 10 + towerWidth - 2, transform.y + totalCastleHeight - towerHeight, 2, towerHeight);
-            ctx.fillRect(transform.x + castleWidth - 10, transform.y + totalCastleHeight - 2, towerWidth, 2);
+            ctx.fillRect(castle.x + castleWidth - 10 + towerWidth - 2, castle.y + totalCastleHeight - towerHeight, 2, towerHeight);
+            ctx.fillRect(castle.x + castleWidth - 10, castle.y + totalCastleHeight - 2, towerWidth, 2);
             
             // Center tower (only for large castle) - draw BEHIND the tiers, not in front
             if (isLarge) {
                 // Position center tower to only extend above the top tier, not from ground
                 const centerTowerHeight = 60; // Only above the castle
-                drawBrickPattern(transform.x + castleWidth/2 - 20, transform.y - centerTowerHeight, towerWidth, centerTowerHeight, '#A0A0A0', '#808080');
+                drawBrickPattern(castle.x + castleWidth/2 - 20, castle.y - centerTowerHeight, towerWidth, centerTowerHeight, '#A0A0A0', '#808080');
                 // Center tower shading
                 ctx.fillStyle = '#696969';
-                ctx.fillRect(transform.x + castleWidth/2 - 20 + towerWidth - 2, transform.y - centerTowerHeight, 2, centerTowerHeight);
-                ctx.fillRect(transform.x + castleWidth/2 - 20, transform.y - 2, towerWidth, 2);
+                ctx.fillRect(castle.x + castleWidth/2 - 20 + towerWidth - 2, castle.y - centerTowerHeight, 2, centerTowerHeight);
+                ctx.fillRect(castle.x + castleWidth/2 - 20, castle.y - 2, towerWidth, 2);
             }
             
             // Tower crenellations (battlements)
             ctx.fillStyle = '#A0A0A0';
             
             // Left tower crenellations
-            const leftTowerX = transform.x - 30;
-            const leftTowerTop = transform.y + totalCastleHeight - towerHeight - 10;
+            const leftTowerX = castle.x - 30;
+            const leftTowerTop = castle.y + totalCastleHeight - towerHeight - 10;
             for (let i = 0; i < Math.floor(towerWidth/8); i++) {
                 if (i % 2 === 0) {
                     ctx.fillRect(leftTowerX + i * 8, leftTowerTop, 6, 10);
@@ -3509,8 +3419,8 @@ async function createMarioGame(settings) {
             }
             
             // Right tower crenellations
-            const rightTowerX = transform.x + castleWidth - 10;
-            const rightTowerTop = transform.y + totalCastleHeight - towerHeight - 10;
+            const rightTowerX = castle.x + castleWidth - 10;
+            const rightTowerTop = castle.y + totalCastleHeight - towerHeight - 10;
             for (let i = 0; i < Math.floor(towerWidth/8); i++) {
                 if (i % 2 === 0) {
                     ctx.fillRect(rightTowerX + i * 8, rightTowerTop, 6, 10);
@@ -3524,32 +3434,32 @@ async function createMarioGame(settings) {
                 
                 // Top tier (tier 3) crenellations
                 const tier3Width = castleWidth * 0.5;
-                const tier3X = transform.x + (castleWidth - tier3Width) / 2;
+                const tier3X = castle.x + (castleWidth - tier3Width) / 2;
                 for (let i = 0; i < Math.floor(tier3Width/8); i++) {
                     if (i % 2 === 0) {
-                        ctx.fillRect(tier3X + i * 8, transform.y - 10, 6, 10);
+                        ctx.fillRect(tier3X + i * 8, castle.y - 10, 6, 10);
                     }
                 }
                 
                 // Middle tier (tier 2) crenellations
                 const tier2Width = castleWidth * 0.75;
-                const tier2X = transform.x + (castleWidth - tier2Width) / 2;
+                const tier2X = castle.x + (castleWidth - tier2Width) / 2;
                 for (let i = 0; i < Math.floor(tier2Width/8); i++) {
                     if (i % 2 === 0) {
-                        ctx.fillRect(tier2X + i * 8, transform.y + tierHeight - 10, 6, 10);
+                        ctx.fillRect(tier2X + i * 8, castle.y + tierHeight - 10, 6, 10);
                     }
                 }
                 
                 // Bottom tier (tier 1) crenellations
                 for (let i = 0; i < Math.floor(castleWidth/8); i++) {
                     if (i % 2 === 0) {
-                        ctx.fillRect(transform.x + i * 8, transform.y + tierHeight * 2 - 10, 6, 10);
+                        ctx.fillRect(castle.x + i * 8, castle.y + tierHeight * 2 - 10, 6, 10);
                     }
                 }
                 
                 // Center tower crenellations
-                const centerTowerX = transform.x + castleWidth/2 - 20;
-                const centerTowerTop = transform.y - 60 - 10; // Top of the shortened center tower
+                const centerTowerX = castle.x + castleWidth/2 - 20;
+                const centerTowerTop = castle.y - 60 - 10; // Top of the shortened center tower
                 for (let i = 0; i < Math.floor(towerWidth/8); i++) {
                     if (i % 2 === 0) {
                         ctx.fillRect(centerTowerX + i * 8, centerTowerTop, 6, 10);
@@ -3561,17 +3471,17 @@ async function createMarioGame(settings) {
                 
                 // Top tier (tier 2) crenellations
                 const tier2Width = castleWidth * 0.7;
-                const tier2X = transform.x + (castleWidth - tier2Width) / 2;
+                const tier2X = castle.x + (castleWidth - tier2Width) / 2;
                 for (let i = 0; i < Math.floor(tier2Width/8); i++) {
                     if (i % 2 === 0) {
-                        ctx.fillRect(tier2X + i * 8, transform.y - 10, 6, 10);
+                        ctx.fillRect(tier2X + i * 8, castle.y - 10, 6, 10);
                     }
                 }
                 
                 // Bottom tier (tier 1) crenellations
                 for (let i = 0; i < Math.floor(castleWidth/8); i++) {
                     if (i % 2 === 0) {
-                        ctx.fillRect(transform.x + i * 8, transform.y + tierHeight - 10, 6, 10);
+                        ctx.fillRect(castle.x + i * 8, castle.y + tierHeight - 10, 6, 10);
                     }
                 }
             }
@@ -3583,40 +3493,40 @@ async function createMarioGame(settings) {
                 // 3-tier castle windows
                 const tierHeight = 60;
                 // Tier 1 windows (bottom)
-                ctx.fillRect(transform.x + 20, transform.y + tierHeight * 2 + 25, 12, 16);
-                ctx.fillRect(transform.x + castleWidth - 32, transform.y + tierHeight * 2 + 25, 12, 16);
+                ctx.fillRect(castle.x + 20, castle.y + tierHeight * 2 + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth - 32, castle.y + tierHeight * 2 + 25, 12, 16);
                 // Tier 2 windows (middle)
-                ctx.fillRect(transform.x + castleWidth * 0.3, transform.y + tierHeight + 25, 12, 16);
-                ctx.fillRect(transform.x + castleWidth * 0.7 - 12, transform.y + tierHeight + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.3, castle.y + tierHeight + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.7 - 12, castle.y + tierHeight + 25, 12, 16);
                 // Tier 3 windows (top)
-                ctx.fillRect(transform.x + castleWidth * 0.4, transform.y + 25, 12, 16);
-                ctx.fillRect(transform.x + castleWidth * 0.6 - 12, transform.y + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.4, castle.y + 25, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.6 - 12, castle.y + 25, 12, 16);
             } else {
                 // 2-tier castle windows
                 const tierHeight = 70;
                 // Tier 1 windows (bottom)
-                ctx.fillRect(transform.x + 20, transform.y + tierHeight + 30, 12, 16);
-                ctx.fillRect(transform.x + castleWidth - 32, transform.y + tierHeight + 30, 12, 16);
+                ctx.fillRect(castle.x + 20, castle.y + tierHeight + 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth - 32, castle.y + tierHeight + 30, 12, 16);
                 // Tier 2 windows (top)
-                ctx.fillRect(transform.x + castleWidth * 0.35, transform.y + 30, 12, 16);
-                ctx.fillRect(transform.x + castleWidth * 0.65 - 12, transform.y + 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.35, castle.y + 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth * 0.65 - 12, castle.y + 30, 12, 16);
             }
             
             // Tower windows
-            ctx.fillRect(transform.x - 20, transform.y + 40, 8, 12);
-            ctx.fillRect(transform.x + castleWidth - 2, transform.y + 40, 8, 12);
+            ctx.fillRect(castle.x - 20, castle.y + 40, 8, 12);
+            ctx.fillRect(castle.x + castleWidth - 2, castle.y + 40, 8, 12);
             
             // Center tower window (large castle only)
             if (isLarge) {
-                ctx.fillRect(transform.x + castleWidth/2 - 6, transform.y - 30, 12, 16);
+                ctx.fillRect(castle.x + castleWidth/2 - 6, castle.y - 30, 12, 16);
             }
             
             // Main entrance - arched door (on bottom tier)
             ctx.fillStyle = '#000000';
             const doorWidth = isLarge ? 40 : 30;
             const doorHeight = isLarge ? 40 : 35;
-            const doorX = transform.x + castleWidth/2 - doorWidth/2;
-            const doorY = transform.y + (isLarge ? 180 - doorHeight : 140 - doorHeight);
+            const doorX = castle.x + castleWidth/2 - doorWidth/2;
+            const doorY = castle.y + (isLarge ? 180 - doorHeight : 140 - doorHeight);
             
             // Door rectangle
             ctx.fillRect(doorX, doorY, doorWidth, doorHeight);
@@ -3627,14 +3537,14 @@ async function createMarioGame(settings) {
             ctx.fill();
             
             // Castle flag
-            const flagPoleX = transform.x + castleWidth/2 - 2;
+            const flagPoleX = castle.x + castleWidth/2 - 2;
             let flagPoleY;
             if (isLarge) {
                 // Large castle: flag at top of center tower
-                flagPoleY = transform.y - 60 - 30; // Raised by 10 pixels
+                flagPoleY = castle.y - 60 - 30; // Raised by 10 pixels
             } else {
                 // Small castle: flag at top of top tier
-                flagPoleY = transform.y - 35; // Lowered by 5 pixels
+                flagPoleY = castle.y - 35; // Lowered by 5 pixels
             }
             const flagPoleHeight = 30;
             
@@ -3718,12 +3628,8 @@ async function createMarioGame(settings) {
         });
         
         // Pits (render lava for castle theme)
-        const pitEntities = game.entityManager.query('transform', 'pit');
-        if (pitEntities.length > 0) {
-            pitEntities.forEach(entity => {
-                const transform = entity.get('transform');
-                const pit = entity.get('pit');
-                
+        if (game.pits && game.pits.length > 0) {
+            game.pits.forEach(pit => {
                 if (ThemeSystem.current?.name === 'Castle') {
                     // Bubbling lava pit
                     const lavaY = 380; // Ground level
@@ -3731,14 +3637,14 @@ async function createMarioGame(settings) {
                     
                     // Base lava
                     ctx.fillStyle = ThemeSystem.getColor('lava');
-                    ctx.fillRect(transform.x, lavaY, transform.width, lavaHeight);
+                    ctx.fillRect(pit.x, lavaY, pit.width, lavaHeight);
                     
                     // Animated bubbles
                     const time = game.frameCount * 0.1;
-                    const bubbleCount = Math.floor(transform.width / 8);
+                    const bubbleCount = Math.floor(pit.width / 8);
                     
                     for (let i = 0; i < bubbleCount; i++) {
-                        const bubbleX = transform.x + (i * 8) + Math.sin(time + i) * 2;
+                        const bubbleX = pit.x + (i * 8) + Math.sin(time + i) * 2;
                         const bubbleY = lavaY + 10 + Math.sin(time * 2 + i * 0.5) * 5;
                         const bubbleSize = 2 + Math.sin(time * 3 + i) * 1;
                         
@@ -3748,7 +3654,7 @@ async function createMarioGame(settings) {
                     
                     // Lava glow effect
                     ctx.fillStyle = '#FF6500';
-                    ctx.fillRect(transform.x, lavaY, transform.width, 3);
+                    ctx.fillRect(pit.x, lavaY, pit.width, 3);
                 }
             });
         }
@@ -3822,22 +3728,12 @@ async function createMarioGame(settings) {
         
         ctx.restore();
         
-        // UI - ensure it's not affected by camera
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any transforms
-        
-        const textColor = (ThemeSystem.current?.name === 'Underground' || ThemeSystem.current?.name === 'Castle') ? '#FFF' : '#000';
-        ctx.fillStyle = textColor;
-        ctx.font = '16px monospace'; // Retro 8-bit style font
-        ctx.textAlign = 'left';
-        
-        // Position text with proper spacing from edges
-        const margin = 20;
-        ctx.fillText(`LIVES: ${game.player.lives}`, margin, 30);
-        ctx.fillText(`SCORE: ${game.player.score}`, margin, 50);
-        ctx.fillText(`LEVEL: ${game.levelsCompleted + 1}/${game.levelsToWin}`, margin, 70);
-        
-        ctx.restore();
+        // UI
+        ctx.fillStyle = '#000';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Lives: ${game.player.lives}`, 10, 30);
+        ctx.fillText(`Score: ${game.player.score}`, 10, 60);
+        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 10, 90);
         
         if (!game.gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -4001,33 +3897,6 @@ async function createMarioGame(settings) {
                     platformComp.vy = -1;
                 }
             }
-        });
-    }
-    
-    // Convert all pits to entities
-    function convertPitsToEntities(layout) {
-        if (!layout.pits) return;
-        
-        let pitCount = 0;
-        layout.pits.forEach(pit => {
-            pitCount++;
-            const pitEntity = game.entityManager.create(`pit${pitCount}`)
-                .add('transform', new Transform(pit.x, pit.y || 380, pit.width, pit.height || 100))
-                .add('pit', new Pit(pit.type || 'standard'));
-        });
-    }
-    
-    // Convert all castles to entities
-    function convertCastlesToEntities(layout) {
-        if (!layout.castles) return;
-        
-        let castleCount = 0;
-        layout.castles.forEach(castle => {
-            castleCount++;
-            const castleHeight = castle.large ? 180 : 140;
-            const castleEntity = game.entityManager.create(`castle${castleCount}`)
-                .add('transform', new Transform(castle.x, castle.y, 120, castleHeight))
-                .add('castle', new Castle(castle.large));
         });
     }
     
