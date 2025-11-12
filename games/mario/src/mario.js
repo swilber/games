@@ -839,8 +839,8 @@ class ProjectileSystem {
                     return;
                 }
                 
-                // Check collision with Mario (unless debug mode)
-                if (playerEntity && !this.game.debugMode) {
+                // Check collision with Mario (unless invincible config enabled)
+                if (playerEntity && !this.game.config.debug.invincible) {
                     const playerTransform = playerEntity.get('transform');
                     if (transform.x < playerTransform.x + playerTransform.width &&
                         transform.x + transform.width > playerTransform.x &&
@@ -1241,14 +1241,14 @@ class ImprovedCollisionSystem {
                     } else if (enemy.id.startsWith('piranha')) {
                         // Piranha plants can't be stomped - damage player instead (unless debug mode)
                         const playerComp = playerEntity.get('player');
-                        if (!this.game.debugMode && playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                        if (!this.game.config.debug.invincible && playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = this.game.config.rendering.playerSmallWidth;
                             playerTransform.height = this.game.config.rendering.playerSmallHeight;
                             playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                             playerComp.invincible = true;
                             playerComp.invincibleTimer = 120;
-                        } else if (!this.game.debugMode) {
+                        } else if (!this.game.config.debug.invincible) {
                             // Small Mario dies immediately
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
@@ -1330,7 +1330,7 @@ class ImprovedCollisionSystem {
                 if (this.isColliding(playerTransform, fireballRect)) {
                     // Firebar damages player (only if not invincible and not in debug mode)
                     const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible && !this.game.debugMode) {
+                    if (!playerComp.invincible && !this.game.config.debug.invincible) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = this.game.config.rendering.playerSmallWidth;
@@ -2283,7 +2283,7 @@ async function createMarioGame(settings) {
         won: false,
         gameStarted: false,
         keys: {},
-        debugMode: (settings && settings.debug) || marioConfig.debug.invincible, // Add debug flag
+        debugMode: false, // Remove debug query param dependency
         currentTheme: 'overworld',
         frameCount: 0,
         config: marioConfig, // Add config to game object
