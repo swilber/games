@@ -111,6 +111,17 @@ class Particle {
     }
 }
 
+class FireBar {
+    constructor(direction = 'clockwise') {
+        this.rotation = 0;
+        this.rotationSpeed = direction === 'clockwise' ? 1.5 : -1.5;
+        this.fireballCount = 6;
+        this.fireballSize = 8;
+        this.fireballSpacing = 12;
+        this.fireballRotations = new Array(6).fill(0).map(() => Math.random() * 360);
+    }
+}
+
 class Pit {
     constructor(type = 'standard') {
         this.type = type;
@@ -1126,6 +1137,55 @@ class ImprovedCollisionSystem {
             }
         });
         
+        // Handle firebar collisions
+        const firebars = entityManager.query('transform', 'firebar');
+        firebars.forEach(firebar => {
+            const firebarTransform = firebar.get('transform');
+            const firebarComponent = firebar.get('firebar');
+            
+            // Check collision with each fireball in the bar
+            for (let i = 0; i < firebarComponent.fireballCount; i++) {
+                const distance = i * firebarComponent.fireballSpacing;
+                const angle = firebarComponent.rotation * Math.PI / 180;
+                
+                const fireballX = firebarTransform.x + Math.cos(angle) * distance - firebarComponent.fireballSize / 2;
+                const fireballY = firebarTransform.y + Math.sin(angle) * distance - firebarComponent.fireballSize / 2;
+                
+                const fireballRect = {
+                    x: fireballX,
+                    y: fireballY,
+                    width: firebarComponent.fireballSize,
+                    height: firebarComponent.fireballSize
+                };
+                
+                if (this.isColliding(playerTransform, fireballRect)) {
+                    // Firebar damages player (only if not invincible)
+                    const playerComp = playerEntity.get('player');
+                    if (!playerComp.invincible) {
+                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                            playerComp.powerState = 'small';
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
+                            playerComp.invincible = true;
+                            playerComp.invincibleTimer = 120;
+                        } else {
+                            // Small Mario dies immediately
+                            playerComp.lives--;
+                            if (playerComp.lives <= 0) {
+                                this.game.gameOver = true;
+                            } else {
+                                this.game.needsLevelReset = true;
+                                this.game.livesToRestore = playerComp.lives;
+                                this.game.scoreToRestore = playerComp.score;
+                            }
+                        }
+                    }
+                    break; // Only need to check one collision per firebar
+                }
+            }
+        });
+        
         // Handle shell kicking
         const shells = entityManager.query('transform', 'sprite').filter(entity => 
             entity.get('sprite').state === 'shell' && entity.get('sprite').kickable
@@ -1271,6 +1331,9 @@ class ImprovedRenderSystem {
             } else if (entity.id.startsWith('fireball')) {
                 // Render fireball
                 this.renderFireball(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
+            } else if (sprite.type === 'firebar') {
+                // Render firebar
+                this.renderFirebar(ctx, entity, screenX, screenY);
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
@@ -1285,6 +1348,44 @@ class ImprovedRenderSystem {
         ctx.fillRect(fireball.x, fireball.y, fireball.width, fireball.height);
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(fireball.x + 1, fireball.y + 1, fireball.width - 2, fireball.height - 2);
+    }
+    
+    renderFirebar(ctx, entity, centerX, centerY) {
+        const transform = entity.get('transform');
+        const firebar = entity.get('firebar');
+        
+        // Draw each fireball in the bar
+        for (let i = 0; i < firebar.fireballCount; i++) {
+            const distance = i * firebar.fireballSpacing;
+            const angle = firebar.rotation * Math.PI / 180;
+            
+            const fireballX = centerX + Math.cos(angle) * distance - firebar.fireballSize / 2;
+            const fireballY = centerY + Math.sin(angle) * distance - firebar.fireballSize / 2;
+            
+            // Draw glow effect
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#FF6600';
+            ctx.fillRect(fireballX - 2, fireballY - 2, firebar.fireballSize + 4, firebar.fireballSize + 4);
+            ctx.restore();
+            
+            // Draw main fireball
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(fireballX, fireballY, firebar.fireballSize, firebar.fireballSize);
+            
+            // Draw inner glow
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(fireballX + 2, fireballY + 2, firebar.fireballSize - 4, firebar.fireballSize - 4);
+            
+            // Add individual rotation effect (small rotating square inside)
+            const individualAngle = firebar.fireballRotations[i] * Math.PI / 180;
+            const innerSize = 4;
+            const innerX = fireballX + firebar.fireballSize / 2 + Math.cos(individualAngle) * 2 - innerSize / 2;
+            const innerY = fireballY + firebar.fireballSize / 2 + Math.sin(individualAngle) * 2 - innerSize / 2;
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(innerX, innerY, innerSize, innerSize);
+        }
     }
     
     renderCoin(ctx, coin) {
@@ -1362,6 +1463,31 @@ class ParticleSystem {
             // Remove dead particles
             if (particle.life <= 0) {
                 entityManager.entities.delete(entity.id);
+            }
+        });
+    }
+}
+
+class FireBarSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const firebars = entityManager.query('transform', 'firebar');
+        
+        firebars.forEach(entity => {
+            const firebar = entity.get('firebar');
+            
+            // Update main rotation
+            firebar.rotation += firebar.rotationSpeed;
+            if (firebar.rotation >= 360) firebar.rotation -= 360;
+            if (firebar.rotation < 0) firebar.rotation += 360;
+            
+            // Update individual fireball rotations
+            for (let i = 0; i < firebar.fireballRotations.length; i++) {
+                firebar.fireballRotations[i] += 2; // Individual rotation speed
+                if (firebar.fireballRotations[i] >= 360) firebar.fireballRotations[i] -= 360;
             }
         });
     }
@@ -1978,6 +2104,19 @@ async function createMarioGame(settings) {
                     // Ground shadow
                     ctx.fillStyle = ThemeSystem.getColor('groundShadow');
                     ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                } else if (platform.type === 'firebar_base') {
+                    // Brown firebar base block
+                    ctx.fillStyle = '#8B4513'; // Brown
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                    // Darker brown shadow
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(platform.x, platform.y + platform.height - 3, platform.width, 3);
+                
+                    // Simple texture lines
+                    ctx.fillStyle = '#A0522D';
+                    ctx.fillRect(platform.x + 2, platform.y + 2, platform.width - 4, 1);
+                    ctx.fillRect(platform.x + 2, platform.y + platform.height - 6, platform.width - 4, 1);
                 } else {
                     // Regular ground platform
                     ctx.fillStyle = ThemeSystem.getColor('ground');
@@ -2027,6 +2166,19 @@ async function createMarioGame(settings) {
                 ctx.fillRect(block.x + 2, block.y + 2, 16, 1);
                 ctx.fillRect(block.x + 2, block.y + 10, 16, 1);
                 ctx.fillRect(block.x + 10, block.y + 6, 1, 4);
+            } else if (block.type === 'firebar_base') {
+                // Brown firebar base block
+                ctx.fillStyle = '#8B4513'; // Brown
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+                
+                // Darker brown shadow
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(block.x, block.y + block.height - 3, block.width, 3);
+                
+                // Simple texture lines
+                ctx.fillStyle = '#A0522D';
+                ctx.fillRect(block.x + 2, block.y + 2, block.width - 4, 1);
+                ctx.fillRect(block.x + 2, block.y + block.height - 6, block.width - 4, 1);
             }
         }
     };
@@ -2448,6 +2600,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new CollectibleSystem(game));
     game.entityManager.addSystem(new ProjectileSystem(game));
     game.entityManager.addSystem(new ParticleSystem(game));
+    game.entityManager.addSystem(new FireBarSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
@@ -2473,6 +2626,8 @@ async function createMarioGame(settings) {
         '@': { type: 'spawn', variant: 'player' },
         '&': { type: 'flag', variant: 'standard' },
         'X': { type: 'pit', variant: 'standard' },
+        'E': { type: 'firebar', variant: 'clockwise' },
+        'e': { type: 'firebar', variant: 'counterclockwise' },
         '-': { type: 'empty', variant: 'sky' }
     };
     
@@ -2601,6 +2756,20 @@ async function createMarioGame(settings) {
         },
         
         pit: (def, x, y, tileSize) => ({ x, width: tileSize }), // Create pit object
+        
+        firebar: (def, x, y, tileSize) => {
+            const direction = def.variant === 'clockwise' ? 'clockwise' : 'counterclockwise';
+            const centerX = x + tileSize / 2;
+            const centerY = y + tileSize / 2;
+            
+            // Create the firebar entity only - the block will be created separately
+            const firebarEntity = new Entity()
+                .add('transform', new Transform(centerX, centerY, 8, 8))
+                .add('firebar', new FireBar(direction))
+                .add('sprite', new Sprite('#FF4500', 'firebar'));
+            
+            return firebarEntity;
+        },
         
         empty: () => null // Sky/empty space
     };
@@ -2753,6 +2922,9 @@ async function createMarioGame(settings) {
             // Convert castles to entities
             convertCastlesToEntities(layout);
             
+            // Convert firebars to entities
+            convertFirebarsToEntities(layout);
+            
             // Use the same function for initial load
             resetMarioPosition();
             
@@ -2774,6 +2946,7 @@ async function createMarioGame(settings) {
         const enemies = [];
         const coins = [];
         const pits = [];
+        const firebars = [];
         let flag = null;
         let startX = 50, startY = 300;
         
@@ -2799,30 +2972,43 @@ async function createMarioGame(settings) {
                 const obj = factory(charDef, worldX, worldY, tileSize, lines);
                 if (!obj) continue; // Skip if factory returns null
                 
-                // Add to appropriate collection based on type
-                switch (charDef.type) {
-                    case 'platform':
-                        platforms.push(obj);
-                        break;
-                    case 'block':
-                        blocks.push(obj);
-                        break;
-                    case 'enemy':
-                        enemies.push(obj);
-                        break;
-                    case 'coin':
-                        coins.push(obj);
-                        break;
-                    case 'pit':
-                        pits.push(obj);
-                        break;
-                    case 'flag':
-                        flag = obj;
-                        break;
-                    case 'spawn':
-                        startX = obj.x;
-                        startY = obj.y;
-                        break;
+                // Special handling for firebar characters - create both platform and firebar
+                if (char === 'E' || char === 'e') {
+                    // Create brown platform block
+                    const platform = { x: worldX, y: worldY, width: tileSize, height: tileSize, type: 'firebar_base' };
+                    platforms.push(platform);
+                    
+                    // Add the firebar entity
+                    firebars.push(obj);
+                } else {
+                    // Add to appropriate collection based on type
+                    switch (charDef.type) {
+                        case 'platform':
+                            platforms.push(obj);
+                            break;
+                        case 'block':
+                            blocks.push(obj);
+                            break;
+                        case 'enemy':
+                            enemies.push(obj);
+                            break;
+                        case 'coin':
+                            coins.push(obj);
+                            break;
+                        case 'pit':
+                            pits.push(obj);
+                            break;
+                        case 'firebar':
+                            firebars.push(obj);
+                            break;
+                        case 'flag':
+                            flag = obj;
+                            break;
+                        case 'spawn':
+                            startX = obj.x;
+                            startY = obj.y;
+                            break;
+                    }
                 }
             }
         }
@@ -2988,7 +3174,7 @@ async function createMarioGame(settings) {
             }
         }
 
-        return {platforms, blocks, enemies, coins, pits, flag, castles, startX, startY};
+        return {platforms, blocks, enemies, coins, pits, firebars, flag, castles, startX, startY};
     }
     
     
@@ -3127,6 +3313,9 @@ async function createMarioGame(settings) {
             
             // Convert castles to entities
             convertCastlesToEntities(layout);
+            
+            // Convert firebars to entities
+            convertFirebarsToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -4028,6 +4217,18 @@ async function createMarioGame(settings) {
             const castleEntity = game.entityManager.create(`castle${castleCount}`)
                 .add('transform', new Transform(castle.x, castle.y, 120, castleHeight))
                 .add('castle', new Castle(castle.large));
+        });
+    }
+    
+    // Convert all firebars to entities
+    function convertFirebarsToEntities(layout) {
+        if (!layout.firebars) return;
+        
+        let firebarCount = 0;
+        layout.firebars.forEach(firebar => {
+            firebarCount++;
+            // Firebars are already entities from the factory, just add them to the entity manager
+            game.entityManager.entities.set(firebar.id, firebar);
         });
     }
     
