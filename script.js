@@ -18,7 +18,22 @@ class ConfigManager {
         // Load default config from JSON file
         if (!this.defaults[gameType]) {
             try {
-                const response = await fetch(`config/games/${gameType}.json`);
+                // Try game-specific config directory first
+                let configPath = `games/${gameType}/config/${gameType}.json`;
+                let response = await fetch(configPath);
+                
+                // Fallback to old config location
+                if (!response.ok) {
+                    configPath = `config/games/${gameType}.json`;
+                    response = await fetch(configPath);
+                }
+                
+                // Final fallback to root config
+                if (!response.ok) {
+                    configPath = `config/${gameType}.json`;
+                    response = await fetch(configPath);
+                }
+                
                 this.defaults[gameType] = await response.json();
             } catch (error) {
                 console.warn(`No config file found for ${gameType}, using empty config`);
