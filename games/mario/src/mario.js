@@ -139,6 +139,22 @@ class Axe {
     }
 }
 
+class Boss {
+    constructor(type = 'bowser') {
+        this.type = type;
+        this.invincible = true; // Cannot be killed by Mario
+        this.jumpTimer = 0;
+        this.jumpCooldown = 120; // 2 seconds between jumps
+        this.fireballTimer = 0;
+        this.fireballCooldown = 180; // 3 seconds between fireballs (was 90)
+        this.moveDirection = 1; // 1 or -1
+        this.moveTimer = 0;
+        this.moveCooldown = 180; // 3 seconds before changing direction
+        this.isJumping = false;
+        this.facingRight = true;
+    }
+}
+
 class Pit {
     constructor(type = 'standard') {
         this.type = type;
@@ -230,8 +246,11 @@ class PhysicsSystem {
             
             // Skip physics for projectiles (ProjectileSystem handles their collision)
             if (entity.has('projectile')) {
-                // Apply gravity and velocity but no collision
-                physics.vy += 0.5;
+                const projectile = entity.get('projectile');
+                // Skip gravity for Bowser flames
+                if (projectile.type !== 'bowser_flame') {
+                    physics.vy += 0.5;
+                }
                 transform.x += physics.vx;
                 transform.y += physics.vy;
                 
@@ -728,6 +747,55 @@ class ProjectileSystem {
             const physics = entity.get('physics');
             const projectile = entity.get('projectile');
             
+            // Track travel distance for Bowser flames
+            if (projectile.type === 'bowser_flame') {
+                if (!projectile.travelDistance) projectile.travelDistance = 0;
+                projectile.travelDistance += Math.abs(physics.vx);
+                
+                // Remove flame after 200 pixels
+                if (projectile.travelDistance >= projectile.maxDistance) {
+                    entityManager.entities.delete(entity.id);
+                    return;
+                }
+                
+                // Check collision with Mario (unless debug mode)
+                if (playerEntity && !this.game.debugMode) {
+                    const playerTransform = playerEntity.get('transform');
+                    if (transform.x < playerTransform.x + playerTransform.width &&
+                        transform.x + transform.width > playerTransform.x &&
+                        transform.y < playerTransform.y + playerTransform.height &&
+                        transform.y + transform.height > playerTransform.y) {
+                        
+                        const playerComp = playerEntity.get('player');
+                        if (!playerComp.invincible) {
+                            if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                                playerComp.powerState = 'small';
+                                playerTransform.width = 16;
+                                playerTransform.height = 16;
+                                playerTransform.y += 16;
+                                playerComp.invincible = true;
+                                playerComp.invincibleTimer = 120;
+                            } else {
+                                // Small Mario dies immediately
+                                playerComp.lives--;
+                                if (playerComp.lives <= 0) {
+                                    this.game.gameOver = true;
+                                } else {
+                                    this.game.needsLevelReset = true;
+                                    this.game.livesToRestore = playerComp.lives;
+                                    this.game.scoreToRestore = playerComp.score;
+                                }
+                            }
+                        }
+                        entityManager.entities.delete(entity.id);
+                        return;
+                    }
+                }
+                
+                // Skip other collision checks for flames
+                return;
+            }
+            
             // Update bounce cooldown
             if (projectile.bounceCooldown > 0) {
                 projectile.bounceCooldown--;
@@ -1111,6 +1179,9 @@ class ImprovedCollisionSystem {
                             }
                         }
                         return; // Skip player bounce
+                    } else if (enemy.has && enemy.has('boss')) {
+                        // Bowser is invincible - Mario just bounces off
+                        // No damage to Bowser, just player bounce
                     } else {
                         // Other enemies: Remove
                         entityManager.entities.delete(enemy.id);
@@ -1357,6 +1428,12 @@ class ImprovedRenderSystem {
             } else if (sprite.type === 'axe') {
                 // Render axe
                 this.renderAxe(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
+            } else if (sprite.type === 'bowser') {
+                // Render Bowser
+                this.renderBowser(ctx, entity, screenX, screenY);
+            } else if (sprite.type === 'bowser_flame') {
+                // Render Bowser flame
+                this.renderBowserFlame(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height }, entity.get('physics'));
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
@@ -1444,6 +1521,98 @@ class ImprovedRenderSystem {
         // Blade highlight
         ctx.fillStyle = '#E0E0E0';
         ctx.fillRect(axe.x + 3, axe.y + 3, 14, 2);
+    }
+    
+    renderBowser(ctx, entity, screenX, screenY) {
+        const boss = entity.get('boss');
+        const transform = entity.get('transform');
+        
+        // Shell (brown, upright oval for standing turtle)
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(screenX + 12, screenY + 8, 24, 32);
+        
+        // Shell segments (darker brown lines)
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(screenX + 12, screenY + 16, 24, 2);
+        ctx.fillRect(screenX + 12, screenY + 24, 24, 2);
+        ctx.fillRect(screenX + 12, screenY + 32, 24, 2);
+        ctx.fillRect(screenX + 20, screenY + 8, 2, 32);
+        ctx.fillRect(screenX + 28, screenY + 8, 2, 32);
+        
+        // Spikes on shell (pointing outward from back)
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = 0; i < 4; i++) {
+            const spikeY = screenY + 12 + i * 6;
+            // Spike triangles on back of shell
+            ctx.fillRect(screenX + 8, spikeY + 1, 4, 3);
+            ctx.fillRect(screenX + 6, spikeY + 2, 2, 1);
+        }
+        
+        // Head (green, above shell)
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(screenX + 16, screenY, 16, 12);
+        
+        // Eyes (red, menacing)
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(screenX + 18, screenY + 2, 3, 3);
+        ctx.fillRect(screenX + 27, screenY + 2, 3, 3);
+        
+        // Horns (yellow, on top of head)
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(screenX + 18, screenY - 2, 2, 4);
+        ctx.fillRect(screenX + 28, screenY - 2, 2, 4);
+        
+        // Arms (green, extending from sides)
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(screenX + 4, screenY + 12, 8, 12);
+        ctx.fillRect(screenX + 36, screenY + 12, 8, 12);
+        
+        // Hind legs (green, standing upright)
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(screenX + 14, screenY + 40, 8, 8);
+        ctx.fillRect(screenX + 26, screenY + 40, 8, 8);
+        
+        // Belly (lighter green)
+        ctx.fillStyle = '#32CD32';
+        ctx.fillRect(screenX + 16, screenY + 12, 16, 24);
+        
+        // Mouth/snout (darker green)
+        ctx.fillStyle = '#1F5F1F';
+        if (boss.facingRight) {
+            ctx.fillRect(screenX + 32, screenY + 6, 6, 4);
+        } else {
+            ctx.fillRect(screenX + 10, screenY + 6, 6, 4);
+        }
+    }
+    
+    renderBowserFlame(ctx, flame, physics) {
+        const facingRight = physics.vx > 0;
+        
+        if (facingRight) {
+            // Right-facing flame (pointed tip on right)
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(flame.x, flame.y, flame.width, flame.height);
+            
+            // Flame tip (pointed)
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(flame.x + flame.width - 4, flame.y + 2, 4, flame.height - 4);
+            
+            // Inner flame
+            ctx.fillStyle = '#FF6600';
+            ctx.fillRect(flame.x + 2, flame.y + 1, flame.width - 6, flame.height - 2);
+        } else {
+            // Left-facing flame (pointed tip on left)
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(flame.x, flame.y, flame.width, flame.height);
+            
+            // Flame tip (pointed)
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(flame.x, flame.y + 2, 4, flame.height - 4);
+            
+            // Inner flame
+            ctx.fillStyle = '#FF6600';
+            ctx.fillRect(flame.x + 4, flame.y + 1, flame.width - 6, flame.height - 2);
+        }
     }
     
     renderCoin(ctx, coin) {
@@ -1612,6 +1781,104 @@ class AxeSystem {
                rect1.x + rect1.width > rect2.x &&
                rect1.y < rect2.y + rect2.height &&
                rect1.y + rect1.height > rect2.y;
+    }
+}
+
+class BossSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const bosses = entityManager.query('transform', 'boss', 'physics');
+        const playerEntity = entityManager.entities.get('player');
+        
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        
+        bosses.forEach(bossEntity => {
+            const transform = bossEntity.get('transform');
+            const boss = bossEntity.get('boss');
+            const physics = bossEntity.get('physics');
+            
+            // Update timers
+            boss.jumpTimer--;
+            boss.fireballTimer--;
+            boss.moveTimer--;
+            
+            // Face Mario
+            boss.facingRight = transform.x < playerTransform.x;
+            
+            // Movement behavior - stay on bridge platform
+            if (boss.moveTimer <= 0) {
+                boss.moveDirection = Math.random() > 0.5 ? 1 : -1;
+                boss.moveTimer = boss.moveCooldown;
+            }
+            
+            if (!boss.isJumping) {
+                // Check if Bowser would fall off bridge, reverse direction
+                const nextX = transform.x + boss.moveDirection * 0.5;
+                const bridgeSegments = entityManager.query('transform', 'bridge');
+                let onBridge = false;
+                
+                bridgeSegments.forEach(bridgeEntity => {
+                    const bridgeTransform = bridgeEntity.get('transform');
+                    const bridge = bridgeEntity.get('bridge');
+                    
+                    if (!bridge.collapsed && 
+                        nextX + 24 > bridgeTransform.x && 
+                        nextX + 24 < bridgeTransform.x + bridgeTransform.width) {
+                        onBridge = true;
+                    }
+                });
+                
+                // If would fall off bridge, reverse direction
+                if (!onBridge) {
+                    boss.moveDirection *= -1;
+                }
+                
+                physics.vx = boss.moveDirection * 0.5; // Slow movement
+            }
+            
+            // Jumping behavior
+            if (boss.jumpTimer <= 0 && physics.onGround) {
+                physics.vy = -12; // Jump
+                boss.isJumping = true;
+                boss.jumpTimer = boss.jumpCooldown + Math.random() * 60; // Random timing
+            }
+            
+            if (physics.onGround && boss.isJumping) {
+                boss.isJumping = false;
+            }
+            
+            // Fireball shooting
+            if (boss.fireballTimer <= 0) {
+                this.shootFireball(entityManager, transform, boss);
+                boss.fireballTimer = boss.fireballCooldown + Math.random() * 30; // Random timing
+            }
+        });
+    }
+    
+    shootFireball(entityManager, bossTransform, boss) {
+        const fireballX = boss.facingRight ? bossTransform.x + 48 : bossTransform.x - 16;
+        const fireballY = bossTransform.y + 20; // Mouth level
+        const direction = boss.facingRight ? 1 : -1;
+        
+        const fireballEntity = entityManager.create(`bowser_flame_${Date.now()}`)
+            .add('transform', new Transform(fireballX, fireballY, 16, 8))
+            .add('physics', new Physics(direction * 1.5, 0)) // Slower velocity
+            .add('projectile', new Projectile('bowser_flame', 1))
+            .add('sprite', new Sprite('#FF4500', 'bowser_flame'));
+        
+        // Remove gravity from flame physics
+        const flamePhysics = fireballEntity.get('physics');
+        flamePhysics.gravity = 0; // No gravity
+        
+        // Set travel distance
+        const projectile = fireballEntity.get('projectile');
+        projectile.maxDistance = 1000; // Travel 1000 pixels
+        projectile.travelDistance = 0;
     }
 }
 
@@ -2726,6 +2993,7 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new FireBarSystem(game));
     game.entityManager.addSystem(new BridgeSystem(game));
     game.entityManager.addSystem(new AxeSystem(game));
+    game.entityManager.addSystem(new BossSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
@@ -2742,6 +3010,7 @@ async function createMarioGame(settings) {
         'G': { type: 'enemy', variant: 'goomba' },
         'k': { type: 'enemy', variant: 'koopa' },
         'K': { type: 'enemy', variant: 'parakoopa' },
+        'b': { type: 'boss', variant: 'bowser' },
         'c': { type: 'coin', variant: 'stationary' },
         'P': { type: 'pipe', variant: 'standard' },
         '^': { type: 'platform', variant: 'moving_up' },
@@ -2920,6 +3189,27 @@ async function createMarioGame(settings) {
             return axeEntity;
         },
         
+        boss: (def, x, y, tileSize, lines) => {
+            // Find ground level for boss placement
+            let groundY = y;
+            for (let checkY = Math.floor(y / tileSize); checkY < lines.length; checkY++) {
+                if (lines[checkY] && lines[checkY][Math.floor(x / tileSize)] === '#' || 
+                    lines[checkY] && lines[checkY][Math.floor(x / tileSize)] === '=') {
+                    groundY = checkY * tileSize - 48; // 48px tall boss
+                    break;
+                }
+            }
+            
+            const bowserEntity = new Entity()
+                .add('transform', new Transform(x, groundY, 48, 48))
+                .add('physics', new Physics(0, 0))
+                .add('sprite', new Sprite('#8B4513', 'bowser'))
+                .add('boss', new Boss('bowser'))
+                .add('ai', new AI('boss'));
+            
+            return bowserEntity;
+        },
+        
         empty: () => null // Sky/empty space
     };
     
@@ -3080,6 +3370,9 @@ async function createMarioGame(settings) {
             // Convert axes to entities
             convertAxesToEntities(layout);
             
+            // Convert bosses to entities
+            convertBossesToEntities(layout);
+            
             // Use the same function for initial load
             resetMarioPosition();
             
@@ -3104,6 +3397,7 @@ async function createMarioGame(settings) {
         const firebars = [];
         const bridges = [];
         const axes = [];
+        const bosses = [];
         let flag = null;
         let startX = 50, startY = 300;
         
@@ -3163,6 +3457,9 @@ async function createMarioGame(settings) {
                             break;
                         case 'axe':
                             axes.push(obj);
+                            break;
+                        case 'boss':
+                            bosses.push(obj);
                             break;
                         case 'flag':
                             flag = obj;
@@ -3387,7 +3684,7 @@ async function createMarioGame(settings) {
             }
         }
 
-        return {platforms, blocks, enemies, coins, pits, firebars, bridges, axes, flag, castles, startX, startY};
+        return {platforms, blocks, enemies, coins, pits, firebars, bridges, axes, bosses, flag, castles, startX, startY};
     }
     
     
@@ -3535,6 +3832,9 @@ async function createMarioGame(settings) {
             
             // Convert axes to entities
             convertAxesToEntities(layout);
+            
+            // Convert bosses to entities
+            convertBossesToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -4512,6 +4812,16 @@ async function createMarioGame(settings) {
         layout.axes.forEach(axe => {
             // Axes are already entities from the factory, just add them to the entity manager
             game.entityManager.entities.set(axe.id, axe);
+        });
+    }
+    
+    // Convert all bosses to entities
+    function convertBossesToEntities(layout) {
+        if (!layout.bosses) return;
+        
+        layout.bosses.forEach(boss => {
+            // Bosses are already entities from the factory, just add them to the entity manager
+            game.entityManager.entities.set(boss.id, boss);
         });
     }
     
