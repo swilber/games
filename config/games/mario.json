@@ -31,9 +31,7 @@
     "starValue": 1000
   },
   "projectiles": {
-    "fireballSpeed": 4,
-    "fireballGravity": 0.5,
-    "fireballBounces": 8
+    "fireballSpeed": 4
   },
   "debug": {
     "invincible": false,

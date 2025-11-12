@@ -702,7 +702,7 @@ class InteractiveSystem {
         
         if (blockComp.type === 'question' && blockComp.content) {
             if (blockComp.content === 'coin') {
-                playerComp.score += 200;
+                playerComp.score += this.game.config.powerups.coinValue;
                 
                 // Add coin animation above the block
                 const particle = entityManager.create();
@@ -720,9 +720,18 @@ class InteractiveSystem {
                 }
                 
                 // Create power-up entity instead of adding to array
+                let powerupSpeed = 0;
+                if (powerUpType === 'mushroom') {
+                    powerupSpeed = this.game.config.powerups.mushroomSpeed;
+                } else if (powerUpType === 'fireflower') {
+                    powerupSpeed = this.game.config.powerups.fireflowerSpeed;
+                } else if (powerUpType === 'star') {
+                    powerupSpeed = this.game.config.powerups.starSpeed;
+                }
+                
                 const powerUpEntity = this.game.entityManager.create(`powerup_${Date.now()}`)
                     .add('transform', new Transform(blockTransform.x, blockTransform.y - 32, 32, 32))
-                    .add('physics', new Physics(powerUpType === 'fireflower' ? 0 : 1, 0))
+                    .add('physics', new Physics(powerupSpeed, 0))
                     .add('sprite', new Sprite('#FF0000', powerUpType));
             }
             blockComp.content = null;
@@ -773,7 +782,17 @@ class PowerUpSystem {
                     }
                 }
                 
-                playerComp.score += 1000;
+                // Award points based on powerup type
+                let scoreValue = 1000; // default
+                if (sprite.type === 'mushroom') {
+                    scoreValue = this.game.config.powerups.mushroomValue;
+                } else if (sprite.type === 'fireflower') {
+                    scoreValue = this.game.config.powerups.fireflowerValue;
+                } else if (sprite.type === 'star') {
+                    scoreValue = this.game.config.powerups.starValue;
+                }
+                
+                playerComp.score += scoreValue;
                 entityManager.entities.delete(entity.id);
             }
         });
@@ -855,7 +874,7 @@ class ProjectileSystem {
                                 playerTransform.height = this.game.config.rendering.playerSmallHeight;
                                 playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                                 playerComp.invincible = true;
-                                playerComp.invincibleTimer = 120;
+                                playerComp.invincibleTimer = this.game.config.player.invincibilityTime;
                             } else {
                                 // Small Mario dies immediately
                                 playerComp.lives--;
@@ -1011,7 +1030,7 @@ class PlayerInputSystem {
                     8, 8
                 ))
                 .add('physics', new Physics(
-                    playerComp.facingRight ? 3 : -3,
+                    playerComp.facingRight ? this.game.config.projectiles.fireballSpeed : -this.game.config.projectiles.fireballSpeed,
                     -1
                 ))
                 .add('sprite', new Sprite('#FF4500', 'fireball'))
@@ -1081,7 +1100,7 @@ class CollisionSystem {
                         }
                     }
                     playerComp.invincible = true;
-                    playerComp.invincibleTimer = 120;
+                    playerComp.invincibleTimer = this.game.config.player.invincibilityTime;
                 }
             }
         });
@@ -1247,7 +1266,7 @@ class ImprovedCollisionSystem {
                             playerTransform.height = this.game.config.rendering.playerSmallHeight;
                             playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                             playerComp.invincible = true;
-                            playerComp.invincibleTimer = 120;
+                            playerComp.invincibleTimer = this.game.config.player.invincibilityTime;
                         } else if (!this.game.config.debug.invincible) {
                             // Small Mario dies immediately
                             playerComp.lives--;
@@ -1282,14 +1301,14 @@ class ImprovedCollisionSystem {
                 } else {
                     // Side collision - damage player (only if not invincible and not in debug mode)
                     const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible && !this.game.debugMode && !this.game.config.debug.invincible) {
+                    if (!playerComp.invincible && !this.game.config.debug.invincible) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = this.game.config.rendering.playerSmallWidth;
                             playerTransform.height = this.game.config.rendering.playerSmallHeight;
                             playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                             playerComp.invincible = true;
-                            playerComp.invincibleTimer = 120;
+                            playerComp.invincibleTimer = this.game.config.player.invincibilityTime;
                         } else {
                             // Small Mario dies immediately
                             playerComp.lives--;
@@ -1337,7 +1356,7 @@ class ImprovedCollisionSystem {
                             playerTransform.height = this.game.config.rendering.playerSmallHeight;
                             playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                             playerComp.invincible = true;
-                            playerComp.invincibleTimer = 120;
+                            playerComp.invincibleTimer = this.game.config.player.invincibilityTime;
                         } else {
                             // Small Mario dies immediately
                             playerComp.lives--;
@@ -2197,9 +2216,11 @@ async function createMarioGame(settings) {
             console.warn('Could not load Mario config, using defaults');
             marioConfig = {
                 player: { jumpHeight: 12, moveSpeed: 4, lives: 3, invincibilityTime: 120 },
-                enemies: { goombaSpeed: 1, koopaSpeed: 0.5, parakoopaSpeed: 1, piranhaSpeed: 1, firebarRotationSpeed: 1.5 },
+                enemies: { goombaSpeed: 1, koopaSpeed: 0.5, parakoopaSpeed: 1, piranhaSpeed: 1, firebarRotationSpeed: 1.5, bowserFlameSpeed: 1.5 },
                 physics: { gravity: 0.5, terminalVelocity: 15 },
-                debug: { invincible: false },
+                powerups: { mushroomSpeed: 1, fireflowerSpeed: 0, starSpeed: 1, coinValue: 200, mushroomValue: 1000, fireflowerValue: 1000, starValue: 1000 },
+                projectiles: { fireballSpeed: 4 },
+                debug: { invincible: false, unlockAllLevels: false },
                 rendering: { playerSmallWidth: 16, playerSmallHeight: 16, playerBigWidth: 16, playerBigHeight: 32 }
             };
         }
@@ -3828,7 +3849,7 @@ async function createMarioGame(settings) {
     }
     
     async function initializeGameState(preserveLives = false) {
-        const currentLives = preserveLives ? game.livesToRestore : 3;
+        const currentLives = preserveLives ? game.livesToRestore : game.config.player.lives;
         const currentScore = preserveLives ? (game.scoreToRestore || 0) : 0;
         
         try {
