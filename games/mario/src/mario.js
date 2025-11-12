@@ -1158,16 +1158,16 @@ class ImprovedCollisionSystem {
                         delete ai.flyDirection;
                         delete ai.flySpeed;
                     } else if (enemy.id.startsWith('piranha')) {
-                        // Piranha plants can't be stomped - damage player instead
+                        // Piranha plants can't be stomped - damage player instead (unless debug mode)
                         const playerComp = playerEntity.get('player');
-                        if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
+                        if (!this.game.debugMode && playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = 16;
                             playerTransform.height = 16;
                             playerTransform.y += 16;
                             playerComp.invincible = true;
                             playerComp.invincibleTimer = 120;
-                        } else {
+                        } else if (!this.game.debugMode) {
                             // Small Mario dies immediately
                             playerComp.lives--;
                             if (playerComp.lives <= 0) {
