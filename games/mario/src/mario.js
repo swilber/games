@@ -261,6 +261,64 @@ class PhysicsSystem {
             
             // Special handling for player entity
             if (entity.id === 'player') {
+                // Check if Mario is riding a moving platform first
+                let ridingPlatform = null;
+                const movingPlatforms = entityManager.query('transform', 'platform');
+                
+                movingPlatforms.forEach(platformEntity => {
+                    const platformTransform = platformEntity.get('transform');
+                    const platformComp = platformEntity.get('platform');
+                    
+                    // Check if Mario is standing on this moving platform
+                    if (platformComp && platformComp.moving &&
+                        transform.x < platformTransform.x + platformTransform.width &&
+                        transform.x + transform.width > platformTransform.x &&
+                        Math.abs((transform.y + transform.height) - platformTransform.y) < 2) {
+                        ridingPlatform = {transform: platformTransform, comp: platformComp};
+                    }
+                });
+                
+                // If riding a moving platform, move with it and skip normal physics
+                if (ridingPlatform) {
+                    physics.onGround = true;
+                    
+                    // Apply horizontal input movement first
+                    const input = entity.get('input');
+                    if (input) {
+                        // Handle jumping - give Mario upward velocity and let normal physics take over
+                        if (input.jump && physics.onGround) {
+                            physics.vy = -12;
+                            physics.onGround = false;
+                            // Apply gravity and normal physics for jumping
+                            physics.vy += 0.5;
+                            transform.x += physics.vx;
+                            transform.y += physics.vy;
+                            if (physics.vy > 15) physics.vy = 15;
+                            return; // Use normal physics when jumping
+                        }
+                        
+                        if (input.left) physics.vx -= 0.5;
+                        if (input.right) physics.vx += 0.5;
+                        physics.vx = Math.max(-4, Math.min(4, physics.vx)); // Clamp speed
+                    }
+                    
+                    if (ridingPlatform.comp.type === 'horizontal_moving') {
+                        // Move horizontally with platform, but preserve Mario's input movement
+                        transform.x += (ridingPlatform.comp.vx || 0) + physics.vx;
+                        physics.vx = 0; // Reset after applying
+                    } else if (ridingPlatform.comp.type === 'vertical_moving' || 
+                               ridingPlatform.comp.type === 'moving_up' || 
+                               ridingPlatform.comp.type === 'moving_down') {
+                        // Move vertically with platform
+                        transform.y += ridingPlatform.comp.vy || 0;
+                        physics.vy = 0; // No falling
+                        transform.x += physics.vx; // Apply horizontal input movement
+                    }
+                    
+                    return; // Skip normal physics
+                }
+                
+                // Normal physics when not on moving platform
                 // Apply gravity
                 physics.vy += 0.5;
                 
@@ -277,44 +335,44 @@ class PhysicsSystem {
                 const platformEntities = entityManager.query('transform', 'platform');
                 const allSolids = [];
                 
-                // Add platform entities to collision check
+                // Add platform entities to collision check (keep reference to platform entity)
                 platformEntities.forEach(platformEntity => {
                     const platformTransform = platformEntity.get('transform');
-                    allSolids.push(platformTransform);
+                    allSolids.push({transform: platformTransform, entity: platformEntity});
                 });
                 
                 allSolids.forEach(solid => {
                     // Check if moving into collision
-                    if (transform.x < solid.x + solid.width &&
-                        transform.x + transform.width > solid.x &&
-                        transform.y < solid.y + solid.height &&
-                        transform.y + transform.height > solid.y) {
+                    if (transform.x < solid.transform.x + solid.transform.width &&
+                        transform.x + transform.width > solid.transform.x &&
+                        transform.y < solid.transform.y + solid.transform.height &&
+                        transform.y + transform.height > solid.transform.y) {
                         
                         let verticalCollisionHandled = false;
                         
                         // Check vertical collision first (prioritize when falling)
-                        if (physics.vy > 0 && prevY + transform.height <= solid.y) {
+                        if (physics.vy > 0 && prevY + transform.height <= solid.transform.y) {
                             // Landing on top from above
-                            transform.y = solid.y - transform.height;
+                            transform.y = solid.transform.y - transform.height;
                             physics.vy = 0;
                             physics.onGround = true;
                             verticalCollisionHandled = true;
                         }
-                        else if (physics.vy < 0 && prevY >= solid.y + solid.height) {
+                        else if (physics.vy < 0 && prevY >= solid.transform.y + solid.transform.height) {
                             // Hitting ceiling from below
-                            transform.y = solid.y + solid.height;
+                            transform.y = solid.transform.y + solid.transform.height;
                             physics.vy = 0;
                             verticalCollisionHandled = true;
                         }
                         
                         // Only handle horizontal collision if no vertical collision occurred
                         if (!verticalCollisionHandled) {
-                            if (physics.vx > 0 && prevX + transform.width <= solid.x) {
+                            if (physics.vx > 0 && prevX + transform.width <= solid.transform.x) {
                                 // Hit right side of solid
-                                transform.x = solid.x - transform.width;
-                            } else if (physics.vx < 0 && prevX >= solid.x + solid.width) {
+                                transform.x = solid.transform.x - transform.width;
+                            } else if (physics.vx < 0 && prevX >= solid.transform.x + solid.transform.width) {
                                 // Hit left side of solid
-                                transform.x = solid.x + solid.width;
+                                transform.x = solid.transform.x + solid.transform.width;
                             }
                         }
                     }
@@ -340,52 +398,52 @@ class PhysicsSystem {
             const blockEntities = entityManager.query('transform', 'block');
             const allSolids = [];
             
-            // Add platform entities to collision check
+            // Add platform entities to collision check (keep reference to platform entity)
             platformEntities.forEach(platformEntity => {
                 const platformTransform = platformEntity.get('transform');
-                allSolids.push(platformTransform);
+                allSolids.push({transform: platformTransform, entity: platformEntity, isBlock: false});
             });
             
             // Add block entities to collision check
             blockEntities.forEach(blockEntity => {
                 const blockTransform = blockEntity.get('transform');
-                allSolids.push(blockTransform);
+                allSolids.push({transform: blockTransform, entity: blockEntity, isBlock: true});
             });
             
             allSolids.forEach(solid => {
-                if (transform.x < solid.x + solid.width &&
-                    transform.x + transform.width > solid.x &&
-                    transform.y < solid.y + solid.height &&
-                    transform.y + transform.height > solid.y) {
+                if (transform.x < solid.transform.x + solid.transform.width &&
+                    transform.x + transform.width > solid.transform.x &&
+                    transform.y < solid.transform.y + solid.transform.height &&
+                    transform.y + transform.height > solid.transform.y) {
                     
                     // Calculate overlap amounts
-                    const overlapLeft = (transform.x + transform.width) - solid.x;
-                    const overlapRight = (solid.x + solid.width) - transform.x;
-                    const overlapTop = (transform.y + transform.height) - solid.y;
-                    const overlapBottom = (solid.y + solid.height) - transform.y;
+                    const overlapLeft = (transform.x + transform.width) - solid.transform.x;
+                    const overlapRight = (solid.transform.x + solid.transform.width) - transform.x;
+                    const overlapTop = (transform.y + transform.height) - solid.transform.y;
+                    const overlapBottom = (solid.transform.y + solid.transform.height) - transform.y;
                     
                     // Find smallest overlap to determine collision direction
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
                     
                     if (minOverlap === overlapTop && physics.vy >= 0) {
                         // Landing on top
-                        transform.y = solid.y - transform.height;
+                        transform.y = solid.transform.y - transform.height;
                         physics.vy = 0;
                         physics.onGround = true;
                     } else if (minOverlap === overlapBottom && physics.vy < 0) {
                         // Hitting from below
-                        transform.y = solid.y + solid.height;
+                        transform.y = solid.transform.y + solid.transform.height;
                         physics.vy = 0;
                     } else if (minOverlap === overlapLeft && physics.vx > 0) {
                         // Hit right side of solid
-                        transform.x = solid.x - transform.width;
+                        transform.x = solid.transform.x - transform.width;
                         physics.vx *= -1;
                         // Update AI direction for entities with AI
                         const ai = entity.get('ai');
                         if (ai) ai.direction = physics.vx;
                     } else if (minOverlap === overlapRight && physics.vx < 0) {
                         // Hit left side of solid
-                        transform.x = solid.x + solid.width;
+                        transform.x = solid.transform.x + solid.transform.width;
                         physics.vx *= -1;
                         // Update AI direction for entities with AI
                         const ai = entity.get('ai');
