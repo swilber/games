@@ -98,6 +98,8 @@ function generateConfigForm(gameType, config) {
     
     if (gameType === 'mario') {
         generateMarioConfigForm(config, content);
+    } else if (gameType === 'pacman') {
+        generatePacmanConfigForm(config, content);
     }
     // Add other games later
 }
@@ -172,6 +174,30 @@ function updateConfigValue(section, key, value) {
     }
     currentGameConfig[section][key] = value;
     updateSaveButtonState();
+}
+
+function generatePacmanConfigForm(config, container) {
+    const sections = [
+        { key: 'player', title: 'Player Settings' },
+        { key: 'ghosts', title: 'Ghost Settings' },
+        { key: 'powerups', title: 'Power-up Settings' },
+        { key: 'gameplay', title: 'Gameplay Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
 }
 
 function updateSaveButtonState() {
@@ -500,7 +526,7 @@ async function initializeLevel() {
             createDonkeyKongGame(await getDifficulty('donkeykong'));
             break;
         case 'pacman':
-            createPacmanGame(await getDifficulty('pacman'));
+            await createPacmanGame(await getDifficulty('pacman'));
             break;
     }
 }

@@ -1,0 +1,21 @@
+{
+  "player": {
+    "lives": 3,
+    "moveSpeed": 1
+  },
+  "ghosts": {
+    "normalSpeed": 2,
+    "vulnerableSpeed": 3,
+    "count": 4
+  },
+  "powerups": {
+    "powerPelletDuration": 8000,
+    "dotValue": 10,
+    "powerPelletValue": 50,
+    "ghostValue": 200
+  },
+  "gameplay": {
+    "gameSpeed": 150,
+    "levelsToWin": 3
+  }
+}

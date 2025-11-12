@@ -1,5 +1,21 @@
-function createPacmanGame(settings) {
+async function createPacmanGame(settings) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load Pac-Man configuration using ConfigManager (same as Mario)
+    let pacmanConfig = {};
+    if (typeof configManager !== 'undefined') {
+        pacmanConfig = await configManager.loadConfig('pacman');
+        console.log('Pac-Man config loaded via ConfigManager:', pacmanConfig);
+    } else {
+        // Fallback to default values
+        console.warn('Could not load Pac-Man config, using defaults');
+        pacmanConfig = {
+            player: { lives: 3, moveSpeed: 1 },
+            ghosts: { normalSpeed: 2, vulnerableSpeed: 3, count: 4 },
+            powerups: { powerPelletDuration: 8000, dotValue: 10, powerPelletValue: 50, ghostValue: 200 },
+            gameplay: { gameSpeed: 150, levelsToWin: 3 }
+        };
+    }
     
     const canvas = document.createElement('canvas');
     canvas.width = 700;
@@ -81,7 +97,7 @@ function createPacmanGame(settings) {
             { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
         ],
         score: 0,
-        lives: 3,
+        lives: pacmanConfig.player.lives,
         dotsRemaining: 0,
         powerMode: false,
         powerModeTimer: 0,
@@ -118,7 +134,7 @@ function createPacmanGame(settings) {
             { color: '#ffb852', behavior: 'random', name: 'Clyde' }    // Orange - random/flee
         ];
         
-        for (let i = 0; i < settings.ghostCount; i++) {
+        for (let i = 0; i < pacmanConfig.ghosts.count; i++) {
             game.ghosts.push({
                 x: startPositions[i][0],
                 y: startPositions[i][1],
@@ -157,7 +173,7 @@ function createPacmanGame(settings) {
             { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
             { x: 14, y: 12, direction: 0, color: '#00ffff', mode: 'scatter' },
             { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
-        ].slice(0, settings.ghostCount);
+        ].slice(0, pacmanConfig.ghosts.count);
         
         // Count dots
         game.dotsRemaining = 0;
@@ -209,7 +225,7 @@ function createPacmanGame(settings) {
             const cell = game.maze[game.pacman.y][game.pacman.x];
             if (cell === 0) {
                 game.maze[game.pacman.y][game.pacman.x] = 3;
-                game.score += 10;
+                game.score += pacmanConfig.powerups.dotValue;
                 game.dotsRemaining--;
                 
                 // Check for level completion
@@ -218,7 +234,7 @@ function createPacmanGame(settings) {
                 }
             } else if (cell === 2) {
                 game.maze[game.pacman.y][game.pacman.x] = 3;
-                game.score += 50;
+                game.score += pacmanConfig.powerups.powerPelletValue;
                 game.dotsRemaining--;
                 
                 // Check for level completion
@@ -228,7 +244,7 @@ function createPacmanGame(settings) {
                 
                 // Power mode
                 game.powerMode = true;
-                game.powerModeTimer = settings.powerPelletDuration;
+                game.powerModeTimer = pacmanConfig.powerups.powerPelletDuration;
                 game.ghosts.forEach(ghost => {
                     if (!ghost.dead) {
                         ghost.vulnerable = true;
@@ -250,7 +266,7 @@ function createPacmanGame(settings) {
         
         // Update power mode
         if (game.powerMode) {
-            game.powerModeTimer -= 150; // Match game loop timing (150ms per frame)
+            game.powerModeTimer -= pacmanConfig.gameplay.gameSpeed; // Match game loop timing
             if (game.powerModeTimer <= 0) {
                 game.powerMode = false;
                 game.ghosts.forEach(ghost => {
@@ -283,7 +299,7 @@ function createPacmanGame(settings) {
             
             // Ghost speed control - ghosts move slower than Pac-Man
             ghost.moveTimer = (ghost.moveTimer || 0) + 1;
-            const moveDelay = ghost.vulnerable ? 3 : 2; // Slower when vulnerable
+            const moveDelay = ghost.vulnerable ? pacmanConfig.ghosts.vulnerableSpeed : pacmanConfig.ghosts.normalSpeed;
             
             if (ghost.moveTimer < moveDelay) return;
             ghost.moveTimer = 0;
@@ -402,7 +418,7 @@ function createPacmanGame(settings) {
                     ghost.dead = true;
                     ghost.vulnerable = false;
                     ghost.returning = true;
-                    game.score += 200;
+                    game.score += pacmanConfig.powerups.ghostValue;
                 } else if (!ghost.returning) {
                     // Pac-Man dies
                     game.lives--;
@@ -583,7 +599,7 @@ function createPacmanGame(settings) {
         render();
         
         if (!game.gameOver && !game.won) {
-            setTimeout(gameLoop, 150); // Slower game speed
+            setTimeout(gameLoop, pacmanConfig.gameplay.gameSpeed);
         }
     }
     
@@ -600,7 +616,7 @@ function createPacmanGame(settings) {
             game.pacman = { x: 14, y: 17, direction: 0, nextDirection: 0 };
             game.ghosts = [];
             game.score = 0;
-            game.lives = 3;
+            game.lives = pacmanConfig.player.lives;
             game.dotsRemaining = 0;
             game.powerMode = false;
             game.powerModeTimer = 0;
@@ -608,6 +624,10 @@ function createPacmanGame(settings) {
             game.won = false;
             game.gameStarted = true;
             game.keys = {};
+            
+            // Reinitialize ghosts with proper count
+            initializeGhosts();
+            initializeLevel();
             
             // Reset maze dots
             for (let y = 0; y < maze.length; y++) {
