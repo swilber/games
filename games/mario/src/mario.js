@@ -122,6 +122,23 @@ class FireBar {
     }
 }
 
+class Bridge {
+    constructor(segmentIndex, groupId) {
+        this.segmentIndex = segmentIndex; // Position in bridge (0, 1, 2...)
+        this.groupId = groupId; // Which bridge group this belongs to
+        this.collapsed = false;
+        this.collapseDelay = 0; // Will be set based on right-to-left timing
+        this.collapseTimer = 0;
+    }
+}
+
+class Axe {
+    constructor(bridgeGroupId) {
+        this.bridgeGroupId = bridgeGroupId;
+        this.activated = false;
+    }
+}
+
 class Pit {
     constructor(type = 'standard') {
         this.type = type;
@@ -1334,6 +1351,12 @@ class ImprovedRenderSystem {
             } else if (sprite.type === 'firebar') {
                 // Render firebar
                 this.renderFirebar(ctx, entity, screenX, screenY);
+            } else if (sprite.type === 'bridge_segment') {
+                // Render bridge segment
+                this.renderBridgeSegment(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height }, entity.get('bridge'));
+            } else if (sprite.type === 'axe') {
+                // Render axe
+                this.renderAxe(ctx, { x: screenX, y: screenY, width: transform.width, height: transform.height });
             } else {
                 // Fallback to colored rectangle for unknown entities
                 ctx.fillStyle = sprite.color || '#FF0000';
@@ -1386,6 +1409,41 @@ class ImprovedRenderSystem {
             ctx.fillStyle = '#FFFF00';
             ctx.fillRect(innerX, innerY, innerSize, innerSize);
         }
+    }
+    
+    renderBridgeSegment(ctx, segment, bridge) {
+        if (bridge.collapsed) return; // Don't render collapsed segments
+        
+        // Bridge with lava reflection: white top, gray middle, red bottom
+        const topHeight = Math.floor(segment.height * 0.3);
+        const middleHeight = Math.floor(segment.height * 0.4);
+        const bottomHeight = segment.height - topHeight - middleHeight;
+        
+        // White top
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(segment.x, segment.y, segment.width, topHeight);
+        
+        // Gray middle
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(segment.x, segment.y + topHeight, segment.width, middleHeight);
+        
+        // Red bottom (lava reflection)
+        ctx.fillStyle = '#FF4500';
+        ctx.fillRect(segment.x, segment.y + topHeight + middleHeight, segment.width, bottomHeight);
+    }
+    
+    renderAxe(ctx, axe) {
+        // Brown handle
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(axe.x + 6, axe.y + 4, 8, 16);
+        
+        // Silver blade
+        ctx.fillStyle = '#C0C0C0';
+        ctx.fillRect(axe.x + 2, axe.y + 2, 16, 8);
+        
+        // Blade highlight
+        ctx.fillStyle = '#E0E0E0';
+        ctx.fillRect(axe.x + 3, axe.y + 3, 14, 2);
     }
     
     renderCoin(ctx, coin) {
@@ -1490,6 +1548,70 @@ class FireBarSystem {
                 if (firebar.fireballRotations[i] >= 360) firebar.fireballRotations[i] -= 360;
             }
         });
+    }
+}
+
+class BridgeSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const bridgeSegments = entityManager.query('transform', 'bridge');
+        
+        bridgeSegments.forEach(entity => {
+            const bridge = entity.get('bridge');
+            
+            if (bridge.collapseTimer > 0) {
+                bridge.collapseTimer--;
+                
+                if (bridge.collapseTimer <= 0 && !bridge.collapsed) {
+                    bridge.collapsed = true;
+                    // Remove platform component so Mario can't stand on it
+                    entity.components.delete('platform');
+                }
+            }
+        });
+    }
+}
+
+class AxeSystem {
+    constructor(game) {
+        this.game = game;
+    }
+    
+    update(entityManager) {
+        const axes = entityManager.query('transform', 'axe');
+        const playerEntity = entityManager.entities.get('player');
+        
+        if (!playerEntity) return;
+        
+        const playerTransform = playerEntity.get('transform');
+        
+        axes.forEach(axeEntity => {
+            const axeTransform = axeEntity.get('transform');
+            const axe = axeEntity.get('axe');
+            
+            if (!axe.activated && this.isColliding(playerTransform, axeTransform)) {
+                axe.activated = true;
+                
+                // Start bridge collapse
+                const bridgeSegments = entityManager.query('transform', 'bridge');
+                bridgeSegments.forEach(bridgeEntity => {
+                    const bridge = bridgeEntity.get('bridge');
+                    if (bridge.groupId === axe.bridgeGroupId) {
+                        bridge.collapseTimer = bridge.collapseDelay + 30; // 30 frame delay + stagger
+                    }
+                });
+            }
+        });
+    }
+    
+    isColliding(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
     }
 }
 
@@ -2601,6 +2723,8 @@ async function createMarioGame(settings) {
     game.entityManager.addSystem(new ProjectileSystem(game));
     game.entityManager.addSystem(new ParticleSystem(game));
     game.entityManager.addSystem(new FireBarSystem(game));
+    game.entityManager.addSystem(new BridgeSystem(game));
+    game.entityManager.addSystem(new AxeSystem(game));
     game.entityManager.addSystem(new PlatformMovementSystem(game));
     
     // Map Character Definitions - defines what each ASCII character creates
@@ -2628,6 +2752,8 @@ async function createMarioGame(settings) {
         'X': { type: 'pit', variant: 'standard' },
         'E': { type: 'firebar', variant: 'clockwise' },
         'e': { type: 'firebar', variant: 'counterclockwise' },
+        '=': { type: 'bridge', variant: 'segment' },
+        'a': { type: 'axe', variant: 'standard' },
         '-': { type: 'empty', variant: 'sky' }
     };
     
@@ -2769,6 +2895,20 @@ async function createMarioGame(settings) {
                 .add('sprite', new Sprite('#FF4500', 'firebar'));
             
             return firebarEntity;
+        },
+        
+        bridge: (def, x, y, tileSize) => {
+            // Will be processed in groups later - return null for now
+            return null;
+        },
+        
+        axe: (def, x, y, tileSize) => {
+            const axeEntity = new Entity()
+                .add('transform', new Transform(x, y, tileSize, tileSize))
+                .add('axe', new Axe('bridge_1')) // Default bridge group
+                .add('sprite', new Sprite('#8B4513', 'axe'));
+            
+            return axeEntity;
         },
         
         empty: () => null // Sky/empty space
@@ -2925,6 +3065,12 @@ async function createMarioGame(settings) {
             // Convert firebars to entities
             convertFirebarsToEntities(layout);
             
+            // Convert bridges to entities
+            convertBridgesToEntities(layout);
+            
+            // Convert axes to entities
+            convertAxesToEntities(layout);
+            
             // Use the same function for initial load
             resetMarioPosition();
             
@@ -2947,6 +3093,8 @@ async function createMarioGame(settings) {
         const coins = [];
         const pits = [];
         const firebars = [];
+        const bridges = [];
+        const axes = [];
         let flag = null;
         let startX = 50, startY = 300;
         
@@ -3000,6 +3148,12 @@ async function createMarioGame(settings) {
                             break;
                         case 'firebar':
                             firebars.push(obj);
+                            break;
+                        case 'bridge':
+                            bridges.push(obj);
+                            break;
+                        case 'axe':
+                            axes.push(obj);
                             break;
                         case 'flag':
                             flag = obj;
@@ -3151,6 +3305,56 @@ async function createMarioGame(settings) {
             }
         }
         
+        // Process connected = groups into bridge segments
+        const processedBridges = new Set();
+        let bridgeGroupCount = 0;
+        
+        for (let y = 0; y < lines.length; y++) {
+            const line = lines[y];
+            for (let x = 0; x < line.length; x++) {
+                if (line[x] === '=' && !processedBridges.has(`${x},${y}`)) {
+                    bridgeGroupCount++;
+                    const bridgeGroupId = `bridge_${bridgeGroupCount}`;
+                    
+                    // Find all connected = characters (horizontal bridge)
+                    let segmentIndex = 0;
+                    let bridgeX = x;
+                    
+                    // Scan horizontally to find the full bridge
+                    while (bridgeX < line.length && line[bridgeX] === '=') {
+                        const key = `${bridgeX},${y}`;
+                        if (!processedBridges.has(key)) {
+                            processedBridges.add(key);
+                            
+                            // Create bridge segment entity
+                            const bridgeEntity = new Entity()
+                                .add('transform', new Transform(bridgeX * tileSize, y * tileSize, tileSize, tileSize))
+                                .add('platform', new Platform('bridge'))
+                                .add('bridge', new Bridge(segmentIndex, bridgeGroupId))
+                                .add('sprite', new Sprite('#FFFFFF', 'bridge_segment'));
+                            
+                            bridges.push(bridgeEntity);
+                            segmentIndex++;
+                        }
+                        bridgeX++;
+                    }
+                    
+                    // Set collapse delays (right to left)
+                    const bridgeSegments = bridges.filter(b => b.get('bridge').groupId === bridgeGroupId);
+                    bridgeSegments.forEach((segment, index) => {
+                        const bridgeComp = segment.get('bridge');
+                        bridgeComp.collapseDelay = (bridgeSegments.length - 1 - index) * 10; // Right to left
+                    });
+                    
+                    // Update axe to reference this bridge group
+                    axes.forEach(axe => {
+                        const axeComp = axe.get('axe');
+                        axeComp.bridgeGroupId = bridgeGroupId;
+                    });
+                }
+            }
+        }
+        
         // Handle castle characters 'q' (2-level) and 'Q' (3-level) - find all castles
         let castles = [];
         
@@ -3174,7 +3378,7 @@ async function createMarioGame(settings) {
             }
         }
 
-        return {platforms, blocks, enemies, coins, pits, firebars, flag, castles, startX, startY};
+        return {platforms, blocks, enemies, coins, pits, firebars, bridges, axes, flag, castles, startX, startY};
     }
     
     
@@ -3316,6 +3520,12 @@ async function createMarioGame(settings) {
             
             // Convert firebars to entities
             convertFirebarsToEntities(layout);
+            
+            // Convert bridges to entities
+            convertBridgesToEntities(layout);
+            
+            // Convert axes to entities
+            convertAxesToEntities(layout);
             
             // Reset Mario completely
             game.player.x = layout.startX;
@@ -4229,6 +4439,26 @@ async function createMarioGame(settings) {
             firebarCount++;
             // Firebars are already entities from the factory, just add them to the entity manager
             game.entityManager.entities.set(firebar.id, firebar);
+        });
+    }
+    
+    // Convert all bridges to entities
+    function convertBridgesToEntities(layout) {
+        if (!layout.bridges) return;
+        
+        layout.bridges.forEach(bridge => {
+            // Bridges are already entities from the parsing, just add them to the entity manager
+            game.entityManager.entities.set(bridge.id, bridge);
+        });
+    }
+    
+    // Convert all axes to entities
+    function convertAxesToEntities(layout) {
+        if (!layout.axes) return;
+        
+        layout.axes.forEach(axe => {
+            // Axes are already entities from the factory, just add them to the entity manager
+            game.entityManager.entities.set(axe.id, axe);
         });
     }
     
