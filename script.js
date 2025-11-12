@@ -66,6 +66,7 @@ const configManager = new ConfigManager();
 
 let currentConfigTab = 'mario';
 let currentGameConfig = {};
+let originalConfig = {}; // Track original config for change detection
 
 // Configuration Modal Functions
 async function openConfigModal() {
@@ -86,7 +87,9 @@ async function showConfigTab(gameType) {
     
     // Load and display config
     currentGameConfig = await configManager.loadConfig(gameType);
+    originalConfig = JSON.parse(JSON.stringify(currentGameConfig)); // Deep copy
     generateConfigForm(gameType, currentGameConfig);
+    updateSaveButtonState();
 }
 
 function generateConfigForm(gameType, config) {
@@ -168,6 +171,14 @@ function updateConfigValue(section, key, value) {
         currentGameConfig[section] = {};
     }
     currentGameConfig[section][key] = value;
+    updateSaveButtonState();
+}
+
+function updateSaveButtonState() {
+    const saveBtn = document.getElementById('save-config-btn');
+    const hasChanges = JSON.stringify(currentGameConfig) !== JSON.stringify(originalConfig);
+    
+    saveBtn.disabled = !hasChanges;
 }
 
 function formatLabel(key) {
@@ -178,12 +189,15 @@ function formatLabel(key) {
 
 async function resetCurrentConfig() {
     currentGameConfig = configManager.resetConfig(currentConfigTab);
+    originalConfig = JSON.parse(JSON.stringify(currentGameConfig)); // Update original
     generateConfigForm(currentConfigTab, currentGameConfig);
+    updateSaveButtonState();
 }
 
 function saveCurrentConfig() {
     configManager.saveConfig(currentConfigTab, currentGameConfig);
-    alert('Configuration saved!');
+    originalConfig = JSON.parse(JSON.stringify(currentGameConfig)); // Update original
+    updateSaveButtonState();
 }
 
 // Show debug controls if debug mode is enabled

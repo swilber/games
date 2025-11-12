@@ -112,9 +112,11 @@ class Particle {
 }
 
 class FireBar {
-    constructor(direction = 'clockwise') {
+    constructor(direction = 'clockwise', game = null) {
         this.rotation = 0;
-        this.rotationSpeed = direction === 'clockwise' ? 1.5 : -1.5;
+        // Use config speed if available, otherwise fallback to default
+        const baseSpeed = game?.config?.enemies?.firebarRotationSpeed || 1.5;
+        this.rotationSpeed = direction === 'clockwise' ? baseSpeed : -baseSpeed;
         this.fireballCount = 6;
         this.fireballSize = 8;
         this.fireballSpacing = 12;
@@ -3282,7 +3284,7 @@ async function createMarioGame(settings) {
         
         pit: (def, x, y, tileSize) => ({ x, width: tileSize }), // Create pit object
         
-        firebar: (def, x, y, tileSize) => {
+        firebar: (def, x, y, tileSize, lines, game) => {
             const direction = def.variant === 'clockwise' ? 'clockwise' : 'counterclockwise';
             const centerX = x + tileSize / 2;
             const centerY = y + tileSize / 2;
@@ -3290,7 +3292,7 @@ async function createMarioGame(settings) {
             // Create the firebar entity only - the block will be created separately
             const firebarEntity = new Entity()
                 .add('transform', new Transform(centerX, centerY, 8, 8))
-                .add('firebar', new FireBar(direction))
+                .add('firebar', new FireBar(direction, game))
                 .add('sprite', new Sprite('#FF4500', 'firebar'));
             
             return firebarEntity;
@@ -3542,7 +3544,7 @@ async function createMarioGame(settings) {
                 const factory = MapObjectFactories[charDef.type];
                 if (!factory) continue; // Skip if no factory
                 
-                const obj = factory(charDef, worldX, worldY, tileSize, lines);
+                const obj = factory(charDef, worldX, worldY, tileSize, lines, game);
                 if (!obj) continue; // Skip if factory returns null
                 
                 // Special handling for firebar characters - create both platform and firebar

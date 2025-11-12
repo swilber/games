@@ -332,3 +332,18 @@ button:hover {
 .hidden {
     display: none !important;
 }
+#save-config-btn:disabled {
+    background-color: #ccc;
+    color: #666;
+    cursor: not-allowed;
+}
+
+#save-config-btn:enabled {
+    background-color: #28a745;
+    color: white;
+    cursor: pointer;
+}
+
+#save-config-btn:enabled:hover {
+    background-color: #218838;
+}
