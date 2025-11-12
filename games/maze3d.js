@@ -348,6 +348,10 @@ function createMaze3DGame(settings) {
     const keys = {};
     
     function handleKeyDown(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
+        if (!gameKeys.includes(e.code)) return;
+        
         keys[e.code] = true;
         e.preventDefault();
         
@@ -357,6 +361,10 @@ function createMaze3DGame(settings) {
     }
     
     function handleKeyUp(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
+        if (!gameKeys.includes(e.code)) return;
+        
         keys[e.code] = false;
         e.preventDefault();
     }

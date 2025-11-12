@@ -198,10 +198,10 @@ async function createPacmanGame(settings, callbacks = null) {
         if (game.gameOver || game.won || !game.gameStarted) return;
         
         // Handle input
-        if (game.keys['ArrowRight'] || game.keys['KeyD']) game.nextDirection = 0;
-        if (game.keys['ArrowDown'] || game.keys['KeyS']) game.nextDirection = 1;
-        if (game.keys['ArrowLeft'] || game.keys['KeyA']) game.nextDirection = 2;
-        if (game.keys['ArrowUp'] || game.keys['KeyW']) game.nextDirection = 3;
+        if (game.keys['ArrowRight']) game.nextDirection = 0;
+        if (game.keys['ArrowDown']) game.nextDirection = 1;
+        if (game.keys['ArrowLeft']) game.nextDirection = 2;
+        if (game.keys['ArrowUp']) game.nextDirection = 3;
         
         // Try to change direction
         const [nextDx, nextDy] = directions[game.nextDirection];
@@ -604,23 +604,32 @@ async function createPacmanGame(settings, callbacks = null) {
         }
     }
     
+    let gameRunning = true;
+    let gameTimeout = null;
+    
     function gameLoop() {
         game.animationFrame++;
         updatePacman();
         updateGhosts();
         render();
         
-        if (!game.gameOver && !game.won) {
-            setTimeout(gameLoop, pacmanConfig.gameplay.gameSpeed);
+        if (!game.gameOver && !game.won && gameRunning) {
+            gameTimeout = setTimeout(gameLoop, pacmanConfig.gameplay.gameSpeed);
         }
     }
     
     function handleKeyDown(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = true;
         
         if (!game.gameStarted) {
             game.gameStarted = true;
-            gameLoop();
+            if (gameRunning) {
+                gameLoop();
+            }
         }
         
         if (game.gameOver && e.code === 'KeyR') {
@@ -657,19 +666,29 @@ async function createPacmanGame(settings, callbacks = null) {
             }
             
             initializeGame();
-            gameLoop();
+            if (gameRunning) {
+                gameLoop();
+            }
         }
         
         e.preventDefault();
     }
     
     function handleKeyUp(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = false;
         e.preventDefault();
     }
     
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+    
+    // Store handler references for cleanup
+    const keyDownHandler = handleKeyDown;
+    const keyUpHandler = handleKeyUp;
     
     const instructions = document.createElement('p');
     instructions.textContent = 'Classic Pac-Man - eat all dots while avoiding ghosts!';
@@ -681,4 +700,16 @@ async function createPacmanGame(settings, callbacks = null) {
     // Initialize first level
     initializeLevel();
     render();
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            gameRunning = false;
+            if (gameTimeout) {
+                clearTimeout(gameTimeout);
+            }
+            document.removeEventListener('keydown', keyDownHandler);
+            document.removeEventListener('keyup', keyUpHandler);
+        }
+    };
 }

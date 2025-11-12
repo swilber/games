@@ -1,7 +1,8 @@
 // 8-bit Style Question/Answer System
 let questionSystem = {
     currentQuestion: null,
-    pendingAnswer: null,
+    expectedAnswer: null,
+    currentCallback: null,
     
     // Show question at end of game with 8-bit style
     showQuestion(levelId) {
@@ -9,22 +10,18 @@ let questionSystem = {
         if (!level || !level.question) return;
         
         this.currentQuestion = level.question;
-        localStorage.setItem('pendingQuestion', level.question);
-        localStorage.setItem('expectedAnswer', level.answer);
+        this.expectedAnswer = level.answer;
         
         this.displayQuestionModal(level.question);
     },
     
     // Show answer prompt at start of next game
     showAnswerPrompt(callback) {
-        const pendingQuestion = localStorage.getItem('pendingQuestion');
-        const expectedAnswer = localStorage.getItem('expectedAnswer');
-        
         console.log('showAnswerPrompt called');
-        console.log('pendingQuestion:', pendingQuestion);
-        console.log('expectedAnswer:', expectedAnswer);
+        console.log('currentQuestion:', this.currentQuestion);
+        console.log('expectedAnswer:', this.expectedAnswer);
         
-        if (!pendingQuestion || !expectedAnswer) {
+        if (!this.currentQuestion || !this.expectedAnswer) {
             console.log('No pending question, allowing access');
             callback(true); // No question pending, allow access
             return;
@@ -32,10 +29,9 @@ let questionSystem = {
         
         // Store callback for later use
         this.currentCallback = callback;
-        this.expectedAnswer = expectedAnswer;
         
         console.log('Displaying answer modal');
-        this.displayAnswerModal(expectedAnswer);
+        this.displayAnswerModal(this.expectedAnswer);
     },
     
     displayQuestionModal(question) {
@@ -109,8 +105,8 @@ let questionSystem = {
         
         if (userAnswer === correctAnswer) {
             // Correct answer - clear pending question and allow access
-            localStorage.removeItem('pendingQuestion');
-            localStorage.removeItem('expectedAnswer');
+            this.currentQuestion = null;
+            this.expectedAnswer = null;
             this.closeAnswerModal(true, callback);
         } else {
             // Wrong answer - show error
@@ -131,8 +127,10 @@ let questionSystem = {
             modal.remove();
         }
         
-        // Don't proceed to next level yet - wait for answer prompt
-        // The progression will happen when the answer is correctly provided
+        // Return to level select after showing the question
+        if (typeof showLevelSelect === 'function') {
+            showLevelSelect();
+        }
     },
     
     closeAnswerModal(success, callback) {
@@ -141,13 +139,10 @@ let questionSystem = {
             modal.remove();
         }
         
-        if (success && typeof proceedToNextLevel === 'function') {
-            // Only proceed to next level if answer was correct
-            proceedToNextLevel();
-        }
-        
-        if (typeof callback === 'function') {
-            callback(success);
+        // Use the stored callback from showAnswerPrompt
+        if (typeof this.currentCallback === 'function') {
+            this.currentCallback(success);
+            this.currentCallback = null; // Clear after use
         }
     },
     

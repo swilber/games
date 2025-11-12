@@ -127,6 +127,9 @@ async function createSnakeGame(settings, callbacks = null) {
     
     document.addEventListener('keydown', handleKeyPress);
     
+    // Store handler reference for cleanup
+    const keyPressHandler = handleKeyPress;
+    
     generateFood();
     gameArea.appendChild(canvas);
     
@@ -136,4 +139,14 @@ async function createSnakeGame(settings, callbacks = null) {
     }, snakeConfig.gameplay.gameSpeed);
     
     drawGame();
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            if (gameInterval) {
+                clearInterval(gameInterval);
+            }
+            document.removeEventListener('keydown', keyPressHandler);
+        }
+    };
 }

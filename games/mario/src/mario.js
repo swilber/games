@@ -999,9 +999,9 @@ class PlayerInputSystem {
         const input = player.get('input');
         
         // Update input state
-        input.left = this.game.keys['ArrowLeft'] || this.game.keys['KeyA'];
-        input.right = this.game.keys['ArrowRight'] || this.game.keys['KeyD'];
-        input.jump = this.game.keys['ArrowUp'] || this.game.keys['KeyW'] || this.game.keys['Space'];
+        input.left = this.game.keys['ArrowLeft'];
+        input.right = this.game.keys['ArrowRight'];
+        input.jump = this.game.keys['ArrowUp'] || this.game.keys['Space'];
         input.shoot = this.game.keys['KeyX'] || this.game.keys['KeyZ'];
         
         // Handle movement
@@ -4777,13 +4777,15 @@ async function createMarioGame(settings, callbacks = null) {
         }
     }
     
+    let gameRunning = true;
+    
     function gameLoop() {
         // Handle level reset if needed
         if (game.needsLevelReset) {
             game.needsLevelReset = false;
             initializeGameState(true).then(() => {
                 // Continue game loop after reset
-                if (!game.gameOver && !game.won) {
+                if (!game.gameOver && !game.won && gameRunning) {
                     requestAnimationFrame(gameLoop);
                 }
             });
@@ -4802,19 +4804,23 @@ async function createMarioGame(settings, callbacks = null) {
         checkWin();
         render();
         
-        if (!game.gameOver && !game.won) {
+        if (!game.gameOver && !game.won && gameRunning) {
             requestAnimationFrame(gameLoop);
         }
     }
     
     function handleKeyDown(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = true;
         
         if (!game.gameStarted) {
             game.gameStarted = true;
         }
         
-        if (game.gameOver && e.code === 'KeyR') {
+        if (game.gameOver && e.code === 'KeyR' && gameRunning) {
             initializeGameState(false).then(() => {
                 gameLoop();
             });
@@ -4824,6 +4830,10 @@ async function createMarioGame(settings, callbacks = null) {
     }
     
     function handleKeyUp(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = false;
         e.preventDefault();
     }
@@ -4837,6 +4847,10 @@ async function createMarioGame(settings, callbacks = null) {
     
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
+    
+    // Store handler references for cleanup
+    const keyDownHandler = handleKeyDown;
+    const keyUpHandler = handleKeyUp;
     
     // Convert all question blocks to entities
     function convertQuestionBlocksToEntities() {
@@ -4988,5 +5002,14 @@ async function createMarioGame(settings, callbacks = null) {
         convertQuestionBlocksToEntities();
         gameLoop();
     });
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            gameRunning = false;
+            document.removeEventListener('keydown', keyDownHandler);
+            document.removeEventListener('keyup', keyUpHandler);
+        }
+    };
     } // End startMarioGame function
 } // End createMarioGame function

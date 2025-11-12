@@ -5,6 +5,7 @@ let unlockedLevels = [];
 let levels = [];
 let config = {};
 let gameConfigs = {};
+let currentGameInstance = null;
 
 // Configuration Manager
 class ConfigManager {
@@ -448,35 +449,43 @@ function showLevelSelect() {
 function selectLevel(levelIndex) {
     currentLevel = levelIndex;
     selectedLevel = levelIndex;
-    document.getElementById('level-select').classList.add('hidden');
-    document.getElementById('game-screen').classList.remove('hidden');
     
     console.log('selectLevel called for level:', levelIndex);
     
-    // Check if this level requires answering a question first
-    if (levelIndex > 0) {
-        const pendingQuestion = localStorage.getItem('pendingQuestion');
-        console.log('Pending question:', pendingQuestion);
-        console.log('questionSystem available:', typeof questionSystem !== 'undefined');
-        
-        if (pendingQuestion && typeof questionSystem !== 'undefined') {
-            // Show answer prompt before starting level
-            questionSystem.showAnswerPrompt((success) => {
-                if (success) {
-                    startLevel();
-                } else {
-                    // Return to level selection
-                    showLevelSelection();
-                }
-            });
-            return;
-        }
+    // First level is always accessible
+    if (levelIndex === 0) {
+        document.getElementById('level-select').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        startLevel();
+        return;
     }
     
-    startLevel();
+    // All other levels require answering their question
+    const levelData = levels[levelIndex];
+    if (levelData && levelData.question && levelData.answer) {
+        // Set up question system for this specific level
+        questionSystem.currentQuestion = levelData.question;
+        questionSystem.expectedAnswer = levelData.answer;
+        questionSystem.showAnswerPrompt((success) => {
+            if (success) {
+                document.getElementById('level-select').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                startLevel();
+            }
+            // If failed, stay on level select
+        });
+    } else {
+        alert('This level has no question configured.');
+    }
 }
 
 function showLevelSelection() {
+    // Clean up current game
+    if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {
+        currentGameInstance.cleanup();
+    }
+    currentGameInstance = null;
+    
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('level-select').classList.remove('hidden');
 }
@@ -529,21 +538,18 @@ async function startLevel() {
 async function createGameWithCallbacks(gameType, settings) {
     const gameCallbacks = {
         onGameStart: async (gameId) => {
-            // Check if there's a pending question to answer
-            if (typeof questionSystem !== 'undefined') {
-                return new Promise((resolve) => {
-                    questionSystem.showAnswerPrompt(() => resolve());
-                });
-            }
+            // Question checking is now handled in selectLevel
+            // Games can start immediately once selectLevel allows them
+            return;
         },
         onGameComplete: (gameId, questionData) => {
-            // Show question and handle progression
-            if (typeof questionSystem !== 'undefined' && questionData) {
-                questionSystem.showQuestion(gameId);
+            // Show this level's question for future reference
+            const currentLevelData = levels[currentLevel];
+            if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
+                questionSystem.showQuestion(currentLevel);
             }
-            // Set global flags for level system
-            gameWon = true;
-            showQuestion();
+            // Don't unlock next level or proceed automatically
+            // Player will need to manually select next level and answer its question
         },
         onLevelComplete: () => {
             // Handle individual level completion within a game
@@ -588,6 +594,12 @@ async function initializeLevel() {
     document.getElementById('level-title').textContent = level.title;
     document.getElementById('level-description').textContent = level.description;
     
+    // Clean up previous game
+    if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {
+        currentGameInstance.cleanup();
+    }
+    currentGameInstance = null;
+    
     const gameArea = document.getElementById('game-area');
     gameArea.innerHTML = '';
     gameWon = false;
@@ -606,7 +618,7 @@ async function initializeLevel() {
         case 'pacman':
         case 'snake':
             // Modern games with callback support
-            await createGameWithCallbacks(level.type, await getDifficulty(level.type));
+            currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
             break;
     }
 }
@@ -638,11 +650,8 @@ function showQuestion() {
     if (currentLevelData && currentLevelData.question) {
         questionSystem.showQuestion(currentLevelData.id);
         
-        // Unlock next level immediately
-        if (currentLevel < levels.length - 1) {
-            unlockedLevels[currentLevel + 1] = true;
-            updateLevelButtons();
-        }
+        // Don't unlock next level here - wait for correct answer
+        // The level will be unlocked when the answer is provided correctly
     } else {
         // No question, proceed directly
         proceedToNextLevel();

@@ -830,6 +830,10 @@ function createDonkeyKongGame(settings) {
     }
     
     function handleKeyDown(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = true;
         
         if (!game.gameStarted) {
@@ -865,6 +869,10 @@ function createDonkeyKongGame(settings) {
     }
     
     function handleKeyUp(e) {
+        // Only handle game-related keys
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyR'];
+        if (!gameKeys.includes(e.code)) return;
+        
         game.keys[e.code] = false;
         e.preventDefault();
     }
