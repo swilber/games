@@ -4224,26 +4224,44 @@ async function createMarioGame(settings) {
         // Flag/Level End Object
         if (game.flag) {
             if (game.currentTheme === 'castle') {
-                // Render toadstool for castle theme
-                const toadstool = game.flag;
+                // Render Toad character for castle theme
+                const toad = game.flag;
                 
-                // Toadstool stem (beige)
-                ctx.fillStyle = '#F5DEB3';
-                ctx.fillRect(toadstool.x + 6, toadstool.y + 16, 8, 16);
-                
-                // Toadstool cap (red with white spots)
+                // Mushroom hat (red with white spots) - wider
                 ctx.fillStyle = '#FF0000';
-                ctx.fillRect(toadstool.x, toadstool.y, 20, 16);
+                ctx.fillRect(toad.x, toad.y, 20, 12);
                 
-                // White spots on cap
+                // White spots on hat
                 ctx.fillStyle = '#FFFFFF';
-                ctx.fillRect(toadstool.x + 3, toadstool.y + 3, 3, 3);
-                ctx.fillRect(toadstool.x + 14, toadstool.y + 3, 3, 3);
-                ctx.fillRect(toadstool.x + 8, toadstool.y + 8, 3, 3);
+                ctx.fillRect(toad.x + 3, toad.y + 2, 3, 3);
+                ctx.fillRect(toad.x + 14, toad.y + 2, 3, 3);
+                ctx.fillRect(toad.x + 8, toad.y + 6, 3, 3);
                 
-                // Cap highlight
+                // Hat highlight
                 ctx.fillStyle = '#FF6666';
-                ctx.fillRect(toadstool.x + 1, toadstool.y + 1, 18, 2);
+                ctx.fillRect(toad.x + 1, toad.y + 1, 18, 2);
+                
+                // Face/head (peach/beige) - wider and rounder
+                ctx.fillStyle = '#FFDBAC';
+                ctx.fillRect(toad.x + 4, toad.y + 12, 12, 10);
+                
+                // Eyes (black dots)
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(toad.x + 7, toad.y + 15, 2, 2);
+                ctx.fillRect(toad.x + 11, toad.y + 15, 2, 2);
+                
+                // Chubby body (blue vest) - much wider
+                ctx.fillStyle = '#0066CC';
+                ctx.fillRect(toad.x + 2, toad.y + 22, 16, 6);
+                
+                // Arms (peach) - positioned for chubby body
+                ctx.fillStyle = '#FFDBAC';
+                ctx.fillRect(toad.x, toad.y + 23, 4, 4);
+                ctx.fillRect(toad.x + 16, toad.y + 23, 4, 4);
+                
+                // Diaper/shorts (white) - wider for chubby look
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(toad.x + 3, toad.y + 28, 14, 4);
             } else {
                 // Render flag pole for other themes
                 const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
