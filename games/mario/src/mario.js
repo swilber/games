@@ -487,7 +487,7 @@ class AISystem {
                 // Parakoopa flying behavior - simple vertical oscillation
                 if (!ai.topY) ai.topY = transform.y; // Starting position is top of flight
                 if (!ai.flyDirection) ai.flyDirection = 1; // Start flying down
-                if (!ai.flySpeed) ai.flySpeed = 1;
+                if (!ai.flySpeed) ai.flySpeed = this.game.config.enemies.parakoopaSpeed || 1;
                 
                 // Move vertically only
                 transform.y += ai.flyDirection * ai.flySpeed;
@@ -528,7 +528,7 @@ class AISystem {
                     ai.timer = 0;
                 } else if (ai.piranhaState === 'emerging') {
                     // Move up from pipe
-                    transform.y = ai.hiddenY - (ai.timer * 1); // Emerge slowly
+                    transform.y = ai.hiddenY - (ai.timer * this.game.config.enemies.piranhaSpeed); // Emerge slowly
                     if (transform.y <= ai.baseY || ai.timer > 32) {
                         transform.y = ai.baseY;
                         ai.piranhaState = 'visible';
@@ -539,7 +539,7 @@ class AISystem {
                     ai.timer = 0;
                 } else if (ai.piranhaState === 'retreating') {
                     // Move down into pipe
-                    transform.y = ai.baseY + (ai.timer * 1); // Retreat slowly
+                    transform.y = ai.baseY + (ai.timer * this.game.config.enemies.piranhaSpeed); // Retreat slowly
                     if (transform.y >= ai.hiddenY || ai.timer > 32) {
                         transform.y = ai.hiddenY;
                         ai.piranhaState = 'hidden';
@@ -1948,7 +1948,7 @@ class BossSystem {
         
         const fireballEntity = entityManager.create(`bowser_flame_${Date.now()}`)
             .add('transform', new Transform(fireballX, fireballY, 16, 8))
-            .add('physics', new Physics(direction * 1.5, 0)) // Slower velocity
+            .add('physics', new Physics(direction * this.game.config.enemies.bowserFlameSpeed, 0))
             .add('projectile', new Projectile('bowser_flame', 1))
             .add('sprite', new Sprite('#FF4500', 'bowser_flame'));
         
@@ -2197,7 +2197,7 @@ async function createMarioGame(settings) {
             console.warn('Could not load Mario config, using defaults');
             marioConfig = {
                 player: { jumpHeight: 12, moveSpeed: 4, lives: 3, invincibilityTime: 120 },
-                enemies: { goombaSpeed: 1, koopaSpeed: 0.5, firebarRotationSpeed: 1.5 },
+                enemies: { goombaSpeed: 1, koopaSpeed: 0.5, parakoopaSpeed: 1, piranhaSpeed: 1, firebarRotationSpeed: 1.5 },
                 physics: { gravity: 0.5, terminalVelocity: 15 },
                 debug: { invincible: false },
                 rendering: { playerSmallWidth: 16, playerSmallHeight: 16, playerBigWidth: 16, playerBigHeight: 32 }
@@ -2218,8 +2218,8 @@ async function createMarioGame(settings) {
         return result;
     }
     
-    // Debug mode - show level selection menu
-    if (settings && settings.debug) {
+    // Show level selection menu if unlockAllLevels is enabled
+    if (marioConfig.debug && marioConfig.debug.unlockAllLevels) {
         const levelSelector = document.createElement('div');
         levelSelector.style.cssText = 'text-align: center; padding: 20px; background: #000; color: #fff;';
         

@@ -9,6 +9,7 @@
     "goombaSpeed": 1,
     "koopaSpeed": 0.5,
     "parakoopaSpeed": 1,
+    "piranhaSpeed": 1,
     "firebarRotationSpeed": 1.5,
     "bowserFlameSpeed": 1.5,
     "bowserFlameDistance": 1000,
@@ -36,9 +37,7 @@
   },
   "debug": {
     "invincible": false,
-    "showHitboxes": false,
-    "unlockAllLevels": false,
-    "showEntityCount": false
+    "unlockAllLevels": false
   },
   "rendering": {
     "playerSmallWidth": 16,
