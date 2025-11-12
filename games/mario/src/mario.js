@@ -4104,6 +4104,8 @@ async function createMarioGame(settings) {
         game.levelsCompleted++;
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
+            gameWon = true; // Set global gameWon flag
+            showQuestion(); // Trigger question system like other games
         } else {
             // Progress to next level while preserving Mario's state
             game.currentLevel = game.levelsCompleted + 1;

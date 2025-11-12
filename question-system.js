@@ -131,10 +131,8 @@ let questionSystem = {
             modal.remove();
         }
         
-        // Trigger next level progression
-        if (typeof proceedToNextLevel === 'function') {
-            proceedToNextLevel();
-        }
+        // Don't proceed to next level yet - wait for answer prompt
+        // The progression will happen when the answer is correctly provided
     },
     
     closeAnswerModal(success, callback) {
@@ -142,6 +140,12 @@ let questionSystem = {
         if (modal) {
             modal.remove();
         }
+        
+        if (success && typeof proceedToNextLevel === 'function') {
+            // Only proceed to next level if answer was correct
+            proceedToNextLevel();
+        }
+        
         if (typeof callback === 'function') {
             callback(success);
         }
