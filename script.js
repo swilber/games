@@ -6,6 +6,194 @@ let levels = [];
 let config = {};
 let gameConfigs = {};
 
+// Configuration Manager
+class ConfigManager {
+    constructor() {
+        this.configs = {};
+        this.defaults = {};
+    }
+    
+    async loadConfig(gameType) {
+        // Load default config from JSON file
+        if (!this.defaults[gameType]) {
+            try {
+                const response = await fetch(`config/games/${gameType}.json`);
+                this.defaults[gameType] = await response.json();
+            } catch (error) {
+                console.warn(`No config file found for ${gameType}, using empty config`);
+                this.defaults[gameType] = {};
+            }
+        }
+        
+        // Load from localStorage and merge with defaults
+        const storageKey = `config_${gameType}`;
+        const savedConfig = localStorage.getItem(storageKey);
+        const userConfig = savedConfig ? JSON.parse(savedConfig) : {};
+        
+        this.configs[gameType] = this.deepMerge(this.defaults[gameType], userConfig);
+        return this.configs[gameType];
+    }
+    
+    saveConfig(gameType, config) {
+        this.configs[gameType] = config;
+        localStorage.setItem(`config_${gameType}`, JSON.stringify(config));
+    }
+    
+    resetConfig(gameType) {
+        this.configs[gameType] = JSON.parse(JSON.stringify(this.defaults[gameType]));
+        localStorage.removeItem(`config_${gameType}`);
+        return this.configs[gameType];
+    }
+    
+    getConfig(gameType) {
+        return this.configs[gameType] || {};
+    }
+    
+    deepMerge(target, source) {
+        const result = JSON.parse(JSON.stringify(target));
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(result[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+        return result;
+    }
+}
+
+const configManager = new ConfigManager();
+
+let currentConfigTab = 'mario';
+let currentGameConfig = {};
+
+// Configuration Modal Functions
+async function openConfigModal() {
+    document.getElementById('config-modal').classList.remove('hidden');
+    await showConfigTab('mario');
+}
+
+function closeConfigModal() {
+    document.getElementById('config-modal').classList.add('hidden');
+}
+
+async function showConfigTab(gameType) {
+    currentConfigTab = gameType;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[onclick="showConfigTab('${gameType}')"]`).classList.add('active');
+    
+    // Load and display config
+    currentGameConfig = await configManager.loadConfig(gameType);
+    generateConfigForm(gameType, currentGameConfig);
+}
+
+function generateConfigForm(gameType, config) {
+    const content = document.getElementById('config-content');
+    content.innerHTML = '';
+    
+    if (gameType === 'mario') {
+        generateMarioConfigForm(config, content);
+    }
+    // Add other games later
+}
+
+function generateMarioConfigForm(config, container) {
+    const sections = [
+        { key: 'player', title: 'Player Settings' },
+        { key: 'enemies', title: 'Enemy Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'powerups', title: 'Power-up Settings' },
+        { key: 'projectiles', title: 'Projectile Settings' },
+        { key: 'debug', title: 'Debug Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function createConfigField(section, key, value) {
+    const field = document.createElement('div');
+    field.className = 'config-field';
+    
+    const label = document.createElement('label');
+    label.textContent = formatLabel(key);
+    
+    const input = createInputForValue(section, key, value);
+    
+    field.appendChild(label);
+    field.appendChild(input);
+    
+    return field;
+}
+
+function createInputForValue(section, key, value) {
+    const input = document.createElement('input');
+    const inputId = `config_${section}_${key}`;
+    input.id = inputId;
+    
+    if (typeof value === 'boolean') {
+        input.type = 'checkbox';
+        input.checked = value;
+        input.addEventListener('change', () => updateConfigValue(section, key, input.checked));
+    } else if (typeof value === 'number') {
+        input.type = 'number';
+        input.value = value;
+        input.step = value % 1 === 0 ? '1' : '0.1';
+        input.addEventListener('input', () => updateConfigValue(section, key, parseFloat(input.value)));
+    } else {
+        input.type = 'text';
+        input.value = value;
+        input.addEventListener('input', () => updateConfigValue(section, key, input.value));
+    }
+    
+    return input;
+}
+
+function updateConfigValue(section, key, value) {
+    if (!currentGameConfig[section]) {
+        currentGameConfig[section] = {};
+    }
+    currentGameConfig[section][key] = value;
+}
+
+function formatLabel(key) {
+    return key.replace(/([A-Z])/g, ' $1')
+              .replace(/^./, str => str.toUpperCase())
+              .replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+async function resetCurrentConfig() {
+    currentGameConfig = configManager.resetConfig(currentConfigTab);
+    generateConfigForm(currentConfigTab, currentGameConfig);
+}
+
+function saveCurrentConfig() {
+    configManager.saveConfig(currentConfigTab, currentGameConfig);
+    alert('Configuration saved!');
+}
+
+// Show debug controls if debug mode is enabled
+function initializeDebugMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === 'true') {
+        document.getElementById('debug-controls').classList.remove('hidden');
+    }
+}
+
 async function loadGameConfig(gameType) {
     if (!gameConfigs[gameType]) {
         try {
@@ -389,3 +577,6 @@ function restartGame() {
 // Start with level selection
 document.getElementById('level-unlock-modal').classList.add('hidden');
 document.getElementById('question-modal').classList.add('hidden');
+
+// Initialize debug mode if enabled
+initializeDebugMode();

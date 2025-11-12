@@ -11,6 +11,9 @@
         <div id="level-select" class="screen">
             <h2>Select Level</h2>
             <div id="level-buttons"></div>
+            <div id="debug-controls" class="hidden">
+                <button id="debug-config-btn" onclick="openConfigModal()">⚙️ Configuration</button>
+            </div>
         </div>
         
         <div id="game-screen" class="screen hidden">
@@ -22,6 +25,28 @@
             
             <div id="game-area">
                 <!-- Game content will be dynamically inserted here -->
+            </div>
+        </div>
+        
+        <div id="config-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Game Configuration</h3>
+                    <button class="close-btn" onclick="closeConfigModal()">&times;</button>
+                </div>
+                <div class="config-tabs">
+                    <button class="tab-btn active" onclick="showConfigTab('mario')">Mario</button>
+                    <button class="tab-btn" onclick="showConfigTab('snake')">Snake</button>
+                    <button class="tab-btn" onclick="showConfigTab('memory')">Memory</button>
+                </div>
+                <div id="config-content">
+                    <!-- Configuration forms will be generated here -->
+                </div>
+                <div class="modal-footer">
+                    <button onclick="resetCurrentConfig()">Reset to Defaults</button>
+                    <button onclick="saveCurrentConfig()">Save Changes</button>
+                    <button onclick="closeConfigModal()">Close</button>
+                </div>
             </div>
         </div>
         

@@ -1,0 +1,52 @@
+{
+  "player": {
+    "jumpHeight": 12,
+    "moveSpeed": 4,
+    "lives": 3,
+    "invincibilityTime": 120
+  },
+  "enemies": {
+    "goombaSpeed": 1,
+    "koopaSpeed": 0.5,
+    "parakoopaSpeed": 1,
+    "firebarRotationSpeed": 1.5,
+    "bowserFlameSpeed": 1.5,
+    "bowserFlameDistance": 1000,
+    "bowserFireballCooldown": 180,
+    "bowserJumpCooldown": 120,
+    "bowserMoveCooldown": 180
+  },
+  "physics": {
+    "gravity": 0.5,
+    "terminalVelocity": 15
+  },
+  "powerups": {
+    "mushroomSpeed": 1,
+    "fireflowerSpeed": 0,
+    "starSpeed": 1,
+    "coinValue": 200,
+    "mushroomValue": 1000,
+    "fireflowerValue": 1000,
+    "starValue": 1000
+  },
+  "projectiles": {
+    "fireballSpeed": 4,
+    "fireballGravity": 0.5,
+    "fireballBounces": 8
+  },
+  "debug": {
+    "invincible": false,
+    "showHitboxes": false,
+    "unlockAllLevels": false,
+    "showEntityCount": false
+  },
+  "rendering": {
+    "playerSmallWidth": 16,
+    "playerSmallHeight": 16,
+    "playerBigWidth": 16,
+    "playerBigHeight": 32,
+    "firebarFireballSize": 8,
+    "firebarFireballSpacing": 12,
+    "firebarFireballCount": 6
+  }
+}

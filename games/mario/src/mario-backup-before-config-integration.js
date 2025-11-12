@@ -249,13 +249,13 @@ class PhysicsSystem {
                 const projectile = entity.get('projectile');
                 // Skip gravity for Bowser flames
                 if (projectile.type !== 'bowser_flame') {
-                    physics.vy += this.game.config.physics.gravity;
+                    physics.vy += 0.5;
                 }
                 transform.x += physics.vx;
                 transform.y += physics.vy;
                 
                 // Terminal velocity
-                if (physics.vy > this.game.config.physics.terminalVelocity) physics.vy = this.game.config.physics.terminalVelocity;
+                if (physics.vy > 15) physics.vy = 15;
                 return;
             }
             
@@ -287,19 +287,19 @@ class PhysicsSystem {
                     if (input) {
                         // Handle jumping - give Mario upward velocity and let normal physics take over
                         if (input.jump && physics.onGround) {
-                            physics.vy = -this.game.config.player.jumpHeight;
+                            physics.vy = -12;
                             physics.onGround = false;
                             // Apply gravity and normal physics for jumping
-                            physics.vy += this.game.config.physics.gravity;
+                            physics.vy += 0.5;
                             transform.x += physics.vx;
                             transform.y += physics.vy;
-                            if (physics.vy > this.game.config.physics.terminalVelocity) physics.vy = this.game.config.physics.terminalVelocity;
+                            if (physics.vy > 15) physics.vy = 15;
                             return; // Use normal physics when jumping
                         }
                         
                         if (input.left) physics.vx -= 0.5;
                         if (input.right) physics.vx += 0.5;
-                        physics.vx = Math.max(-this.game.config.player.moveSpeed, Math.min(this.game.config.player.moveSpeed, physics.vx)); // Clamp speed
+                        physics.vx = Math.max(-4, Math.min(4, physics.vx)); // Clamp speed
                     }
                     
                     if (ridingPlatform.comp.type === 'horizontal_moving') {
@@ -320,7 +320,7 @@ class PhysicsSystem {
                 
                 // Normal physics when not on moving platform
                 // Apply gravity
-                physics.vy += this.game.config.physics.gravity;
+                physics.vy += 0.5;
                 
                 // Store previous position for swept collision
                 const prevX = transform.x;
@@ -379,12 +379,12 @@ class PhysicsSystem {
                 });
                 
                 // Terminal velocity
-                if (physics.vy > this.game.config.physics.terminalVelocity) physics.vy = this.game.config.physics.terminalVelocity;
+                if (physics.vy > 15) physics.vy = 15;
                 return;
             }
             
             // Apply gravity
-            physics.vy += this.game.config.physics.gravity;
+            physics.vy += 0.5;
             
             // Apply velocity
             transform.x += physics.vx;
@@ -555,14 +555,7 @@ class AISystem {
             
             // Ensure entity always has movement velocity
             if (physics.vx === 0) {
-                // Use config-based speed for different enemy types
-                if (entity.id.startsWith('goomba')) {
-                    physics.vx = -this.game.config.enemies.goombaSpeed;
-                } else if (entity.id.startsWith('koopa')) {
-                    physics.vx = -this.game.config.enemies.koopaSpeed;
-                } else {
-                    physics.vx = ai.direction; // Fallback for other enemies
-                }
+                physics.vx = ai.direction;
             }
             
             // Check for pits ahead (only for patrolling enemies on ground, not falling or shells)
@@ -587,13 +580,7 @@ class AISystem {
                 // Turn around if no ground ahead (pit detection for patrolling enemies)
                 if (!foundGround) {
                     ai.direction *= -1;
-                    if (entity.id.startsWith('goomba')) {
-                        physics.vx = ai.direction > 0 ? this.game.config.enemies.goombaSpeed : -this.game.config.enemies.goombaSpeed;
-                    } else if (entity.id.startsWith('koopa')) {
-                        physics.vx = ai.direction > 0 ? this.game.config.enemies.koopaSpeed : -this.game.config.enemies.koopaSpeed;
-                    } else {
-                        physics.vx = ai.direction;
-                    }
+                    physics.vx = ai.direction;
                 }
             }
             
@@ -606,14 +593,8 @@ class AISystem {
                 physics.vx = -1;
             }
             
-            // Ensure velocity matches direction with proper speed
-            if (entity.id.startsWith('goomba')) {
-                physics.vx = ai.direction > 0 ? this.game.config.enemies.goombaSpeed : -this.game.config.enemies.goombaSpeed;
-            } else if (entity.id.startsWith('koopa')) {
-                physics.vx = ai.direction > 0 ? this.game.config.enemies.koopaSpeed : -this.game.config.enemies.koopaSpeed;
-            } else {
-                physics.vx = ai.direction; // Fallback for other enemies
-            }
+            // Ensure velocity matches direction
+            physics.vx = ai.direction;
         });
     }
 }
@@ -758,17 +739,15 @@ class PowerUpSystem {
                 if (sprite.type === 'mushroom') {
                     if (playerComp.powerState === 'small') {
                         playerComp.powerState = 'big';
-                        playerTransform.width = this.game.config.rendering.playerBigWidth;
-                        playerTransform.height = this.game.config.rendering.playerBigHeight;
-                        playerTransform.y -= (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                        playerTransform.width = 16;
+                        playerTransform.height = 32;
+                        playerTransform.y -= 16;
                     }
                 } else if (sprite.type === 'fireflower') {
                     playerComp.powerState = 'fire';
-                    playerTransform.width = this.game.config.rendering.playerBigWidth;
-                    playerTransform.height = this.game.config.rendering.playerBigHeight;
-                    if (playerTransform.height === this.game.config.rendering.playerSmallHeight) {
-                        playerTransform.y -= (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
-                    }
+                    playerTransform.width = 16;
+                    playerTransform.height = 32;
+                    if (playerTransform.height === 16) playerTransform.y -= 16;
                 }
                 
                 playerComp.score += 1000;
@@ -849,9 +828,9 @@ class ProjectileSystem {
                         if (!playerComp.invincible) {
                             if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                                 playerComp.powerState = 'small';
-                                playerTransform.width = this.game.config.rendering.playerSmallWidth;
-                                playerTransform.height = this.game.config.rendering.playerSmallHeight;
-                                playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                                playerTransform.width = 16;
+                                playerTransform.height = 16;
+                                playerTransform.y += 16;
                                 playerComp.invincible = true;
                                 playerComp.invincibleTimer = 120;
                             } else {
@@ -985,10 +964,10 @@ class PlayerInputSystem {
         
         // Handle movement
         if (input.left) {
-            physics.vx = Math.max(physics.vx - 0.5, -this.game.config.player.moveSpeed);
+            physics.vx = Math.max(physics.vx - 0.5, -5);
             playerComp.facingRight = false;
         } else if (input.right) {
-            physics.vx = Math.min(physics.vx + 0.5, this.game.config.player.moveSpeed);
+            physics.vx = Math.min(physics.vx + 0.5, 5);
             playerComp.facingRight = true;
         } else {
             physics.vx *= 0.8;
@@ -996,7 +975,7 @@ class PlayerInputSystem {
         
         // Handle jumping
         if (input.jump && physics.onGround) {
-            physics.vy = -this.game.config.player.jumpHeight;
+            physics.vy = -12;
             physics.onGround = false;
         }
         
@@ -1067,9 +1046,9 @@ class CollisionSystem {
                     // Take damage
                     if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                         playerComp.powerState = 'small';
-                        playerTransform.width = this.game.config.rendering.playerSmallWidth;
-                        playerTransform.height = this.game.config.rendering.playerSmallHeight;
-                        playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                        playerTransform.width = 16;
+                        playerTransform.height = 16;
+                        playerTransform.y += 16;
                     } else {
                         playerComp.lives--;
                         if (playerComp.lives <= 0) {
@@ -1228,7 +1207,7 @@ class ImprovedCollisionSystem {
                         const ai = enemy.get('ai');
                         ai.type = 'patrol'; // Change to regular koopa AI
                         // Add physics component for walking behavior
-                        const newPhysics = new Physics(-this.game.config.enemies.koopaSpeed, 0);
+                        const newPhysics = new Physics(-1, 0);
                         newPhysics.onGround = false; // Allow it to fall initially
                         enemy.add('physics', newPhysics);
                         enemySprite.state = 'walking';
@@ -1241,9 +1220,9 @@ class ImprovedCollisionSystem {
                         const playerComp = playerEntity.get('player');
                         if (!this.game.debugMode && playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
-                            playerTransform.width = this.game.config.rendering.playerSmallWidth;
-                            playerTransform.height = this.game.config.rendering.playerSmallHeight;
-                            playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
                             playerComp.invincible = true;
                             playerComp.invincibleTimer = 120;
                         } else if (!this.game.debugMode) {
@@ -1280,12 +1259,12 @@ class ImprovedCollisionSystem {
                 } else {
                     // Side collision - damage player (only if not invincible and not in debug mode)
                     const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible && !this.game.debugMode && !this.game.config.debug.invincible) {
+                    if (!playerComp.invincible && !this.game.debugMode) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
-                            playerTransform.width = this.game.config.rendering.playerSmallWidth;
-                            playerTransform.height = this.game.config.rendering.playerSmallHeight;
-                            playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
                             playerComp.invincible = true;
                             playerComp.invincibleTimer = 120;
                         } else {
@@ -1331,9 +1310,9 @@ class ImprovedCollisionSystem {
                     if (!playerComp.invincible && !this.game.debugMode) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
-                            playerTransform.width = this.game.config.rendering.playerSmallWidth;
-                            playerTransform.height = this.game.config.rendering.playerSmallHeight;
-                            playerTransform.y += (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
+                            playerTransform.width = 16;
+                            playerTransform.height = 16;
+                            playerTransform.y += 16;
                             playerComp.invincible = true;
                             playerComp.invincibleTimer = 120;
                         } else {
@@ -2175,47 +2154,6 @@ const LevelMapper = {
 async function createMarioGame(settings) {
     const gameArea = document.getElementById('game-area');
     
-    // Load Mario configuration using ConfigManager
-    let marioConfig = {};
-    if (typeof configManager !== 'undefined') {
-        marioConfig = await configManager.loadConfig('mario');
-        console.log('Mario config loaded via ConfigManager:', marioConfig.enemies.goombaSpeed);
-    } else {
-        console.log('ConfigManager not available, using fallback');
-        // Fallback to manual loading if ConfigManager not available
-        try {
-            const response = await fetch('config/games/mario.json');
-            const defaultConfig = await response.json();
-            
-            // Load from localStorage and merge with defaults
-            const savedConfig = localStorage.getItem('config_mario');
-            const userConfig = savedConfig ? JSON.parse(savedConfig) : {};
-            marioConfig = deepMerge(defaultConfig, userConfig);
-        } catch (error) {
-            console.warn('Could not load Mario config, using defaults');
-            marioConfig = {
-                player: { jumpHeight: 12, moveSpeed: 4, lives: 3, invincibilityTime: 120 },
-                enemies: { goombaSpeed: 1, koopaSpeed: 0.5, firebarRotationSpeed: 1.5 },
-                physics: { gravity: 0.5, terminalVelocity: 15 },
-                debug: { invincible: false },
-                rendering: { playerSmallWidth: 16, playerSmallHeight: 16, playerBigWidth: 16, playerBigHeight: 32 }
-            };
-        }
-    }
-    
-    // Helper function for deep merge
-    function deepMerge(target, source) {
-        const result = JSON.parse(JSON.stringify(target));
-        for (const key in source) {
-            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                result[key] = deepMerge(result[key] || {}, source[key]);
-            } else {
-                result[key] = source[key];
-            }
-        }
-        return result;
-    }
-    
     // Debug mode - show level selection menu
     if (settings && settings.debug) {
         const levelSelector = document.createElement('div');
@@ -2267,9 +2205,9 @@ async function createMarioGame(settings) {
     
     let game = {
         player: { 
-            x: 50, y: 300, width: marioConfig.rendering.playerSmallWidth, height: marioConfig.rendering.playerSmallHeight, 
+            x: 50, y: 300, width: 16, height: 16, 
             vx: 0, vy: 0, onGround: false, 
-            lives: marioConfig.player.lives, score: 0, powerState: 'small',
+            lives: 3, score: 0, powerState: 'small',
             facingRight: true, shootCooldown: 0
         },
         camera: { x: 0 },
@@ -2281,10 +2219,9 @@ async function createMarioGame(settings) {
         won: false,
         gameStarted: false,
         keys: {},
-        debugMode: (settings && settings.debug) || marioConfig.debug.invincible, // Add debug flag
+        debugMode: settings && settings.debug, // Add debug flag
         currentTheme: 'overworld',
         frameCount: 0,
-        config: marioConfig, // Add config to game object
         
         // Entity System - Phase 1
         entityManager: new EntityManager(),
@@ -3414,16 +3351,15 @@ async function createMarioGame(settings) {
                         // Create entity for goomba
                         const goombaEntity = game.entityManager.create(`goomba${goombaCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 300, 20, 18))
-                            .add('physics', new Physics(-game.config.enemies.goombaSpeed, 0))
+                            .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#8B4513'))
                             .add('ai', new AI('patrol'));
-                        console.log(`Goomba created with speed: ${-game.config.enemies.goombaSpeed}`);
                     } else if (enemy.type === 'koopa') {
                         koopaCount++;
                         // Create entity for koopa
                         const koopaEntity = game.entityManager.create(`koopa${koopaCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 300, 20, 24))
-                            .add('physics', new Physics(-game.config.enemies.koopaSpeed, 0))
+                            .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
                     } else if (enemy.type === 'parakoopa') {
@@ -3446,7 +3382,7 @@ async function createMarioGame(settings) {
                         // Convert other enemy types to entities too
                         const enemyEntity = game.entityManager.create(`${enemy.type}${enemyCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 332, 20, 20))
-                            .add('physics', new Physics(-game.config.enemies.goombaSpeed, 0))
+                            .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#FF6600'))
                             .add('ai', new AI('patrol'));
                     }
@@ -3878,7 +3814,7 @@ async function createMarioGame(settings) {
                         // Create entity for goomba
                         const goombaEntity = game.entityManager.create(`goomba${goombaCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 18))
-                            .add('physics', new Physics(-game.config.enemies.goombaSpeed, 0))
+                            .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#8B4513'))
                             .add('ai', new AI('patrol'));
                     } else if (enemy.type === 'koopa') {
@@ -3886,7 +3822,7 @@ async function createMarioGame(settings) {
                         // Create entity for koopa
                         const koopaEntity = game.entityManager.create(`koopa${koopaCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 24))
-                            .add('physics', new Physics(-game.config.enemies.koopaSpeed, 0))
+                            .add('physics', new Physics(-0.5, 0))
                             .add('sprite', new Sprite('#00AA00'))
                             .add('ai', new AI('patrol'));
                     } else if (enemy.type === 'parakoopa') {
@@ -3909,7 +3845,7 @@ async function createMarioGame(settings) {
                         // Convert other enemy types to entities too
                         const enemyEntity = game.entityManager.create(`${enemy.type}${enemyCount}`)
                             .add('transform', new Transform(enemy.x, enemy.y || 334, 20, 20))
-                            .add('physics', new Physics(-game.config.enemies.goombaSpeed, 0))
+                            .add('physics', new Physics(-1, 0))
                             .add('sprite', new Sprite('#FF6600'))
                             .add('ai', new AI('patrol'));
                     }
@@ -4028,13 +3964,13 @@ async function createMarioGame(settings) {
                 // Update transform size based on power state
                 const transform = playerEntity.get('transform');
                 if (marioState.powerState === 'small') {
-                    transform.width = game.config.rendering.playerSmallWidth;
-                    transform.height = game.config.rendering.playerSmallHeight;
+                    transform.width = 16;
+                    transform.height = 16;
                 } else {
-                    transform.width = game.config.rendering.playerBigWidth;
-                    transform.height = game.config.rendering.playerBigHeight;
+                    transform.width = 16;
+                    transform.height = 32;
                     // Adjust Y position so big Mario doesn't spawn in ground
-                    transform.y -= (game.config.rendering.playerBigHeight - game.config.rendering.playerSmallHeight);
+                    transform.y -= 16;
                 }
             }
         }
