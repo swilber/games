@@ -1128,9 +1128,9 @@ class ImprovedCollisionSystem {
                     playerComp.invincible = true;
                     playerComp.invincibleTimer = 10;
                 } else {
-                    // Side collision - damage player (only if not invincible)
+                    // Side collision - damage player (only if not invincible and not in debug mode)
                     const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible) {
+                    if (!playerComp.invincible && !this.game.debugMode) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = 16;
@@ -1176,9 +1176,9 @@ class ImprovedCollisionSystem {
                 };
                 
                 if (this.isColliding(playerTransform, fireballRect)) {
-                    // Firebar damages player (only if not invincible)
+                    // Firebar damages player (only if not invincible and not in debug mode)
                     const playerComp = playerEntity.get('player');
-                    if (!playerComp.invincible) {
+                    if (!playerComp.invincible && !this.game.debugMode) {
                         if (playerComp.powerState === 'big' || playerComp.powerState === 'fire') {
                             playerComp.powerState = 'small';
                             playerTransform.width = 16;
@@ -1894,6 +1894,7 @@ async function createMarioGame(settings) {
         won: false,
         gameStarted: false,
         keys: {},
+        debugMode: settings && settings.debug, // Add debug flag
         currentTheme: 'overworld',
         frameCount: 0,
         
@@ -2821,7 +2822,15 @@ async function createMarioGame(settings) {
                     break;
                 }
             }
-            return { x, y: groundY - (10 * tileSize), width: 35, height: 10 * tileSize };
+            
+            // Create different level end objects based on theme (will be determined at runtime)
+            return { 
+                x, 
+                y: groundY - 32, // 32 pixels tall for toadstool
+                width: 20, 
+                height: 32,
+                type: 'level_end' // Generic type, rendering will depend on theme
+            };
         },
         
         spawn: (def, x, y, tileSize, lines) => {
@@ -3664,6 +3673,8 @@ async function createMarioGame(settings) {
         const playerTransform = playerEntity.get('transform');
         
         if (game.flag && playerTransform.x + playerTransform.width > game.flag.x) {
+            // Start level end animation (placeholder for now)
+            game.levelEndTriggered = true;
             await nextLevel();
         }
     }
@@ -4210,13 +4221,37 @@ async function createMarioGame(settings) {
             }
         });
         
-        // Flag
+        // Flag/Level End Object
         if (game.flag) {
-            const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
-            ctx.fillStyle = flagPoleColor;
-            ctx.fillRect(game.flag.x, game.flag.y, 5, game.flag.height);
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(game.flag.x + 5, game.flag.y, 30, 20);
+            if (game.currentTheme === 'castle') {
+                // Render toadstool for castle theme
+                const toadstool = game.flag;
+                
+                // Toadstool stem (beige)
+                ctx.fillStyle = '#F5DEB3';
+                ctx.fillRect(toadstool.x + 6, toadstool.y + 16, 8, 16);
+                
+                // Toadstool cap (red with white spots)
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(toadstool.x, toadstool.y, 20, 16);
+                
+                // White spots on cap
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(toadstool.x + 3, toadstool.y + 3, 3, 3);
+                ctx.fillRect(toadstool.x + 14, toadstool.y + 3, 3, 3);
+                ctx.fillRect(toadstool.x + 8, toadstool.y + 8, 3, 3);
+                
+                // Cap highlight
+                ctx.fillStyle = '#FF6666';
+                ctx.fillRect(toadstool.x + 1, toadstool.y + 1, 18, 2);
+            } else {
+                // Render flag pole for other themes
+                const flagPoleColor = game.currentTheme === 'underground' ? '#FFFFFF' : '#000000';
+                ctx.fillStyle = flagPoleColor;
+                ctx.fillRect(game.flag.x, game.flag.y, 5, game.flag.height);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(game.flag.x + 5, game.flag.y, 30, 20);
+            }
         }
         
         ctx.restore();
