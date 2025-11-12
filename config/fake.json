@@ -1,0 +1,21 @@
+{
+  "name": "Fake Game",
+  "description": "Move the blue square to the gold square",
+  "difficulty": {
+    "speed": {
+      "base": 5,
+      "multiplier": 1,
+      "min": 3,
+      "max": 10,
+      "formula": "base + difficulty"
+    },
+    "playerSize": {
+      "value": 20,
+      "static": true
+    },
+    "goalSize": {
+      "value": 30,
+      "static": true
+    }
+  }
+}

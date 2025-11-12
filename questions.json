@@ -87,6 +87,16 @@
       "answer": "abc",
       "unlockQuestion": "What does Donkey Kong throw?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 10,
+      "title": "Level 10: Fake Game",
+      "description": "Move the blue square to the gold square",
+      "type": "fake",
+      "question": "What color is the goal square?",
+      "answer": "gold",
+      "unlockQuestion": "What do you eat in Pac-Man?",
+      "unlockAnswer": "abc"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 9,
+    "totalLevels": 10,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -61,6 +61,12 @@
       "order": 9,
       "enabled": true,
       "type": "pacman"
+    },
+    {
+      "id": 10,
+      "order": 10,
+      "enabled": true,
+      "type": "fake"
     }
   ]
 }

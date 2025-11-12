@@ -816,6 +816,8 @@ function createDonkeyKongGame(settings) {
         }
     }
     
+    let gameRunning = true;
+    
     function gameLoop() {
         updatePlayer();
         updateDonkeyKong();
@@ -824,7 +826,7 @@ function createDonkeyKongGame(settings) {
         checkWin();
         render();
         
-        if (!game.gameOver && !game.won) {
+        if (!game.gameOver && !game.won && gameRunning) {
             requestAnimationFrame(gameLoop);
         }
     }
@@ -862,7 +864,9 @@ function createDonkeyKongGame(settings) {
             settings.barrelSpeed = Math.max(0.8, 0.5 + (5 * 0.1)); // Use difficulty 5 as default
             settings.barrelFrequency = 150; // Reset to default value
             
-            gameLoop();
+            if (gameRunning) {
+                gameLoop();
+            }
         }
         
         e.preventDefault();
@@ -880,6 +884,10 @@ function createDonkeyKongGame(settings) {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
     
+    // Store handler references for cleanup
+    const keyDownHandler = handleKeyDown;
+    const keyUpHandler = handleKeyUp;
+    
     const instructions = document.createElement('p');
     instructions.textContent = 'Classic Donkey Kong - climb to save the princess while avoiding barrels!';
     instructions.style.textAlign = 'center';
@@ -889,4 +897,13 @@ function createDonkeyKongGame(settings) {
     
     generateLevel();
     gameLoop();
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            gameRunning = false;
+            document.removeEventListener('keydown', keyDownHandler);
+            document.removeEventListener('keyup', keyUpHandler);
+        }
+    };
 }

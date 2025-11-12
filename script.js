@@ -367,6 +367,10 @@ function getFallbackDifficulty(gameType, difficulty) {
                 ladderCount: Math.max(3, 2 + Math.floor(difficulty / 2)),
                 levelCount: Math.max(1, Math.floor(difficulty / 2))
             };
+        case 'fake':
+            return {
+                speed: 5 + difficulty
+            };
         case 'pacman':
             return {
                 ghostSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
@@ -565,6 +569,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createPacmanGame(settings, gameCallbacks);
         case 'snake':
             return await createSnakeGame(settings, gameCallbacks);
+        case 'fake':
+            return await createFakeGame(settings, gameCallbacks);
         default:
             // Fallback for games without callback support yet
             return await createGameLegacy(gameType, settings);
@@ -612,11 +618,12 @@ async function initializeLevel() {
         case 'maze3d':
         case 'donkeykong':
             // Legacy games without callback support
-            await createGameLegacy(level.type, await getDifficulty(level.type));
+            currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
             break;
         case 'mario':
         case 'pacman':
         case 'snake':
+        case 'fake':
             // Modern games with callback support
             currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
             break;
