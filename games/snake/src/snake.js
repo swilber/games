@@ -80,8 +80,8 @@ async function createSnakeGame(settings, callbacks = null) {
         snake.unshift(head);
         
         if(head.x === food.x && head.y === food.y) {
-            score += snakeConfig.scoring.foodValue;
-            if(score >= snakeConfig.gameplay.requiredScore) {
+            score += snakeConfig.scoring?.foodValue || 1;
+            if(score >= (snakeConfig.gameplay?.requiredScore || 5)) {
                 // Use callback if provided, otherwise fallback to global functions
                 if (callbacks?.onGameComplete) {
                     const currentLevelData = levels?.[currentLevel];

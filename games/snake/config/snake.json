@@ -24,7 +24,8 @@
   "gameplay": {
     "gameSpeed": 150,
     "boardSize": 400,
-    "requiredScore": 5
+    "requiredScore": 5,
+    "gridSize": 20
   },
   "snake": {
     "startLength": 3,
@@ -33,7 +34,7 @@
     "segmentSize": 20
   },
   "scoring": {
-    "foodValue": 10,
+    "foodValue": 1,
     "speedBonus": 1
   }
 }
