@@ -64,18 +64,20 @@ async function createSnakeGame(settings, callbacks = null) {
         ctx.fillRect(food.x, food.y, gridSize, gridSize);
         
         ctx.fillStyle = '#fff';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Level: ${currentLevel}`, 10, 30);
-        ctx.fillText(`Score: ${score}/${getLevelRequiredScore()}`, 10, 60);
-        ctx.fillText(`Lives: ${lives}`, 10, 90);
+        ctx.font = '16px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Level: ${currentLevel}`, 10, 25);
+        ctx.fillText(`Score: ${score}/${getLevelRequiredScore()}`, 10, 45);
+        ctx.fillText(`Lives: ${lives}`, 10, 65);
         
         if (!gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = 'white';
-            ctx.font = '24px Arial';
+            ctx.font = '24px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('Press arrow key to begin', canvas.width/2, canvas.height/2);
+            ctx.font = '18px "Courier New", monospace';
             ctx.fillText(`Level ${currentLevel} - Get ${getLevelRequiredScore()} points`, canvas.width/2, canvas.height/2 + 40);
         }
     }
