@@ -28,7 +28,8 @@
     "gridSize": 20,
     "totalLevels": 4,
     "speedIncrease": 20,
-    "scoreIncrease": 10
+    "scoreIncrease": 10,
+    "lives": 3
   },
   "snake": {
     "startLength": 3,

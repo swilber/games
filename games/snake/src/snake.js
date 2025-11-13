@@ -34,6 +34,7 @@ async function createSnakeGame(settings, callbacks = null) {
     let dx = 0, dy = 0;
     let score = 0;
     let currentLevel = 1;
+    let lives = snakeConfig.gameplay?.lives || 3;
     let gameStarted = false;
     let gameInterval;
     
@@ -66,6 +67,7 @@ async function createSnakeGame(settings, callbacks = null) {
         ctx.font = '20px Arial';
         ctx.fillText(`Level: ${currentLevel}`, 10, 30);
         ctx.fillText(`Score: ${score}/${getLevelRequiredScore()}`, 10, 60);
+        ctx.fillText(`Lives: ${lives}`, 10, 90);
         
         if (!gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -84,12 +86,32 @@ async function createSnakeGame(settings, callbacks = null) {
         const head = {x: snake[0].x + dx, y: snake[0].y + dy};
         
         if(head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-            resetGame();
+            lives--;
+            if(lives <= 0) {
+                resetGame();
+            } else {
+                // Reset current level but keep progress
+                snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
+                dx = 0; dy = 0;
+                score = 0;
+                gameStarted = false;
+                generateFood();
+            }
             return;
         }
         
         if(snake.some(segment => segment.x === head.x && segment.y === head.y)) {
-            resetGame();
+            lives--;
+            if(lives <= 0) {
+                resetGame();
+            } else {
+                // Reset current level but keep progress
+                snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
+                dx = 0; dy = 0;
+                score = 0;
+                gameStarted = false;
+                generateFood();
+            }
             return;
         }
         
@@ -146,6 +168,7 @@ async function createSnakeGame(settings, callbacks = null) {
         dx = 0; dy = 0;
         score = 0;
         currentLevel = 1;
+        lives = snakeConfig.gameplay?.lives || 3;
         gameStarted = false;
         
         // Reset to level 1 speed
