@@ -56,6 +56,10 @@ async function createFroggerGame(settings, callbacks = null) {
         return Math.floor((canvas.height - y) / laneHeight);
     }
     
+    // Game state
+    let gameRunning = false;
+    let gameInterval = null;
+    
     let game = {
         frog: { x: canvas.width / 2, y: canvas.height - laneHeight / 2, size: 18 },
         cars: [],
@@ -329,11 +333,10 @@ async function createFroggerGame(settings, callbacks = null) {
     }
     
     function gameLoop() {
+        if (!gameRunning) return;
+        
         updateObstacles();
         draw();
-        if (!game.gameOver && !game.won) {
-            requestAnimationFrame(gameLoop);
-        }
     }
     
     function handleKeyPress(e) {
@@ -354,7 +357,10 @@ async function createFroggerGame(settings, callbacks = null) {
                 game.gameOver = false;
                 game.gameStarted = false;
                 // Keep level progression and lane types
-                gameLoop();
+                if (!gameRunning) {
+                    gameRunning = true;
+                    gameInterval = setInterval(gameLoop, 16);
+                }
             }
             return;
         }
@@ -394,12 +400,18 @@ async function createFroggerGame(settings, callbacks = null) {
     gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
-    gameLoop();
+    // Start game loop
+    gameRunning = true;
+    gameInterval = setInterval(gameLoop, 16); // ~60fps
     
     // Return cleanup function
     return {
         cleanup: () => {
-            game.gameRunning = false;
+            gameRunning = false;
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
             document.removeEventListener('keydown', keyPressHandler);
         }
     };

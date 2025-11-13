@@ -4,10 +4,28 @@
   "levelsToWin": 5,
   "carSpeed": 2,
   "carDensity": 0.3,
+  "frogSize": 18,
+  "frogMoveSpeed": 25,
+  "totalLanes": 12,
+  "canvasWidth": 600,
+  "canvasHeight": 600,
   "gameplay": {
     "levelsToWin": 5,
+    "totalLanes": 12,
+    "carSpawnDivisor": 100,
+    "logSpawnDivisor": 40
+  },
+  "physics": {
+    "frogMoveSpeed": 25,
     "carSpeed": 2,
-    "carDensity": 0.3
+    "carDensity": 0.3,
+    "carHeight": 18,
+    "logSpeedMultiplier": 0.6
+  },
+  "visual": {
+    "frogSize": 18,
+    "canvasWidth": 600,
+    "canvasHeight": 600
   },
   "difficulty": {
     "carSpeed": {

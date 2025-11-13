@@ -365,7 +365,8 @@ function generateFlappyConfigForm(config, container) {
 
 function generateFroggerConfigForm(config, container) {
     const sections = [
-        { key: 'gameplay', title: 'Gameplay Settings' }
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' }
     ];
     
     sections.forEach(section => {
