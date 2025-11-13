@@ -115,9 +115,11 @@ function closeConfigModal() {
 async function showConfigTab(gameType) {
     currentConfigTab = gameType;
     
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[onclick="showConfigTab('${gameType}')"]`).classList.add('active');
+    // Update dropdown selection
+    const gameSelect = document.getElementById('game-select');
+    if (gameSelect) {
+        gameSelect.value = gameType;
+    }
     
     // Load and display config
     currentGameConfig = await configManager.loadConfig(gameType);
@@ -142,6 +144,8 @@ function generateConfigForm(gameType, config) {
         generateMemoryConfigForm(config, content);
     } else if (gameType === 'fake') {
         generateFakeConfigForm(config, content);
+    } else if (gameType === 'flappy') {
+        generateFlappyConfigForm(config, content);
     }
     // Add other games later
 }
@@ -316,6 +320,29 @@ function generateFakeConfigForm(config, container) {
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' },
         { key: 'visual', title: 'Visual Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateFlappyConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'pipes', title: 'Pipe Settings' }
     ];
     
     sections.forEach(section => {

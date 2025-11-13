@@ -75,28 +75,31 @@ body {
     height: 30px;
 }
 
-.config-tabs {
-    display: flex;
+.config-selector {
     background: #1a1a2e;
+    padding: 15px 20px;
     border-bottom: 1px solid #444;
 }
 
-.tab-btn {
-    background: none;
-    border: none;
+.config-selector label {
     color: #ccc;
-    padding: 15px 20px;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
+    margin-right: 10px;
+    font-weight: bold;
 }
 
-.tab-btn.active {
-    color: white;
-    border-bottom-color: #4CAF50;
-}
-
-.tab-btn:hover {
+.config-selector select {
     background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 150px;
+}
+
+.config-selector select:focus {
+    outline: none;
+    border-color: #4CAF50;
 }
 
 #config-content {

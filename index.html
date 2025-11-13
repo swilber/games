@@ -34,12 +34,17 @@
                     <h3>Game Configuration</h3>
                     <button class="close-btn" onclick="closeConfigModal()">&times;</button>
                 </div>
-                <div class="config-tabs">
-                    <button class="tab-btn active" onclick="showConfigTab('mario')">Mario</button>
-                    <button class="tab-btn" onclick="showConfigTab('snake')">Snake</button>
-                    <button class="tab-btn" onclick="showConfigTab('pacman')">Pac-Man</button>
-                    <button class="tab-btn" onclick="showConfigTab('memory')">Memory</button>
-                    <button class="tab-btn" onclick="showConfigTab('breakout')">Breakout</button>
+                <div class="config-selector">
+                    <label for="game-select">Configure Game:</label>
+                    <select id="game-select" onchange="showConfigTab(this.value)">
+                        <option value="mario">Mario</option>
+                        <option value="snake">Snake</option>
+                        <option value="pacman">Pac-Man</option>
+                        <option value="memory">Memory</option>
+                        <option value="breakout">Breakout</option>
+                        <option value="flappy">Flappy Bird</option>
+                        <option value="fake">Fake Game</option>
+                    </select>
                 </div>
                 <div id="config-content">
                     <!-- Configuration forms will be generated here -->

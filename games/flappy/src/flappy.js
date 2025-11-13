@@ -1,5 +1,20 @@
-function createFlappyGame(settings) {
+async function createFlappyGame(settings) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load Flappy Bird configuration using ConfigManager
+    let flappyConfig = {};
+    if (typeof configManager !== 'undefined') {
+        flappyConfig = await configManager.loadConfig('flappy');
+        console.log('Flappy config loaded via ConfigManager:', flappyConfig);
+    } else {
+        console.log('ConfigManager not available, using settings fallback');
+        flappyConfig = {
+            gameplay: settings,
+            physics: settings,
+            pipes: settings,
+            scoring: settings
+        };
+    }
     
     const canvas = document.createElement('canvas');
     canvas.width = 800;
@@ -10,26 +25,34 @@ function createFlappyGame(settings) {
     const ctx = canvas.getContext('2d');
     
     let game = {
-        bird: { x: 100, y: 200, velocity: 0, size: 20 },
+        bird: { 
+            x: 100, 
+            y: 200, 
+            velocity: 0, 
+            size: flappyConfig.physics?.birdSize || 20 
+        },
         pipes: [],
         score: 0,
-        gameSpeed: settings.gameSpeed,
-        pipeGap: settings.pipeGap,
-        pipesToWin: settings.pipesToWin,
+        gameSpeed: flappyConfig.gameplay?.gameSpeed || settings.gameSpeed || 2,
+        pipeGap: flappyConfig.pipes?.gap || settings.pipeGap || 150,
+        pipesToWin: flappyConfig.gameplay?.pipesToWin || settings.pipesToWin || 5,
         gameOver: false,
         won: false
     };
     
     function createPipe() {
-        const minHeight = 50;
+        const minHeight = flappyConfig.pipes?.minHeight || 50;
         const maxHeight = canvas.height - game.pipeGap - minHeight;
-        const height = Math.random() * (maxHeight - minHeight) + minHeight;
+        
+        // Ensure we always have visible top and bottom pipes
+        const topHeight = Math.random() * (maxHeight - minHeight) + minHeight;
+        const bottomY = topHeight + game.pipeGap;
         
         game.pipes.push({
             x: canvas.width,
-            topHeight: height,
-            bottomY: height + game.pipeGap,
-            width: 50,
+            topHeight: topHeight,
+            bottomY: bottomY,
+            width: flappyConfig.pipes?.width || 80,
             passed: false
         });
     }
@@ -37,8 +60,11 @@ function createFlappyGame(settings) {
     function updateBird() {
         if (game.gameOver || game.won) return;
         
-        game.bird.velocity += 0.15;
-        game.bird.velocity = Math.min(game.bird.velocity, 4);
+        const gravity = flappyConfig.physics?.gravity || 0.6;
+        const terminalVelocity = flappyConfig.physics?.terminalVelocity || 8;
+        
+        game.bird.velocity += gravity;
+        game.bird.velocity = Math.min(game.bird.velocity, terminalVelocity);
         game.bird.y += game.bird.velocity;
         
         if (game.bird.y <= 0 || game.bird.y >= canvas.height - game.bird.size) {
@@ -49,7 +75,7 @@ function createFlappyGame(settings) {
     function updatePipes() {
         if (game.gameOver || game.won) return;
         
-        if (game.pipes.length === 0 || game.pipes[game.pipes.length - 1].x < canvas.width - 200) {
+        if (game.pipes.length === 0 || game.pipes[game.pipes.length - 1].x < canvas.width - (flappyConfig.pipes?.spacing || 200)) {
             createPipe();
         }
         
@@ -92,23 +118,24 @@ function createFlappyGame(settings) {
         });
         
         ctx.fillStyle = 'white';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${game.score}/${game.pipesToWin}`, 10, 30);
+        ctx.font = '16px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Score: ${game.score}/${game.pipesToWin}`, 10, 25);
         
         if (game.gameOver) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = 'white';
-            ctx.font = '36px Arial';
+            ctx.font = '36px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('Game Over!', canvas.width/2, canvas.height/2);
-            ctx.font = '18px Arial';
+            ctx.font = '18px "Courier New", monospace';
             ctx.fillText('Press SPACE to restart', canvas.width/2, canvas.height/2 + 40);
         } else if (game.won) {
             ctx.fillStyle = 'rgba(0,255,0,0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = 'white';
-            ctx.font = '36px Arial';
+            ctx.font = '36px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('Level Complete!', canvas.width/2, canvas.height/2);
         }
@@ -128,18 +155,24 @@ function createFlappyGame(settings) {
             e.preventDefault();
             if (game.gameOver) {
                 game = {
-                    bird: { x: 100, y: 200, velocity: 0, size: 20 },
+                    bird: { 
+                        x: 100, 
+                        y: 200, 
+                        velocity: 0, 
+                        size: flappyConfig.physics?.birdSize || 20 
+                    },
                     pipes: [],
                     score: 0,
-                    gameSpeed: settings.gameSpeed,
-                    pipeGap: settings.pipeGap,
-                    pipesToWin: settings.pipesToWin,
+                    gameSpeed: flappyConfig.gameplay?.gameSpeed || settings.gameSpeed || 2,
+                    pipeGap: flappyConfig.pipes?.gap || settings.pipeGap || 150,
+                    pipesToWin: flappyConfig.gameplay?.pipesToWin || settings.pipesToWin || 5,
                     gameOver: false,
                     won: false
                 };
                 gameLoop();
             } else if (!game.won) {
-                game.bird.velocity = -5;
+                const jumpStrength = flappyConfig.physics?.jumpStrength || -12;
+                game.bird.velocity = jumpStrength;
             }
         }
     }

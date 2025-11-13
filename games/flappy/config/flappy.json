@@ -23,5 +23,22 @@
       "max": 13,
       "formula": "base + difficulty"
     }
+  },
+  "gameplay": {
+    "gameSpeed": 4,
+    "pipesToWin": 15
+  },
+  "physics": {
+    "gravity": 0.6,
+    "jumpStrength": -11,
+    "terminalVelocity": 8,
+    "birdSize": 20
+  },
+  "pipes": {
+    "width": 80,
+    "gap": 150,
+    "speed": 3,
+    "spacing": 200,
+    "minHeight": 50
   }
 }
