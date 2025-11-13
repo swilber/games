@@ -26,7 +26,8 @@
   },
   "gameplay": {
     "gameSpeed": 4,
-    "pipesToWin": 15
+    "pipesToWin": 15,
+    "pipeVariation": 0.8
   },
   "physics": {
     "gravity": 0.6,
