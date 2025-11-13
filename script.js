@@ -725,6 +725,7 @@ async function startLevel() {
 
 // Callback-based game creation wrapper
 async function createGameWithCallbacks(gameType, settings) {
+    console.log('createGameWithCallbacks called with gameType:', gameType, 'settings:', settings);
     const gameCallbacks = {
         onGameStart: async (gameId) => {
             // Question checking is now handled in selectLevel
@@ -758,6 +759,9 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createFakeGame(settings, gameCallbacks);
         case 'breakout':
             return await createBreakoutGame(settings, gameCallbacks);
+        case 'flappy':
+            console.log('Creating flappy game with settings:', settings);
+            return await createFlappyGame(settings, gameCallbacks);
         default:
             // Fallback for games without callback support yet
             return await createGameLegacy(gameType, settings);
@@ -771,8 +775,6 @@ async function createGameLegacy(gameType, settings) {
             return createMemoryGame(settings);
         case 'quiz':
             return createQuizGame(settings);
-        case 'flappy':
-            return createFlappyGame(settings);
         case 'frogger':
             return createFroggerGame(settings);
         case 'maze3d':
@@ -800,7 +802,6 @@ async function initializeLevel() {
     switch(level.type) {
         case 'memory':
         case 'quiz':
-        case 'flappy':
         case 'frogger':
         case 'maze3d':
         case 'donkeykong':
@@ -812,6 +813,7 @@ async function initializeLevel() {
         case 'snake':
         case 'fake':
         case 'breakout':
+        case 'flappy':
             // Modern games with callback support
             currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
             break;
