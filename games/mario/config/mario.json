@@ -31,5 +31,39 @@
       "max": 5,
       "formula": "Math.min(5, 3 + Math.floor(difficulty / 3))"
     }
+  },
+  "player": {
+    "jumpHeight": 15,
+    "moveSpeed": 4,
+    "lives": 3,
+    "invincibilityTime": 120
+  },
+  "enemies": {
+    "goombaSpeed": 1,
+    "koopaSpeed": 0.5,
+    "parakoopaSpeed": 1,
+    "piranhaSpeed": 1,
+    "firebarRotationSpeed": 1.5,
+    "bowserFlameSpeed": 1.5
+  },
+  "physics": {
+    "gravity": 0.8,
+    "terminalVelocity": 10
+  },
+  "powerups": {
+    "coinValue": 200,
+    "mushroomSpeed": 1,
+    "mushroomValue": 1000,
+    "fireflowerSpeed": 1,
+    "fireflowerValue": 1000,
+    "starSpeed": 2,
+    "starValue": 1000
+  },
+  "projectiles": {
+    "fireballSpeed": 3
+  },
+  "debug": {
+    "invincible": false,
+    "unlockAllLevels": false
   }
 }

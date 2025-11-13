@@ -30,5 +30,25 @@
       "max": 5,
       "formula": "Math.ceil(difficulty / 2)"
     }
+  },
+  "player": {
+    "lives": 3,
+    "speed": 2
+  },
+  "ghosts": {
+    "speed": 1,
+    "count": 4,
+    "scatterTime": 7000,
+    "chaseTime": 20000
+  },
+  "powerups": {
+    "powerPelletDuration": 6000,
+    "powerPelletPoints": 50,
+    "ghostPoints": 200
+  },
+  "scoring": {
+    "dotValue": 10,
+    "fruitValue": 100,
+    "levelBonus": 1000
   }
 }

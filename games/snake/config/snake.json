@@ -20,5 +20,20 @@
       "value": 400,
       "static": true
     }
+  },
+  "gameplay": {
+    "gameSpeed": 150,
+    "boardSize": 400,
+    "requiredScore": 5
+  },
+  "snake": {
+    "startLength": 3,
+    "startX": 200,
+    "startY": 200,
+    "segmentSize": 20
+  },
+  "scoring": {
+    "foodValue": 10,
+    "speedBonus": 1
   }
 }

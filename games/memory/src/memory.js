@@ -1,5 +1,20 @@
-function createMemoryGame(settings) {
+async function createMemoryGame(settings) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load Memory configuration using ConfigManager
+    let memoryConfig = {};
+    if (typeof configManager !== 'undefined') {
+        memoryConfig = await configManager.loadConfig('memory');
+        console.log('Memory config loaded via ConfigManager:', memoryConfig);
+    } else {
+        console.log('ConfigManager not available, using settings fallback');
+        memoryConfig = {
+            gameplay: settings,
+            timing: settings,
+            visual: settings
+        };
+    }
+    
     const sequence = [];
     const playerSequence = [];
     let currentStep = 0;
@@ -8,7 +23,8 @@ function createMemoryGame(settings) {
     const grid = document.createElement('div');
     grid.className = 'memory-grid';
     
-    for(let i = 0; i < settings.gridSize; i++) {
+    const gridSize = memoryConfig.gameplay?.gridSize || settings.gridSize || 9;
+    for(let i = 0; i < gridSize; i++) {
         const square = document.createElement('div');
         square.className = 'memory-square';
         square.dataset.index = i;
@@ -18,8 +34,9 @@ function createMemoryGame(settings) {
     
     function generateSequence() {
         sequence.length = 0;
-        for(let i = 0; i < settings.sequenceLength; i++) {
-            sequence.push(Math.floor(Math.random() * settings.gridSize));
+        const sequenceLength = memoryConfig.gameplay?.sequenceLength || settings.sequenceLength || 4;
+        for(let i = 0; i < sequenceLength; i++) {
+            sequence.push(Math.floor(Math.random() * gridSize));
         }
     }
     
@@ -40,7 +57,7 @@ function createMemoryGame(settings) {
                 grid.children[sequence[step-1]].classList.remove('active');
                 showingSequence = false;
             }
-        }, settings.showSpeed);
+        }, memoryConfig.timing?.showDuration || settings.showSpeed || 600);
     }
     
     function handleSquareClick(index) {

@@ -1,0 +1,42 @@
+{
+  "name": "Breakout",
+  "description": "Classic brick-breaking game with paddle and ball",
+  "difficulty": {
+    "ballSpeed": {
+      "base": 4,
+      "multiplier": 0.5,
+      "min": 2,
+      "max": 8,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "paddleSpeed": {
+      "base": 8,
+      "multiplier": 0.3,
+      "min": 4,
+      "max": 12,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "lives": {
+      "value": 3,
+      "static": true
+    }
+  },
+  "gameplay": {
+    "ballSpeed": 4,
+    "paddleSpeed": 8,
+    "lives": 3,
+    "levels": 3
+  },
+  "physics": {
+    "ballRadius": 8,
+    "paddleWidth": 120,
+    "paddleHeight": 15,
+    "brickWidth": 55,
+    "brickHeight": 20
+  },
+  "scoring": {
+    "brickPoints": 10,
+    "powerUpChance": 0.15,
+    "levelBonus": 100
+  }
+}

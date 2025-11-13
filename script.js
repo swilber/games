@@ -19,18 +19,18 @@ class ConfigManager {
         if (!this.defaults[gameType]) {
             try {
                 // Try game-specific config directory first
-                let configPath = `games/${gameType}/config/${gameType}.json`;
+                let configPath = `games/${gameType}/config/${gameType}.json?t=${Date.now()}`;
                 let response = await fetch(configPath);
                 
                 // Fallback to old config location
                 if (!response.ok) {
-                    configPath = `config/games/${gameType}.json`;
+                    configPath = `config/games/${gameType}.json?t=${Date.now()}`;
                     response = await fetch(configPath);
                 }
                 
                 // Final fallback to root config
                 if (!response.ok) {
-                    configPath = `config/${gameType}.json`;
+                    configPath = `config/${gameType}.json?t=${Date.now()}`;
                     response = await fetch(configPath);
                 }
                 
@@ -55,10 +55,28 @@ class ConfigManager {
         localStorage.setItem(`config_${gameType}`, JSON.stringify(config));
     }
     
-    resetConfig(gameType) {
-        this.configs[gameType] = JSON.parse(JSON.stringify(this.defaults[gameType]));
-        localStorage.removeItem(`config_${gameType}`);
-        return this.configs[gameType];
+    async resetConfig(gameType) {
+        console.log(`Resetting config for ${gameType}`);
+        
+        // Clear cached defaults to force reload from file
+        delete this.defaults[gameType];
+        delete this.configs[gameType];
+        
+        // Load fresh defaults from file
+        console.log(`Loading fresh config for ${gameType}`);
+        await this.loadConfig(gameType);
+        
+        console.log(`Loaded defaults for ${gameType}:`, this.defaults[gameType]);
+        
+        if (this.defaults[gameType]) {
+            this.configs[gameType] = JSON.parse(JSON.stringify(this.defaults[gameType]));
+            localStorage.removeItem(`config_${gameType}`);
+            console.log(`Reset config for ${gameType}:`, this.configs[gameType]);
+            return this.configs[gameType];
+        } else {
+            console.error(`No default config found for ${gameType}`);
+            return {};
+        }
     }
     
     getConfig(gameType) {
@@ -118,6 +136,12 @@ function generateConfigForm(gameType, config) {
         generatePacmanConfigForm(config, content);
     } else if (gameType === 'snake') {
         generateSnakeConfigForm(config, content);
+    } else if (gameType === 'breakout') {
+        generateBreakoutConfigForm(config, content);
+    } else if (gameType === 'memory') {
+        generateMemoryConfigForm(config, content);
+    } else if (gameType === 'fake') {
+        generateFakeConfigForm(config, content);
     }
     // Add other games later
 }
@@ -241,6 +265,75 @@ function generateSnakeConfigForm(config, container) {
     });
 }
 
+function generateBreakoutConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'scoring', title: 'Scoring Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateMemoryConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'timing', title: 'Timing Settings' },
+        { key: 'visual', title: 'Visual Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateFakeConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'visual', title: 'Visual Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
 function updateSaveButtonState() {
     const saveBtn = document.getElementById('save-config-btn');
     const hasChanges = JSON.stringify(currentGameConfig) !== JSON.stringify(originalConfig);
@@ -255,10 +348,16 @@ function formatLabel(key) {
 }
 
 async function resetCurrentConfig() {
-    currentGameConfig = configManager.resetConfig(currentConfigTab);
+    console.log(`resetCurrentConfig called for ${currentConfigTab}`);
+    currentGameConfig = await configManager.resetConfig(currentConfigTab);
+    console.log(`After reset, currentGameConfig:`, currentGameConfig);
+    console.log(`Config keys:`, Object.keys(currentGameConfig));
+    console.log(`Has player section:`, !!currentGameConfig.player);
+    console.log(`Has enemies section:`, !!currentGameConfig.enemies);
     originalConfig = JSON.parse(JSON.stringify(currentGameConfig)); // Update original
     generateConfigForm(currentConfigTab, currentGameConfig);
     updateSaveButtonState();
+    console.log(`Reset complete for ${currentConfigTab}`);
 }
 
 function saveCurrentConfig() {
@@ -278,8 +377,32 @@ function initializeDebugMode() {
 async function loadGameConfig(gameType) {
     if (!gameConfigs[gameType]) {
         try {
-            const response = await fetch(`config/${gameType}.json`);
+            // Try game-specific config directory first
+            let configPath = `games/${gameType}/config/${gameType}.json?t=${Date.now()}`;
+            console.log(`Trying to load config from: ${configPath}`);
+            let response = await fetch(configPath);
+            
+            // Fallback to old config location
+            if (!response.ok) {
+                configPath = `config/games/${gameType}.json?t=${Date.now()}`;
+                console.log(`Fallback to: ${configPath}`);
+                response = await fetch(configPath);
+            }
+            
+            // Final fallback to root config
+            if (!response.ok) {
+                configPath = `config/${gameType}.json?t=${Date.now()}`;
+                console.log(`Final fallback to: ${configPath}`);
+                response = await fetch(configPath);
+            }
+            
+            if (!response.ok) {
+                console.error(`Failed to load config from any path for ${gameType}`);
+                return null;
+            }
+            
             gameConfigs[gameType] = await response.json();
+            console.log(`Successfully loaded config from ${configPath}:`, gameConfigs[gameType]);
         } catch (error) {
             console.error(`Failed to load config for ${gameType}:`, error);
             return null;
@@ -314,8 +437,15 @@ async function getDifficulty(gameType) {
     console.log(`Getting difficulty for ${gameType}: ${difficulty}${difficultyParam ? ' (from URL param)' : ''}`);
     
     const gameConfig = await loadGameConfig(gameType);
+    console.log(`Loaded config for ${gameType}:`, gameConfig);
+    
     if (!gameConfig) {
         console.error(`No config found for ${gameType}, using fallback`);
+        return getFallbackDifficulty(gameType, difficulty);
+    }
+    
+    if (!gameConfig.difficulty) {
+        console.error(`No difficulty section found for ${gameType}, using fallback`);
         return getFallbackDifficulty(gameType, difficulty);
     }
     
@@ -386,12 +516,25 @@ function getFallbackDifficulty(gameType, difficulty) {
             return {
                 speed: 5 + difficulty
             };
+        case 'breakout':
+            return {
+                ballSpeed: Math.max(2, 3 + (difficulty * 0.5)),
+                paddleSpeed: Math.max(4, 6 + (difficulty * 0.3)),
+                brickRows: Math.min(8, Math.floor(4 + (difficulty * 0.4))),
+                powerUpChance: Math.min(0.25, 0.1 + (difficulty * 0.01))
+            };
         case 'pacman':
             return {
                 ghostSpeed: Math.max(0.8, 0.5 + (difficulty * 0.1)),
                 powerPelletDuration: Math.max(3000, 8000 - (difficulty * 500)),
                 ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3)),
                 levelsToWin: Math.max(1, Math.min(5, Math.ceil(difficulty / 2)))
+            };
+        case 'breakout':
+            return {
+                ballSpeed: Math.max(2, 3 + (difficulty * 0.5)),
+                paddleSpeed: Math.max(4, 6 + (difficulty * 0.3)),
+                lives: 3
             };
         default:
             return {};
@@ -586,6 +729,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createSnakeGame(settings, gameCallbacks);
         case 'fake':
             return await createFakeGame(settings, gameCallbacks);
+        case 'breakout':
+            return await createBreakoutGame(settings, gameCallbacks);
         default:
             // Fallback for games without callback support yet
             return await createGameLegacy(gameType, settings);
@@ -639,6 +784,7 @@ async function initializeLevel() {
         case 'pacman':
         case 'snake':
         case 'fake':
+        case 'breakout':
             // Modern games with callback support
             currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
             break;

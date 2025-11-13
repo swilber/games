@@ -97,6 +97,16 @@
       "answer": "gold",
       "unlockQuestion": "What do you eat in Pac-Man?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 11,
+      "title": "Level 11: Breakout",
+      "description": "Use paddle to bounce ball and break all bricks",
+      "type": "breakout",
+      "question": "What do you use to control the ball in Breakout?",
+      "answer": "paddle",
+      "unlockQuestion": "What color is the goal square?",
+      "unlockAnswer": "gold"
     }
   ]
 }

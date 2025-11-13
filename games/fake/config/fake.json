@@ -17,5 +17,21 @@
       "value": 30,
       "static": true
     }
+  },
+  "gameplay": {
+    "speed": 5,
+    "lives": 1,
+    "levels": 1
+  },
+  "physics": {
+    "playerSize": 20,
+    "goalSize": 30,
+    "canvasWidth": 400,
+    "canvasHeight": 300
+  },
+  "visual": {
+    "playerColor": "#0000ff",
+    "goalColor": "#ffd700",
+    "backgroundColor": "#ffffff"
   }
 }

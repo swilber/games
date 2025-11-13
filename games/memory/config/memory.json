@@ -20,5 +20,22 @@
       "value": 9,
       "static": true
     }
+  },
+  "gameplay": {
+    "sequenceLength": 4,
+    "showSpeed": 600,
+    "gridSize": 9,
+    "rounds": 5
+  },
+  "timing": {
+    "showDuration": 500,
+    "pauseBetween": 200,
+    "inputTimeout": 5000
+  },
+  "visual": {
+    "tileSize": 80,
+    "tileGap": 10,
+    "highlightColor": "#ffff00",
+    "normalColor": "#cccccc"
   }
 }

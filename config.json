@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 10,
+    "totalLevels": 11,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -67,6 +67,12 @@
       "order": 10,
       "enabled": true,
       "type": "fake"
+    },
+    {
+      "id": 11,
+      "order": 11,
+      "enabled": true,
+      "type": "breakout"
     }
   ]
 }

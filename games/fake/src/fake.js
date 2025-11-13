@@ -1,6 +1,20 @@
 async function createFakeGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
     
+    // Load Fake Game configuration using ConfigManager
+    let fakeConfig = {};
+    if (typeof configManager !== 'undefined') {
+        fakeConfig = await configManager.loadConfig('fake');
+        console.log('Fake config loaded via ConfigManager:', fakeConfig);
+    } else {
+        console.log('ConfigManager not available, using settings fallback');
+        fakeConfig = {
+            gameplay: settings,
+            physics: settings,
+            visual: settings
+        };
+    }
+    
     // Game state
     let gameRunning = false;
     let gameInterval = null;
@@ -9,32 +23,40 @@ async function createFakeGame(settings, callbacks = null) {
     
     // Create canvas
     const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 300;
+    canvas.width = fakeConfig.physics?.canvasWidth || 400;
+    canvas.height = fakeConfig.physics?.canvasHeight || 300;
     const ctx = canvas.getContext('2d');
     
     // Game objects
-    const player = { x: 50, y: 150, size: 20 };
-    const goal = { x: 350, y: 150, size: 30 };
+    const player = { 
+        x: 50, 
+        y: 150, 
+        size: fakeConfig.physics?.playerSize || 20 
+    };
+    const goal = { 
+        x: 350, 
+        y: 150, 
+        size: fakeConfig.physics?.goalSize || 30 
+    };
     
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Draw player
-        ctx.fillStyle = 'blue';
+        ctx.fillStyle = fakeConfig.visual?.playerColor || '#0000ff';
         ctx.fillRect(player.x, player.y, player.size, player.size);
         
         // Draw goal
-        ctx.fillStyle = 'gold';
+        ctx.fillStyle = fakeConfig.visual?.goalColor || '#ffd700';
         ctx.fillRect(goal.x, goal.y, goal.size, goal.size);
         
         // Instructions
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = '#000000';
         ctx.font = '16px Arial';
         ctx.fillText('Use arrow keys to reach the gold square', 50, 30);
         
         if (gameWon) {
-            ctx.fillStyle = 'green';
+            ctx.fillStyle = '#00ff00';
             ctx.font = '24px Arial';
             ctx.fillText('YOU WIN!', 150, 100);
         }
@@ -70,7 +92,7 @@ async function createFakeGame(settings, callbacks = null) {
         
         if (!gameRunning || gameWon) return;
         
-        const speed = 5;
+        const speed = fakeConfig.gameplay?.speed || 5;
         switch(e.code) {
             case 'ArrowLeft':
                 player.x = Math.max(0, player.x - speed);
