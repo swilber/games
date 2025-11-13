@@ -146,6 +146,8 @@ function generateConfigForm(gameType, config) {
         generateFakeConfigForm(config, content);
     } else if (gameType === 'flappy') {
         generateFlappyConfigForm(config, content);
+    } else if (gameType === 'frogger') {
+        generateFroggerConfigForm(config, content);
     }
     // Add other games later
 }
@@ -343,6 +345,27 @@ function generateFlappyConfigForm(config, container) {
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' },
         { key: 'pipes', title: 'Pipe Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateFroggerConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' }
     ];
     
     sections.forEach(section => {

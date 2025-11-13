@@ -1,5 +1,19 @@
-function createFroggerGame(settings) {
+async function createFroggerGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load Frogger configuration using ConfigManager
+    let froggerConfig = {};
+    if (typeof configManager !== 'undefined') {
+        froggerConfig = await configManager.loadConfig('frogger');
+        console.log('Frogger config loaded via ConfigManager:', froggerConfig);
+    } else {
+        console.log('ConfigManager not available, using settings fallback');
+        froggerConfig = {
+            gameplay: settings,
+            physics: settings,
+            visual: settings
+        };
+    }
     
     const canvas = document.createElement('canvas');
     canvas.width = 600;
@@ -52,10 +66,10 @@ function createFroggerGame(settings) {
         gameStarted: false,
         currentLevel: 0,
         levelsCompleted: 0,
-        levelsToWin: settings.levelsToWin || 5,
+        levelsToWin: froggerConfig.gameplay?.levelsToWin || settings?.levelsToWin || 5,
         laneTypes: levelLayouts[0],
-        baseCarSpeed: settings.carSpeed,
-        baseCarDensity: settings.carDensity
+        baseCarSpeed: froggerConfig.gameplay?.carSpeed || settings?.carSpeed || 2,
+        baseCarDensity: froggerConfig.gameplay?.carDensity || settings?.carDensity || 0.3
     };
     
     console.log('Frogger game settings:', settings);
@@ -76,6 +90,16 @@ function createFroggerGame(settings) {
         if (game.levelsCompleted >= game.levelsToWin) {
             game.won = true;
             console.log('Frogger: All levels completed, game won!');
+            
+            // Call game complete callback
+            if (callbacks && callbacks.onGameComplete) {
+                setTimeout(() => {
+                    callbacks.onGameComplete('frogger', { 
+                        completed: true, 
+                        levelsCompleted: game.levelsCompleted 
+                    });
+                }, 1000);
+            }
             return;
         }
         
@@ -315,6 +339,9 @@ function createFroggerGame(settings) {
     function handleKeyPress(e) {
         if (!game.gameStarted) {
             game.gameStarted = true;
+            if (callbacks && callbacks.onGameStart) {
+                callbacks.onGameStart('frogger');
+            }
         }
         
         if (game.gameOver) {
@@ -334,6 +361,9 @@ function createFroggerGame(settings) {
         
         if (game.won) return;
         
+        const gameKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+        if (!gameKeys.includes(e.key)) return;
+        
         const moveDistance = laneHeight;
         
         if (e.key === 'ArrowUp') {
@@ -348,9 +378,14 @@ function createFroggerGame(settings) {
         if (e.key === 'ArrowRight') {
             game.frog.x = Math.min(canvas.width - game.frog.size / 2, game.frog.x + 25);
         }
+        
+        e.preventDefault();
     }
     
-    document.addEventListener('keydown', handleKeyPress);
+    // Store handler reference for cleanup
+    const keyPressHandler = handleKeyPress;
+    
+    document.addEventListener('keydown', keyPressHandler);
     
     const instructions = document.createElement('p');
     instructions.textContent = 'Cross roads avoiding cars, ride logs across water!';
@@ -360,4 +395,12 @@ function createFroggerGame(settings) {
     gameArea.appendChild(canvas);
     
     gameLoop();
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            game.gameRunning = false;
+            document.removeEventListener('keydown', keyPressHandler);
+        }
+    };
 }

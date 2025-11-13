@@ -1,6 +1,14 @@
 {
   "name": "Frogger",
   "description": "Cross roads and rivers safely",
+  "levelsToWin": 5,
+  "carSpeed": 2,
+  "carDensity": 0.3,
+  "gameplay": {
+    "levelsToWin": 5,
+    "carSpeed": 2,
+    "carDensity": 0.3
+  },
   "difficulty": {
     "carSpeed": {
       "base": 1,
