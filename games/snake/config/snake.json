@@ -25,7 +25,10 @@
     "gameSpeed": 150,
     "boardSize": 400,
     "requiredScore": 5,
-    "gridSize": 20
+    "gridSize": 20,
+    "totalLevels": 4,
+    "speedIncrease": 20,
+    "scoreIncrease": 10
   },
   "snake": {
     "startLength": 3,

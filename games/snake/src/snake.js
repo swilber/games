@@ -33,8 +33,22 @@ async function createSnakeGame(settings, callbacks = null) {
     let food = {x: 100, y: 100};
     let dx = 0, dy = 0;
     let score = 0;
+    let currentLevel = 1;
     let gameStarted = false;
     let gameInterval;
+    
+    // Calculate level-specific values
+    function getLevelRequiredScore() {
+        const baseScore = snakeConfig.gameplay?.requiredScore || 5;
+        const scoreIncrease = snakeConfig.gameplay?.scoreIncrease || 3;
+        return baseScore + ((currentLevel - 1) * scoreIncrease);
+    }
+    
+    function getLevelSpeed() {
+        const baseSpeed = snakeConfig.gameplay?.gameSpeed || 150;
+        const speedIncrease = snakeConfig.gameplay?.speedIncrease || 20;
+        return Math.max(50, baseSpeed - ((currentLevel - 1) * speedIncrease));
+    }
     
     function drawGame() {
         ctx.fillStyle = '#000';
@@ -50,7 +64,8 @@ async function createSnakeGame(settings, callbacks = null) {
         
         ctx.fillStyle = '#fff';
         ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${score}/${snakeConfig.gameplay.requiredScore}`, 10, 30);
+        ctx.fillText(`Level: ${currentLevel}`, 10, 30);
+        ctx.fillText(`Score: ${score}/${getLevelRequiredScore()}`, 10, 60);
         
         if (!gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -59,6 +74,7 @@ async function createSnakeGame(settings, callbacks = null) {
             ctx.font = '24px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('Press arrow key to begin', canvas.width/2, canvas.height/2);
+            ctx.fillText(`Level ${currentLevel} - Get ${getLevelRequiredScore()} points`, canvas.width/2, canvas.height/2 + 40);
         }
     }
     
@@ -81,17 +97,36 @@ async function createSnakeGame(settings, callbacks = null) {
         
         if(head.x === food.x && head.y === food.y) {
             score += snakeConfig.scoring?.foodValue || 1;
-            if(score >= (snakeConfig.gameplay?.requiredScore || 5)) {
-                // Use callback if provided, otherwise fallback to global functions
-                if (callbacks?.onGameComplete) {
-                    const currentLevelData = levels?.[currentLevel];
-                    callbacks.onGameComplete('snake', currentLevelData);
+            if(score >= getLevelRequiredScore()) {
+                const totalLevels = snakeConfig.gameplay?.totalLevels || 3;
+                if(currentLevel >= totalLevels) {
+                    // Game complete - all levels finished
+                    if (callbacks?.onGameComplete) {
+                        const currentLevelData = levels?.[currentLevel];
+                        callbacks.onGameComplete('snake', currentLevelData);
+                    } else {
+                        gameWon = true;
+                        showQuestion();
+                    }
+                    return;
                 } else {
-                    // Fallback to original global approach
-                    gameWon = true;
-                    showQuestion();
+                    // Next level
+                    currentLevel++;
+                    score = 0;
+                    snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
+                    dx = 0; dy = 0;
+                    gameStarted = false;
+                    
+                    // Update game speed for new level
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(() => {
+                        moveSnake();
+                        drawGame();
+                    }, getLevelSpeed());
+                    
+                    generateFood();
+                    return;
                 }
-                return;
             }
             generateFood();
         } else {
@@ -110,7 +145,16 @@ async function createSnakeGame(settings, callbacks = null) {
         snake = [{x: snakeConfig.snake.startX, y: snakeConfig.snake.startY}];
         dx = 0; dy = 0;
         score = 0;
+        currentLevel = 1;
         gameStarted = false;
+        
+        // Reset to level 1 speed
+        clearInterval(gameInterval);
+        gameInterval = setInterval(() => {
+            moveSnake();
+            drawGame();
+        }, getLevelSpeed());
+        
         generateFood();
     }
     
@@ -136,7 +180,7 @@ async function createSnakeGame(settings, callbacks = null) {
     gameInterval = setInterval(() => {
         moveSnake();
         drawGame();
-    }, snakeConfig.gameplay.gameSpeed);
+    }, getLevelSpeed());
     
     drawGame();
     
