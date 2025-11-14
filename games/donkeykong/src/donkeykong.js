@@ -21,12 +21,42 @@ class DKPlatform extends DKEntity {
     }
     
     render(ctx) {
-        ctx.fillStyle = '#FF6B35';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        // Neon pink platform with rivets
+        ctx.strokeStyle = '#FF1493'; // Hot pink
+        ctx.lineWidth = 4; // Thicker lines
         
-        ctx.fillStyle = '#D2691E';
-        for (let i = 0; i < this.width; i += 20) {
-            ctx.fillRect(this.x + i, this.y + 2, 2, this.height - 4);
+        // Top and bottom bars
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.width, this.y);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y + this.height);
+        ctx.lineTo(this.x + this.width, this.y + this.height);
+        ctx.stroke();
+        
+        // Zigzag pattern through middle (single ^ per cell)
+        const bottomY = this.y + this.height - 2; // Touch bottom rivet
+        const topY = this.y + 2; // Touch top rivet
+        const peakX = this.x + this.width / 2;
+        
+        // Draw two separate lines to avoid filling
+        ctx.beginPath();
+        ctx.moveTo(this.x, bottomY);
+        ctx.lineTo(peakX, topY); // Left side of ^
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(peakX, topY);
+        ctx.lineTo(this.x + this.width, bottomY); // Right side of ^
+        ctx.stroke();
+        
+        // Rivets
+        ctx.fillStyle = '#FF1493';
+        for (let x = this.x + 10; x < this.x + this.width - 5; x += 20) {
+            ctx.fillRect(x, this.y + 2, 2, 2);
+            ctx.fillRect(x, this.y + this.height - 4, 2, 2);
         }
     }
 }
@@ -37,12 +67,27 @@ class DKLadder extends DKEntity {
     }
     
     render(ctx) {
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        // Neon blue ladder
+        ctx.strokeStyle = '#00BFFF'; // Deep sky blue
+        ctx.lineWidth = 4; // Thicker lines
         
-        for (let i = 0; i < this.height; i += 10) {
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(this.x, this.y + i, this.width, 2);
+        // Side rails
+        ctx.beginPath();
+        ctx.moveTo(this.x + 2, this.y);
+        ctx.lineTo(this.x + 2, this.y + this.height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width - 2, this.y);
+        ctx.lineTo(this.x + this.width - 2, this.y + this.height);
+        ctx.stroke();
+        
+        // Rungs
+        for (let y = this.y + 8; y < this.y + this.height; y += 12) {
+            ctx.beginPath();
+            ctx.moveTo(this.x + 2, y);
+            ctx.lineTo(this.x + this.width - 2, y);
+            ctx.stroke();
         }
     }
 }
@@ -271,8 +316,8 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Background
-        ctx.fillStyle = '#000080';
+        // Black background (original arcade style)
+        ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Render entities
@@ -280,23 +325,82 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             entity.render(ctx);
         });
         
-        // Player (Mario)
+        // Mario (original red/blue sprite style)
+        const marioX = game.player.x;
+        const marioY = game.player.y;
+        const marioW = game.player.width;
+        const marioH = game.player.height;
+        
+        // Mario's hat (red)
         ctx.fillStyle = '#FF0000';
-        ctx.fillRect(game.player.x, game.player.y, game.player.width, game.player.height);
-        ctx.fillStyle = '#8B0000';
-        ctx.fillRect(game.player.x + 2, game.player.y, game.player.width - 4, 8);
+        ctx.fillRect(marioX + 2, marioY, marioW - 4, 8);
         
-        // Donkey Kong
+        // Mario's face (peach)
+        ctx.fillStyle = '#FFDBAC';
+        ctx.fillRect(marioX + 4, marioY + 6, marioW - 8, 6);
+        
+        // Mario's shirt (red)
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(marioX + 2, marioY + 12, marioW - 4, 8);
+        
+        // Mario's overalls (blue)
+        ctx.fillStyle = '#0000FF';
+        ctx.fillRect(marioX + 3, marioY + 20, marioW - 6, 6);
+        
+        // Mario's legs (blue)
+        ctx.fillStyle = '#0000FF';
+        ctx.fillRect(marioX + 2, marioY + 26, 6, 4);
+        ctx.fillRect(marioX + marioW - 8, marioY + 26, 6, 4);
+        
+        // Donkey Kong (brown gorilla with tie)
+        const dkX = game.donkeyKong.x;
+        const dkY = game.donkeyKong.y;
+        const dkW = game.donkeyKong.width;
+        const dkH = game.donkeyKong.height;
+        
+        // DK's body (brown)
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(game.donkeyKong.x, game.donkeyKong.y, game.donkeyKong.width, game.donkeyKong.height);
-        ctx.fillStyle = '#D2691E';
-        ctx.fillRect(game.donkeyKong.x + 8, game.donkeyKong.y + 8, 24, 16);
+        ctx.fillRect(dkX, dkY + 8, dkW, dkH - 8);
         
-        // Princess
+        // DK's head (brown)
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(dkX + 8, dkY, dkW - 16, 16);
+        
+        // DK's face (lighter brown)
+        ctx.fillStyle = '#D2691E';
+        ctx.fillRect(dkX + 12, dkY + 4, dkW - 24, 8);
+        
+        // DK's tie (red)
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(dkX + dkW/2 - 3, dkY + 16, 6, 16);
+        
+        // DK's arms
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(dkX - 4, dkY + 12, 8, 12);
+        ctx.fillRect(dkX + dkW - 4, dkY + 12, 8, 12);
+        
+        // Princess Peach (pink dress, blonde hair)
+        const pX = game.princess.x;
+        const pY = game.princess.y;
+        const pW = game.princess.width;
+        const pH = game.princess.height;
+        
+        // Princess's hair (blonde)
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(pX + 2, pY, pW - 4, 8);
+        
+        // Princess's face (peach)
+        ctx.fillStyle = '#FFDBAC';
+        ctx.fillRect(pX + 4, pY + 6, pW - 8, 6);
+        
+        // Princess's dress (pink)
         ctx.fillStyle = '#FFB6C1';
-        ctx.fillRect(game.princess.x, game.princess.y, game.princess.width, game.princess.height);
+        ctx.fillRect(pX, pY + 12, pW, pH - 12);
+        
+        // Princess's dress details (hot pink)
         ctx.fillStyle = '#FF69B4';
-        ctx.fillRect(game.princess.x, game.princess.y + 15, game.princess.width, 15);
+        ctx.fillRect(pX + 2, pY + 16, pW - 4, 2);
+        ctx.fillRect(pX + 2, pY + 22, pW - 4, 2);
     }
     
     // Controls
