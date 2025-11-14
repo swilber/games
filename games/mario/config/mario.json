@@ -1,6 +1,13 @@
 {
   "name": "Mario Bros",
   "description": "Side-scrolling platformer with enemies and coins",
+  "rendering": {
+    "playerSmallWidth": 16,
+    "playerSmallHeight": 16,
+    "playerBigWidth": 16,
+    "playerBigHeight": 32,
+    "tileSize": 16
+  },
   "difficulty": {
     "levelLength": {
       "base": 600,
