@@ -1,6 +1,47 @@
 {
   "name": "Donkey Kong",
   "description": "Climb ladders and avoid barrels to reach the top",
+  "barrelSpeed": 1.0,
+  "barrelFrequency": 150,
+  "ladderCount": 4,
+  "levelCount": 4,
+  "gameplay": {
+    "levelCount": 4,
+    "barrelFrequency": 150,
+    "hammerDuration": 600
+  },
+  "physics": {
+    "barrelSpeed": 1.0,
+    "playerSpeed": 3,
+    "jumpHeight": 8,
+    "gravity": 0.5
+  },
+  "levels": {
+    "1": {
+      "name": "Girders",
+      "type": "girders",
+      "barrelFrequency": 180,
+      "hammerPosition": { "x": 300, "y": 380 }
+    },
+    "2": {
+      "name": "Pie Factory", 
+      "type": "factory",
+      "barrelFrequency": 150,
+      "hammerPosition": { "x": 200, "y": 300 }
+    },
+    "3": {
+      "name": "Elevators",
+      "type": "elevators", 
+      "barrelFrequency": 120,
+      "hammerPosition": { "x": 400, "y": 250 }
+    },
+    "4": {
+      "name": "Rivets",
+      "type": "rivets",
+      "barrelFrequency": 100,
+      "hammerPosition": { "x": 250, "y": 200 }
+    }
+  },
   "difficulty": {
     "barrelSpeed": {
       "base": 0.5,

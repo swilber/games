@@ -150,6 +150,8 @@ function generateConfigForm(gameType, config) {
         generateFroggerConfigForm(config, content);
     } else if (gameType === 'maze3d') {
         generateMaze3DConfigForm(config, content);
+    } else if (gameType === 'donkeykong') {
+        generateDonkeyKongConfigForm(config, content);
     }
     // Add other games later
 }
@@ -388,6 +390,28 @@ function generateFroggerConfigForm(config, container) {
 }
 
 function generateMaze3DConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateDonkeyKongConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' }
@@ -853,10 +877,10 @@ async function initializeLevel() {
         case 'memory':
         case 'quiz':
         case 'frogger':
-        case 'donkeykong':
             // Legacy games without callback support
             currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
             break;
+        case 'donkeykong':
         case 'maze3d':
         case 'mario':
         case 'pacman':

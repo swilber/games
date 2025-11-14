@@ -1,24 +1,5 @@
-async function createDonkeyKongGame(settings, callbacks = null) {
+function createDonkeyKongGame(settings) {
     const gameArea = document.getElementById('game-area');
-    
-    // Load Donkey Kong configuration using ConfigManager
-    let dkConfig = {};
-    if (typeof configManager !== 'undefined') {
-        dkConfig = await configManager.loadConfig('donkeykong');
-        console.log('Donkey Kong config loaded via ConfigManager:', dkConfig);
-    } else {
-        console.log('ConfigManager not available, using settings fallback');
-        dkConfig = {
-            gameplay: settings,
-            physics: settings,
-            visual: settings
-        };
-    }
-    
-    // Game state
-    let gameRunning = false;
-    let gameInterval = null;
-    let gameStarted = false;
     
     const canvas = document.createElement('canvas');
     canvas.width = 600;
@@ -44,7 +25,7 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         barrelTimer: 0,
         firstBlueBarrel: true,
         currentLevel: 1,
-        maxLevels: dkConfig.gameplay?.levelCount || settings?.levelCount || 4,
+        maxLevels: settings.levelCount,
         levelComplete: false,
         gameOver: false,
         won: false,
@@ -52,50 +33,8 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         keys: {}
     };
     
-    function generateLevel(levelNumber = 1) {
-        // Clear existing level elements
-        game.platforms = [];
-        game.ladders = [];
-        game.barrels = [];
-        game.fireballs = [];
-        
-        // Get level config
-        const levelConfig = dkConfig.levels?.[levelNumber] || dkConfig.levels?.['1'];
-        const levelType = levelConfig?.type || 'girders';
-        
-        console.log(`Generating level ${levelNumber}: ${levelType}`);
-        
-        // Generate level based on type
-        switch(levelType) {
-            case 'girders':
-                generateGirdersLevel(levelConfig);
-                break;
-            case 'factory':
-                generateFactoryLevel(levelConfig);
-                break;
-            case 'elevators':
-                generateElevatorsLevel(levelConfig);
-                break;
-            case 'rivets':
-                generateRivetsLevel(levelConfig);
-                break;
-            default:
-                generateGirdersLevel(levelConfig);
-        }
-        
-        // Update hammer position
-        if (levelConfig?.hammerPosition) {
-            game.hammer.x = levelConfig.hammerPosition.x;
-            game.hammer.y = levelConfig.hammerPosition.y;
-            game.hammer.collected = false;
-        }
-        
-        // Reset player and DK positions
-        resetPositions();
-    }
-    
-    function generateGirdersLevel(config) {
-        // Classic slanted girder level (Level 1)
+    function generateLevel() {
+        // Create slanted platforms (classic DK style)
         const platformHeight = 15;
         const levelHeight = 80;
         
@@ -128,134 +67,25 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             }
         }
         
-        // Add ladders with guaranteed path to top
-        addLadders([
-            { x: 500, y: 390, width: 20, height: 80 },  // Bottom to level 1
-            { x: 150, y: 310, width: 20, height: 80 },  // Level 1 to 2
-            { x: 450, y: 230, width: 20, height: 80 },  // Level 2 to 3
-            { x: 200, y: 150, width: 20, height: 80 },  // Level 3 to 4
-            { x: 300, y: 80, width: 20, height: 70 }    // Level 4 to top
-        ]);
-    }
-    
-    function generateFactoryLevel(config) {
-        // Pie factory level with conveyor belts (Level 2)
-        const platformHeight = 15;
-        
-        // Bottom platform
-        game.platforms.push({ x: 0, y: 470, width: canvas.width, height: 30, angle: 0 });
-        
-        // Straight platforms with gaps
-        game.platforms.push({ x: 0, y: 390, width: 200, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 250, y: 390, width: 200, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 500, y: 390, width: 100, height: platformHeight, angle: 0 });
-        
-        game.platforms.push({ x: 100, y: 310, width: 200, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 350, y: 310, width: 250, height: platformHeight, angle: 0 });
-        
-        game.platforms.push({ x: 0, y: 230, width: 150, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 200, y: 230, width: 200, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 450, y: 230, width: 150, height: platformHeight, angle: 0 });
-        
-        game.platforms.push({ x: 50, y: 150, width: 500, height: platformHeight, angle: 0 });
-        
-        // Top platform
-        game.platforms.push({ x: 0, y: 70, width: canvas.width, height: platformHeight, angle: 0 });
-        
         // Add ladders
-        addLadders([
-            { x: 180, y: 390, width: 20, height: 80 },
-            { x: 480, y: 390, width: 20, height: 80 },
-            { x: 320, y: 310, width: 20, height: 80 },
-            { x: 170, y: 230, width: 20, height: 80 },
-            { x: 420, y: 230, width: 20, height: 80 },
-            { x: 300, y: 150, width: 20, height: 80 }
-        ]);
-    }
-    
-    function generateElevatorsLevel(config) {
-        // Elevator level (Level 3) - simplified version
-        const platformHeight = 15;
+        for (let i = 0; i < settings.ladderCount; i++) {
+            const level = i + 1;
+            const y = 470 - (level * levelHeight);
+            const x = 150 + i * 100;
+            
+            game.ladders.push({ 
+                x: x, 
+                y: y - levelHeight + platformHeight, 
+                width: 20, 
+                height: levelHeight - platformHeight 
+            });
+        }
         
-        // Bottom platform
-        game.platforms.push({ x: 0, y: 470, width: canvas.width, height: 30, angle: 0 });
+        // Add ladder from bottom to first level
+        game.ladders.push({ x: 500, y: 390, width: 20, height: 80 });
         
-        // Multiple small platforms at different heights
-        game.platforms.push({ x: 50, y: 400, width: 100, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 200, y: 380, width: 100, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 350, y: 360, width: 100, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 500, y: 340, width: 100, height: platformHeight, angle: 0 });
-        
-        game.platforms.push({ x: 100, y: 300, width: 100, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 300, y: 280, width: 100, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 450, y: 260, width: 100, height: platformHeight, angle: 0 });
-        
-        game.platforms.push({ x: 150, y: 200, width: 300, height: platformHeight, angle: 0 });
-        
-        // Top platform
-        game.platforms.push({ x: 0, y: 70, width: canvas.width, height: platformHeight, angle: 0 });
-        
-        // Add ladders
-        addLadders([
-            { x: 80, y: 400, width: 20, height: 70 },
-            { x: 230, y: 380, width: 20, height: 90 },
-            { x: 380, y: 360, width: 20, height: 110 },
-            { x: 530, y: 340, width: 20, height: 130 },
-            { x: 130, y: 300, width: 20, height: 100 },
-            { x: 330, y: 280, width: 20, height: 120 },
-            { x: 300, y: 200, width: 20, height: 130 }
-        ]);
-    }
-    
-    function generateRivetsLevel(config) {
-        // Rivet level (Level 4) - final level
-        const platformHeight = 15;
-        
-        // Bottom platform
-        game.platforms.push({ x: 0, y: 470, width: canvas.width, height: 30, angle: 0 });
-        
-        // Cross-beam structure
-        game.platforms.push({ x: 0, y: 350, width: canvas.width, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 0, y: 250, width: canvas.width, height: platformHeight, angle: 0 });
-        game.platforms.push({ x: 0, y: 150, width: canvas.width, height: platformHeight, angle: 0 });
-        
-        // Top platform
-        game.platforms.push({ x: 0, y: 70, width: canvas.width, height: platformHeight, angle: 0 });
-        
-        // Add ladders on both sides
-        addLadders([
-            { x: 100, y: 350, width: 20, height: 120 },
-            { x: 500, y: 350, width: 20, height: 120 },
-            { x: 200, y: 250, width: 20, height: 100 },
-            { x: 400, y: 250, width: 20, height: 100 },
-            { x: 150, y: 150, width: 20, height: 100 },
-            { x: 450, y: 150, width: 20, height: 100 }
-        ]);
-    }
-    
-    function addLadders(ladderData) {
-        ladderData.forEach(ladder => {
-            game.ladders.push(ladder);
-        });
-    }
-    
-    function resetPositions() {
-        // Reset player to bottom left
-        game.player.x = 50;
-        game.player.y = 450;
-        game.player.vx = 0;
-        game.player.vy = 0;
-        game.player.onGround = false;
-        game.player.hasHammer = false;
-        game.player.hammerTimer = 0;
-        
-        // Reset DK to top
-        game.donkeyKong.x = 50;
-        game.donkeyKong.y = 50;
-        
-        // Reset princess to top right
-        game.princess.x = 520;
-        game.princess.y = 30;
+        // Extra ladder to top
+        game.ladders.push({ x: 300, y: 80, width: 20, height: 70 });
     }
     
     function updatePlayer() {
@@ -677,17 +507,8 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             if (game.currentLevel >= game.maxLevels) {
                 // All levels complete
                 game.won = true;
-                gameRunning = false;
-                
-                if (callbacks && callbacks.onGameComplete) {
-                    setTimeout(() => {
-                        callbacks.onGameComplete('donkeykong', { 
-                            completed: true, 
-                            score: game.player.score,
-                            levelsCompleted: game.currentLevel
-                        });
-                    }, 1000);
-                }
+                gameWon = true;
+                setTimeout(showQuestion, 1000);
             } else {
                 // Next level
                 setTimeout(nextLevel, 2000);
@@ -699,10 +520,15 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         game.currentLevel++;
         game.levelComplete = false;
         
-        // Generate new level layout
-        generateLevel(game.currentLevel);
+        // Reset player position
+        game.player.x = 50;
+        game.player.y = 450;
+        game.player.vx = 0;
+        game.player.vy = 0;
+        game.player.hasHammer = false;
+        game.player.hammerTimer = 0;
         
-        // Clear barrels and fireballs
+        // Clear barrels
         game.barrels = [];
         game.fireballs = [];
         game.barrelTimer = 0;
@@ -712,13 +538,8 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         game.hammer.collected = false;
         game.oilDrum.lit = false;
         
-        // Update barrel frequency based on level config
-        const levelConfig = dkConfig.levels?.[game.currentLevel] || dkConfig.levels?.['1'];
-        if (levelConfig?.barrelFrequency) {
-            settings.barrelFrequency = levelConfig.barrelFrequency;
-        }
-        
-        console.log(`Advanced to level ${game.currentLevel}: ${levelConfig?.name || 'Unknown'}`);
+        // Increase difficulty for next level - more frequent barrels, not faster
+        settings.barrelFrequency = Math.max(40, settings.barrelFrequency - 15);
     }
     
     function render() {
@@ -728,20 +549,9 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         ctx.fillStyle = '#000080';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Platforms with level-specific colors
-        const currentLevelConfig = dkConfig.levels?.[game.currentLevel] || dkConfig.levels?.['1'];
-        const levelType = currentLevelConfig?.type || 'girders';
-        
-        let platformColor = '#FF6B35'; // Default orange
-        switch(levelType) {
-            case 'girders': platformColor = '#FF6B35'; break;  // Orange
-            case 'factory': platformColor = '#8B4513'; break;  // Brown  
-            case 'elevators': platformColor = '#4682B4'; break; // Steel blue
-            case 'rivets': platformColor = '#DC143C'; break;   // Crimson
-        }
-        
+        // Platforms
         game.platforms.forEach(platform => {
-            ctx.fillStyle = platformColor;
+            ctx.fillStyle = '#FF6B35';
             ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
             
             // Platform details
@@ -955,9 +765,7 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         ctx.font = '16px Arial';
         ctx.fillText(`Lives: ${game.player.lives}`, 10, 25);
         ctx.fillText(`Score: ${game.player.score}`, 10, 45);
-        const levelConfig = dkConfig.levels?.[game.currentLevel] || dkConfig.levels?.['1'];
-        const levelName = levelConfig?.name || 'Unknown';
-        ctx.fillText(`Level: ${game.currentLevel}/${game.maxLevels} - ${levelName}`, 10, 65);
+        ctx.fillText(`Level: ${game.currentLevel}/${game.maxLevels}`, 10, 65);
         
         if (game.player.hasHammer) {
             ctx.fillStyle = '#FFD700';
@@ -1008,15 +816,19 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         }
     }
     
+    let gameRunning = true;
+    
     function gameLoop() {
-        if (!gameRunning) return;
-        
         updatePlayer();
         updateDonkeyKong();
         updateBarrels();
         updateFireballs();
         checkWin();
         render();
+        
+        if (!game.gameOver && !game.won && gameRunning) {
+            requestAnimationFrame(gameLoop);
+        }
     }
     
     function handleKeyDown(e) {
@@ -1028,10 +840,6 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         
         if (!game.gameStarted) {
             game.gameStarted = true;
-            gameStarted = true;
-            if (callbacks && callbacks.onGameStart) {
-                callbacks.onGameStart('donkeykong');
-            }
         }
         
         if (game.gameOver && e.code === 'KeyR') {
@@ -1087,20 +895,13 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
-    generateLevel(game.currentLevel);
-    
-    // Start game loop
-    gameRunning = true;
-    gameInterval = setInterval(gameLoop, 16); // ~60fps
+    generateLevel();
+    gameLoop();
     
     // Return cleanup function
     return {
         cleanup: () => {
             gameRunning = false;
-            if (gameInterval) {
-                clearInterval(gameInterval);
-                gameInterval = null;
-            }
             document.removeEventListener('keydown', keyDownHandler);
             document.removeEventListener('keyup', keyUpHandler);
         }
