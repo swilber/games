@@ -1,5 +1,33 @@
 // Custom Entity-Based Donkey Kong with Enhanced ASCII Maps
 
+// Theme System
+const DKThemes = {
+    girders: {
+        name: 'Girders',
+        platforms: '#FF1493', // Hot pink
+        ladders: '#00BFFF',   // Deep sky blue
+        background: '#000000'  // Black
+    },
+    elevators: {
+        name: 'Elevators', 
+        platforms: '#FF1493', // Hot pink (same as girders for now)
+        ladders: '#00BFFF',   // Deep sky blue (same as girders for now)
+        background: '#000000'  // Black
+    },
+    factory: {
+        name: 'Factory',
+        platforms: '#8B4513', // Saddle brown
+        ladders: '#FFD700',   // Gold
+        background: '#1a1a1a'  // Dark gray
+    },
+    rivets: {
+        name: 'Rivets',
+        platforms: '#DC143C', // Crimson
+        ladders: '#32CD32',   // Lime green
+        background: '#000080'  // Navy blue
+    }
+};
+
 class DKEntity {
     constructor(x, y, width, height, type) {
         this.x = x;
@@ -15,14 +43,19 @@ class DKEntity {
 }
 
 class DKPlatform extends DKEntity {
-    constructor(x, y, width, height, angle = 0) {
+    constructor(x, y, width, height, angle = 0, theme = 'girders') {
         super(x, y, width, height, 'platform');
         this.angle = angle; // Keep for reference but don't use in rendering
+        this.theme = theme;
     }
     
     render(ctx) {
-        // Neon pink platform with rivets (always drawn straight)
-        ctx.strokeStyle = '#FF1493'; // Hot pink
+        // Get theme colors
+        const themeColors = DKThemes[this.theme] || DKThemes.girders;
+        const platformColor = themeColors.platforms;
+        
+        // Neon platform with rivets (always drawn straight)
+        ctx.strokeStyle = platformColor;
         ctx.lineWidth = 4; // Thick lines
         
         // Top and bottom bars (straight)
@@ -53,7 +86,7 @@ class DKPlatform extends DKEntity {
         ctx.stroke();
         
         // Rivets (straight positioning)
-        ctx.fillStyle = '#FF1493';
+        ctx.fillStyle = platformColor;
         for (let x = this.x + 10; x < this.x + this.width - 5; x += 20) {
             ctx.fillRect(x, this.y + 2, 2, 2);
             ctx.fillRect(x, this.y + this.height - 4, 2, 2);
@@ -62,13 +95,18 @@ class DKPlatform extends DKEntity {
 }
 
 class DKLadder extends DKEntity {
-    constructor(x, y, width, height) {
+    constructor(x, y, width, height, theme = 'girders') {
         super(x, y, width, height, 'ladder');
+        this.theme = theme;
     }
     
     render(ctx) {
-        // Neon blue ladder
-        ctx.strokeStyle = '#00BFFF'; // Deep sky blue
+        // Get theme colors
+        const themeColors = DKThemes[this.theme] || DKThemes.girders;
+        const ladderColor = themeColors.ladders;
+        
+        // Neon ladder
+        ctx.strokeStyle = ladderColor;
         ctx.lineWidth = 4; // Thicker lines
         
         // Side rails
@@ -174,13 +212,14 @@ class DKHammer extends DKEntity {
 
 // Enhanced Map Parser
 class DKMapParser {
-    static async loadMap(mapPath) {
-        const response = await fetch(mapPath);
+    static async loadMap(mapPath, theme = 'girders') {
+        const cacheBuster = Date.now();
+        const response = await fetch(`${mapPath}?t=${cacheBuster}`);
         const mapText = await response.text();
-        return this.parseMap(mapText);
+        return this.parseMap(mapText, theme);
     }
     
-    static parseMap(mapText) {
+    static parseMap(mapText, theme = 'girders') {
         const lines = mapText.split('\n');
         const entities = [];
         
@@ -207,19 +246,19 @@ class DKMapParser {
                 
                 switch (char) {
                     case '-':
-                        const flatPlatform = new DKPlatform(x, y, tileWidth, tileHeight, 0);
+                        const flatPlatform = new DKPlatform(x, y, tileWidth, tileHeight, 0, theme);
                         entities.push(flatPlatform);
                         platforms.push({x, y, width: tileWidth, height: tileHeight});
                         break;
                     case '/':
                         yOffset = cellPair * -1;
-                        const upPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, 0.1);
+                        const upPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, 0.1, theme);
                         entities.push(upPlatform);
                         platforms.push({x, y: y + yOffset, width: tileWidth, height: tileHeight});
                         break;
                     case '\\':
                         yOffset = cellPair * 1;
-                        const downPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, -0.1);
+                        const downPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, -0.1, theme);
                         entities.push(downPlatform);
                         platforms.push({x, y: y + yOffset, width: tileWidth, height: tileHeight});
                         break;
@@ -297,7 +336,7 @@ class DKMapParser {
                     // Ensure minimum ladder height
                     if (ladderHeight < 20) ladderHeight = 20;
                     
-                    entities.push(new DKLadder(x, ladderY, tileWidth, ladderHeight));
+                    entities.push(new DKLadder(x, ladderY, tileWidth, ladderHeight, theme));
                 }
             }
         });
@@ -306,8 +345,132 @@ class DKMapParser {
     }
 }
 
+// Level Configuration
+const DKLevels = {
+    1: { name: 'Girders', file: 'level1.map', theme: 'girders' },
+    2: { name: 'Elevators', file: 'level2.map', theme: 'elevators' }
+};
+
 async function createDonkeyKongGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
+    
+    // Load configuration
+    let dkConfig = {};
+    if (typeof configManager !== 'undefined') {
+        dkConfig = await configManager.loadConfig('donkeykong');
+    }
+    
+    // Check if unlock all levels is enabled
+    const unlockAllLevels = dkConfig.unlockAllLevels || settings?.unlockAllLevels || 
+                           dkConfig.gameplay?.unlockAllLevels || false;
+    
+    console.log('Donkey Kong - unlockAllLevels:', unlockAllLevels);
+    console.log('dkConfig:', dkConfig);
+    console.log('settings:', settings);
+    
+    // Temporary: Force level selection for testing
+    // Remove this line once configuration is working
+    // if (true) {
+    
+    if (unlockAllLevels) {
+        // Show level selection dialog
+        console.log('About to show level selection');
+        
+        // Simple inline level selection instead of separate function
+        gameArea.innerHTML = `
+            <div style="text-align: center; padding: 50px; color: #FFFFFF; font-family: Arial, sans-serif; background: #000; min-height: 400px;">
+                <h1 style="color: #FF1493; font-size: 36px; margin-bottom: 30px;">DONKEY KONG</h1>
+                <h2 style="color: #00BFFF; font-size: 24px; margin-bottom: 40px;">SELECT LEVEL</h2>
+                <button onclick="window.loadDKLevel(1)" 
+                        style="background: #FF1493; color: #000; border: 2px solid #00BFFF; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 1: Girders
+                </button>
+                <button onclick="window.loadDKLevel(2)" 
+                        style="background: #FF1493; color: #000; border: 2px solid #00BFFF; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 2: Elevators
+                </button>
+            </div>
+        `;
+        
+        // Simple global function
+        window.loadDKLevel = (levelNum) => {
+            console.log('Loading level:', levelNum);
+            const levelConfig = DKLevels[levelNum] || DKLevels[1];
+            createDonkeyKongLevel(levelNum, gameArea, settings, callbacks);
+        };
+        
+        console.log('Level selection shown successfully');
+        return {
+            cleanup: () => {
+                // Clean up global function when game is closed
+                if (window.loadDKLevel) {
+                    delete window.loadDKLevel;
+                }
+            }
+        };
+    } else {
+        // Load default level 1
+        return createDonkeyKongLevel(1, gameArea, settings, callbacks);
+    }
+}
+
+function showLevelSelection(gameArea, settings, callbacks) {
+    console.log('showLevelSelection called');
+    console.log('gameArea:', gameArea);
+    console.log('Available levels:', Object.keys(DKLevels));
+    
+    const levelSelectionHTML = `
+        <div style="text-align: center; padding: 50px; color: #FFFFFF; font-family: 'Courier New', monospace; background: #000; min-height: 400px;">
+            <h1 style="color: #FF1493; font-size: 36px; margin-bottom: 30px;">DONKEY KONG</h1>
+            <h2 style="color: #00BFFF; font-size: 24px; margin-bottom: 40px;">SELECT LEVEL</h2>
+            <div id="level-buttons" style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                ${Object.entries(DKLevels).map(([num, level]) => `
+                    <button onclick="loadDonkeyKongLevel(${num})" 
+                            style="background: #FF1493; color: #000; border: 2px solid #00BFFF; 
+                                   padding: 15px 30px; font-size: 18px; font-family: 'Courier New', monospace;
+                                   cursor: pointer; min-width: 200px;">
+                        Level ${num}: ${level.name}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    console.log('Setting gameArea innerHTML');
+    gameArea.innerHTML = levelSelectionHTML;
+    
+    console.log('gameArea after setting innerHTML:', gameArea.innerHTML.substring(0, 100));
+    
+    // Check if content is still there after a delay
+    setTimeout(() => {
+        console.log('gameArea content after 1 second:', gameArea.innerHTML.substring(0, 100));
+    }, 1000);
+    
+    // Make level loading function globally available
+    window.loadDonkeyKongLevel = (levelNum) => {
+        console.log('Loading level:', levelNum);
+        createDonkeyKongLevel(levelNum, gameArea, settings, callbacks);
+    };
+    
+    console.log('Level selection setup complete');
+}
+
+async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
+    console.log('createDonkeyKongLevel called with level:', levelNum);
+    
+    // Load configuration
+    let dkConfig = {};
+    if (typeof configManager !== 'undefined') {
+        dkConfig = await configManager.loadConfig('donkeykong');
+    }
+    
+    // Get level configuration
+    const levelConfig = DKLevels[levelNum] || DKLevels[1];
+    console.log('Using level config:', levelConfig);
     
     const canvas = document.createElement('canvas');
     canvas.width = 600;
@@ -334,7 +497,7 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     };
     
     async function loadLevel() {
-        const entities = await DKMapParser.loadMap('/games/donkeykong/maps/level1.map');
+        const entities = await DKMapParser.loadMap(`/games/donkeykong/maps/${levelConfig.file}`, levelConfig.theme);
         
         entities.forEach(entity => {
             if (entity.type === 'platform') {
@@ -360,6 +523,9 @@ async function createDonkeyKongGame(settings, callbacks = null) {
                 game.princess.y = entity.y;
             }
         });
+        
+        // Store current theme for background rendering
+        game.currentTheme = levelConfig.theme;
         
         render();
     }
@@ -551,8 +717,9 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Black background (original arcade style)
-        ctx.fillStyle = '#000000';
+        // Theme-based background
+        const themeColors = DKThemes[game.currentTheme || 'girders'] || DKThemes.girders;
+        ctx.fillStyle = themeColors.background;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Render entities
@@ -642,15 +809,29 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             barrel.render(ctx);
         });
         
-        // Display lives
+        // Display lives and level info
         ctx.fillStyle = '#FFFFFF';
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
         ctx.fillText(`Lives: ${game.player.lives}`, 10, 25);
+        ctx.fillText(`Level ${game.currentLevel}: ${DKLevels[game.currentLevel]?.name || 'Unknown'}`, 10, 45);
     }
     
     // Controls
     document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Return to level selection if unlock all levels is enabled
+            const unlockAllLevels = dkConfig.unlockAllLevels || settings?.unlockAllLevels || false;
+            if (unlockAllLevels) {
+                game.gameRunning = false;
+                if (game.gameInterval) {
+                    clearInterval(game.gameInterval);
+                }
+                showLevelSelection(gameArea, settings, callbacks);
+                return;
+            }
+        }
+        
         if (!game.gameRunning && e.key === 'r') {
             // Restart game
             location.reload();

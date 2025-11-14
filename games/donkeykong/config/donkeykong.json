@@ -5,10 +5,12 @@
   "barrelFrequency": 150,
   "ladderCount": 4,
   "levelCount": 4,
+  "unlockAllLevels": false,
   "gameplay": {
     "levelCount": 4,
     "barrelFrequency": 150,
-    "hammerDuration": 600
+    "hammerDuration": 600,
+    "unlockAllLevels": false
   },
   "physics": {
     "barrelSpeed": 1.0,
@@ -68,6 +70,11 @@
       "min": 1,
       "max": 5,
       "formula": "Math.floor(difficulty / 2)"
+    },
+    "unlockAllLevels": {
+      "value": false,
+      "static": true,
+      "source": "config.gameSettings.unlockAllLevels"
     }
   }
 }
