@@ -824,6 +824,8 @@ async function createGameWithCallbacks(gameType, settings) {
     switch(gameType) {
         case 'mario':
             return await createMarioGame(settings, gameCallbacks);
+        case 'donkeykong':
+            return await createDonkeyKongGame(settings, gameCallbacks);
         case 'pacman':
             return await createPacmanGame(settings, gameCallbacks);
         case 'snake':
