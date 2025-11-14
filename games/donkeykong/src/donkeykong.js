@@ -113,16 +113,16 @@ class DKMapParser {
                 
                 switch (char) {
                     case '-':
-                        entities.push(new DKPlatform(x, y, tileWidth, 8, 0));
+                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, 0));
                         break;
                     case '/':
-                        entities.push(new DKPlatform(x, y, tileWidth, 8, 0.1));
+                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, 0.1));
                         break;
                     case '\\':
-                        entities.push(new DKPlatform(x, y, tileWidth, 8, -0.1));
+                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, -0.1));
                         break;
                     case 'H':
-                        entities.push(new DKLadder(x, y, 8, tileHeight));
+                        entities.push(new DKLadder(x, y, tileWidth, tileHeight));
                         break;
                     case 'o':
                         entities.push(new DKOilDrum(x, y - 5));
@@ -172,7 +172,7 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     };
     
     async function loadLevel() {
-        const entities = await DKMapParser.loadMap('/games/donkeykong/maps/level-1-enhanced.map');
+        const entities = await DKMapParser.loadMap('/games/donkeykong/maps/level1.map');
         
         entities.forEach(entity => {
             if (entity.type === 'platform') {
@@ -205,6 +205,17 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     function gameLoop() {
         if (!game.gameRunning) return;
         
+        // Check if Mario is on a ladder (center must be touching ladder center)
+        const marioCenter = game.player.x + game.player.width / 2;
+        const onLadder = game.ladders.some(ladder => {
+            const ladderCenter = ladder.x + ladder.width / 2;
+            const ladderCenterZone = ladder.width * 0.6; // 60% of ladder width for center zone
+            
+            return Math.abs(marioCenter - ladderCenter) < ladderCenterZone / 2 &&
+                   game.player.y < ladder.y + ladder.height &&
+                   game.player.y + game.player.height > ladder.y;
+        });
+        
         // Handle movement
         if (game.keys['ArrowLeft']) {
             game.player.vx = -3;
@@ -214,8 +225,20 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             game.player.vx = 0;
         }
         
-        // Physics
-        game.player.vy += 0.5;
+        // Handle ladder climbing (disable gravity when on ladder)
+        if (onLadder) {
+            if (game.keys['ArrowUp']) {
+                game.player.vy = -3;
+            } else if (game.keys['ArrowDown']) {
+                game.player.vy = 3;
+            } else {
+                game.player.vy = 0; // Stop vertical movement when not pressing up/down
+            }
+        } else {
+            // Only apply gravity when not on ladder
+            game.player.vy += 0.5;
+        }
+        
         game.player.x += game.player.vx;
         game.player.y += game.player.vy;
         
@@ -223,21 +246,24 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         if (game.player.x < 0) game.player.x = 0;
         if (game.player.x > canvas.width - game.player.width) game.player.x = canvas.width - game.player.width;
         
-        // Platform collision
-        game.player.onGround = false;
-        game.platforms.forEach(platform => {
-            if (game.player.x < platform.x + platform.width &&
-                game.player.x + game.player.width > platform.x &&
-                game.player.y < platform.y + platform.height &&
-                game.player.y + game.player.height > platform.y) {
-                
-                if (game.player.vy > 0) {
-                    game.player.y = platform.y - game.player.height;
-                    game.player.vy = 0;
-                    game.player.onGround = true;
+        // Platform collision (only when not on ladder)
+        if (!onLadder) {
+            game.player.onGround = false;
+            game.platforms.forEach(platform => {
+                if (game.player.x < platform.x + platform.width &&
+                    game.player.x + game.player.width > platform.x &&
+                    game.player.y + game.player.height >= platform.y &&
+                    game.player.y + game.player.height <= platform.y + platform.height + 5) {
+                    
+                    // Only land on platform if Mario is falling (vy > 0) and his feet hit the top
+                    if (game.player.vy > 0 && game.player.y + game.player.height >= platform.y) {
+                        game.player.y = platform.y - game.player.height;
+                        game.player.vy = 0;
+                        game.player.onGround = true;
+                    }
                 }
-            }
-        });
+            });
+        }
         
         render();
     }
@@ -279,8 +305,8 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         
         game.keys[e.key] = true;
         
-        if (e.key === 'ArrowUp' && game.player.onGround) {
-            game.player.vy = -12;
+        if (e.key === ' ' && game.player.onGround) {
+            game.player.vy = -6; // Reduced to jump ~3 grid cells high
         }
         
         e.preventDefault();
@@ -297,21 +323,9 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     gameArea.innerHTML = '';
     gameArea.appendChild(canvas);
     
-    const startButton = document.createElement('button');
-    startButton.textContent = 'Start Game';
-    startButton.onclick = () => {
-        if (!game.gameRunning) {
-            game.gameRunning = true;
-            game.gameInterval = setInterval(gameLoop, 16);
-            startButton.textContent = 'Stop Game';
-        } else {
-            game.gameRunning = false;
-            clearInterval(game.gameInterval);
-            startButton.textContent = 'Start Game';
-        }
-    };
-    
-    gameArea.appendChild(startButton);
+    // Auto-start game
+    game.gameRunning = true;
+    game.gameInterval = setInterval(gameLoop, 16);
     
     return {
         cleanup: () => {
