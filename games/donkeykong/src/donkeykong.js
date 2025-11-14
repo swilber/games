@@ -240,14 +240,14 @@ class DKMapParser {
                     let ladderHeight = tileHeight;
                     
                     if (platformAbove && platformBelow) {
-                        // Ladder spans from top of lower platform to bottom of upper platform
+                        // Ladder spans from bottom of upper platform to top of lower platform (original way)
                         ladderY = platformAbove.y + platformAbove.height;
                         ladderHeight = platformBelow.y - ladderY;
                     } else if (platformBelow) {
-                        // Ladder goes from current position to platform below
+                        // Ladder goes from current position to top of platform below
                         ladderHeight = platformBelow.y - y;
                     } else if (platformAbove) {
-                        // Ladder goes from platform above to current position
+                        // Ladder goes from bottom of platform above to current position
                         ladderY = platformAbove.y + platformAbove.height;
                         ladderHeight = y + tileHeight - ladderY;
                     }
@@ -333,6 +333,19 @@ async function createDonkeyKongGame(settings, callbacks = null) {
                    game.player.y + game.player.height > ladder.y;
         });
         
+        // Also check if there's a ladder that starts at Mario's level and goes down
+        const ladderBelow = game.ladders.some(ladder => {
+            const ladderCenter = ladder.x + ladder.width / 2;
+            const ladderCenterZone = ladder.width * 0.6;
+            
+            const centerMatch = Math.abs(marioCenter - ladderCenter) < ladderCenterZone / 2;
+            // Ladder should start at or near Mario's platform level and extend downward
+            const startsAtMarioLevel = Math.abs(ladder.y - (game.player.y + game.player.height)) < 20;
+            const extendsDown = ladder.y + ladder.height > game.player.y + game.player.height + 30;
+            
+            return centerMatch && startsAtMarioLevel && extendsDown;
+        });
+        
         // Handle movement
         if (game.keys['ArrowLeft']) {
             game.player.vx = -3;
@@ -351,6 +364,9 @@ async function createDonkeyKongGame(settings, callbacks = null) {
             } else {
                 game.player.vy = 0; // Stop vertical movement when not pressing up/down
             }
+        } else if (ladderBelow && game.keys['ArrowDown']) {
+            // Allow Mario to start climbing down when there's a ladder below him
+            game.player.vy = 3;
         } else {
             // Only apply gravity when not on ladder
             game.player.vy += 0.5;
@@ -380,6 +396,29 @@ async function createDonkeyKongGame(settings, callbacks = null) {
                     }
                 }
             });
+        }
+        
+        // Check if Mario reached the Princess (level complete)
+        if (game.player.x < game.princess.x + game.princess.width &&
+            game.player.x + game.player.width > game.princess.x &&
+            game.player.y < game.princess.y + game.princess.height &&
+            game.player.y + game.player.height > game.princess.y) {
+            
+            // Level complete!
+            game.gameRunning = false;
+            clearInterval(game.gameInterval);
+            
+            // Show completion message
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEVEL COMPLETE!', canvas.width / 2, canvas.height / 2);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '24px Arial';
+            ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
+            
+            return; // Stop game loop
         }
         
         render();
@@ -477,6 +516,12 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     
     // Controls
     document.addEventListener('keydown', (e) => {
+        if (!game.gameRunning && e.key === 'r') {
+            // Restart game
+            location.reload();
+            return;
+        }
+        
         if (!game.gameRunning) return;
         
         game.keys[e.key] = true;
