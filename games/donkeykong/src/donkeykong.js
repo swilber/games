@@ -17,15 +17,15 @@ class DKEntity {
 class DKPlatform extends DKEntity {
     constructor(x, y, width, height, angle = 0) {
         super(x, y, width, height, 'platform');
-        this.angle = angle;
+        this.angle = angle; // Keep for reference but don't use in rendering
     }
     
     render(ctx) {
-        // Neon pink platform with rivets
+        // Neon pink platform with rivets (always drawn straight)
         ctx.strokeStyle = '#FF1493'; // Hot pink
-        ctx.lineWidth = 4; // Thicker lines
+        ctx.lineWidth = 4; // Thick lines
         
-        // Top and bottom bars
+        // Top and bottom bars (straight)
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(this.x + this.width, this.y);
@@ -36,9 +36,9 @@ class DKPlatform extends DKEntity {
         ctx.lineTo(this.x + this.width, this.y + this.height);
         ctx.stroke();
         
-        // Zigzag pattern through middle (single ^ per cell)
-        const bottomY = this.y + this.height - 2; // Touch bottom rivet
-        const topY = this.y + 2; // Touch top rivet
+        // Zigzag pattern through middle (straight)
+        const bottomY = this.y + this.height - 2;
+        const topY = this.y + 2;
         const peakX = this.x + this.width / 2;
         
         // Draw two separate lines to avoid filling
@@ -52,7 +52,7 @@ class DKPlatform extends DKEntity {
         ctx.lineTo(this.x + this.width, bottomY); // Right side of ^
         ctx.stroke();
         
-        // Rivets
+        // Rivets (straight positioning)
         ctx.fillStyle = '#FF1493';
         for (let x = this.x + 10; x < this.x + this.width - 5; x += 20) {
             ctx.fillRect(x, this.y + 2, 2, 2);
@@ -150,24 +150,36 @@ class DKMapParser {
         const tileWidth = canvasWidth / mapWidth;
         const tileHeight = canvasHeight / mapHeight;
         
+        // First pass: create platforms and collect their positions
+        const platforms = [];
+        
         lines.forEach((line, row) => {
             for (let col = 0; col < line.length; col++) {
                 const char = line[col];
                 const x = col * tileWidth;
-                const y = row * tileHeight;
+                let y = row * tileHeight;
+                
+                // Adjust Y position for slanted platforms every 2 cells
+                const cellPair = Math.floor(col / 2);
+                let yOffset = 0;
                 
                 switch (char) {
                     case '-':
-                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, 0));
+                        const flatPlatform = new DKPlatform(x, y, tileWidth, tileHeight, 0);
+                        entities.push(flatPlatform);
+                        platforms.push({x, y, width: tileWidth, height: tileHeight});
                         break;
                     case '/':
-                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, 0.1));
+                        yOffset = cellPair * -1;
+                        const upPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, 0.1);
+                        entities.push(upPlatform);
+                        platforms.push({x, y: y + yOffset, width: tileWidth, height: tileHeight});
                         break;
                     case '\\':
-                        entities.push(new DKPlatform(x, y, tileWidth, tileHeight, -0.1));
-                        break;
-                    case 'H':
-                        entities.push(new DKLadder(x, y, tileWidth, tileHeight));
+                        yOffset = cellPair * 1;
+                        const downPlatform = new DKPlatform(x, y + yOffset, tileWidth, tileHeight, -0.1);
+                        entities.push(downPlatform);
+                        platforms.push({x, y: y + yOffset, width: tileWidth, height: tileHeight});
                         break;
                     case 'o':
                         entities.push(new DKOilDrum(x, y - 5));
@@ -184,6 +196,66 @@ class DKMapParser {
                     case 'P':
                         entities.push({ type: 'princess', x, y: y - 25 });
                         break;
+                }
+            }
+        });
+        
+        // Second pass: create ladders with proper heights
+        lines.forEach((line, row) => {
+            for (let col = 0; col < line.length; col++) {
+                const char = line[col];
+                if (char === 'H') {
+                    const x = col * tileWidth;
+                    const y = row * tileHeight;
+                    
+                    // Find the closest platform above and below this ladder position
+                    let platformBelow = null;
+                    let platformAbove = null;
+                    
+                    // Find closest platform below (smallest y > current y)
+                    let minDistanceBelow = Infinity;
+                    platforms.forEach(p => {
+                        if (Math.abs(p.x - x) < tileWidth/2 && p.y > y) {
+                            const distance = p.y - y;
+                            if (distance < minDistanceBelow) {
+                                minDistanceBelow = distance;
+                                platformBelow = p;
+                            }
+                        }
+                    });
+                    
+                    // Find closest platform above (largest y < current y)
+                    let minDistanceAbove = Infinity;
+                    platforms.forEach(p => {
+                        if (Math.abs(p.x - x) < tileWidth/2 && p.y < y) {
+                            const distance = y - p.y;
+                            if (distance < minDistanceAbove) {
+                                minDistanceAbove = distance;
+                                platformAbove = p;
+                            }
+                        }
+                    });
+                    
+                    let ladderY = y;
+                    let ladderHeight = tileHeight;
+                    
+                    if (platformAbove && platformBelow) {
+                        // Ladder spans from top of lower platform to bottom of upper platform
+                        ladderY = platformAbove.y + platformAbove.height;
+                        ladderHeight = platformBelow.y - ladderY;
+                    } else if (platformBelow) {
+                        // Ladder goes from current position to platform below
+                        ladderHeight = platformBelow.y - y;
+                    } else if (platformAbove) {
+                        // Ladder goes from platform above to current position
+                        ladderY = platformAbove.y + platformAbove.height;
+                        ladderHeight = y + tileHeight - ladderY;
+                    }
+                    
+                    // Ensure minimum ladder height
+                    if (ladderHeight < 20) ladderHeight = 20;
+                    
+                    entities.push(new DKLadder(x, ladderY, tileWidth, ladderHeight));
                 }
             }
         });
