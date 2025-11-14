@@ -275,7 +275,7 @@ async function createMaze3DGame(settings, callbacks = null) {
             ctx.font = '24px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('Use WASD or Arrow Keys to move', canvas.width/2, canvas.height/2 - 20);
-            ctx.fillText('Find the green exit!', canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText('Find the Triwizard Cup!', canvas.width/2, canvas.height/2 + 20);
             return;
         }
         
@@ -421,15 +421,85 @@ async function createMaze3DGame(settings, callbacks = null) {
                 
                 if (rayDistance >= finishDistance - 0.5) {
                     const screenX = canvas.width / 2 + (normalizedAngle / fov) * canvas.width;
-                    const size = Math.max(10, 100 / finishDistance);
+                    const baseSize = Math.max(15, 120 / finishDistance);
                     
-                    ctx.fillStyle = '#0f0';
-                    ctx.fillRect(screenX - size/2, canvas.height/2 - size/2, size, size);
+                    // Pulsing glow effect
+                    const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
                     
-                    ctx.fillStyle = '#fff';
-                    ctx.font = '16px Arial';
+                    const gobletWidth = baseSize * 0.8;
+                    const gobletHeight = baseSize * 1.2;
+                    const centerY = canvas.height / 2;
+                    
+                    // Outer magical glow
+                    ctx.shadowColor = '#4080ff';
+                    ctx.shadowBlur = 20 * pulse;
+                    ctx.fillStyle = `rgba(64, 128, 255, ${0.2 * pulse})`;
+                    ctx.beginPath();
+                    ctx.ellipse(screenX, centerY - gobletHeight * 0.2, gobletWidth * 1.2, gobletHeight * 0.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Goblet bowl (egg-shaped)
+                    ctx.shadowBlur = 8;
+                    ctx.fillStyle = `rgba(180, 200, 255, ${0.9 * pulse})`;
+                    ctx.beginPath();
+                    ctx.ellipse(screenX, centerY - gobletHeight * 0.4, gobletWidth * 0.6, gobletHeight * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bowl rim (darker edge)
+                    ctx.fillStyle = `rgba(120, 150, 220, ${0.9 * pulse})`;
+                    ctx.beginPath();
+                    ctx.ellipse(screenX, centerY - gobletHeight * 0.65, gobletWidth * 0.6, gobletHeight * 0.1, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Silver handles (left and right)
+                    ctx.strokeStyle = `rgba(200, 200, 220, ${0.8 * pulse})`;
+                    ctx.lineWidth = Math.max(2, baseSize * 0.1);
+                    
+                    // Left handle
+                    ctx.beginPath();
+                    ctx.arc(screenX - gobletWidth * 0.7, centerY - gobletHeight * 0.4, gobletWidth * 0.25, -Math.PI * 0.3, Math.PI * 0.3);
+                    ctx.stroke();
+                    
+                    // Right handle  
+                    ctx.beginPath();
+                    ctx.arc(screenX + gobletWidth * 0.7, centerY - gobletHeight * 0.4, gobletWidth * 0.25, Math.PI * 0.7, Math.PI * 1.3);
+                    ctx.stroke();
+                    
+                    // Goblet stem (curved)
+                    ctx.fillStyle = `rgba(150, 170, 240, ${0.9 * pulse})`;
+                    ctx.beginPath();
+                    ctx.ellipse(screenX, centerY + gobletHeight * 0.1, gobletWidth * 0.12, gobletHeight * 0.4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Goblet base (curved)
+                    ctx.fillStyle = `rgba(120, 140, 200, ${0.9 * pulse})`;
+                    ctx.beginPath();
+                    ctx.ellipse(screenX, centerY + gobletHeight * 0.45, gobletWidth * 0.4, gobletHeight * 0.15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Magical sparkles
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (Date.now() * 0.003 + i * Math.PI * 0.5) % (Math.PI * 2);
+                        const sparkleX = screenX + Math.cos(angle) * gobletWidth * 0.8;
+                        const sparkleY = centerY - gobletHeight * 0.4 + Math.sin(angle * 2) * gobletHeight * 0.2;
+                        const sparkleSize = Math.sin(Date.now() * 0.01 + i) * 2 + 2;
+                        
+                        ctx.fillStyle = `rgba(255, 255, 255, ${pulse * 0.8})`;
+                        ctx.beginPath();
+                        ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    ctx.shadowBlur = 0;
+                    
+                    // Cup text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#4080ff';
+                    ctx.lineWidth = 1;
+                    ctx.font = `bold ${Math.max(12, baseSize * 0.3)}px "Courier New", monospace`;
                     ctx.textAlign = 'center';
-                    ctx.fillText('EXIT', screenX, canvas.height/2 + 30);
+                    ctx.strokeText('TRIWIZARD CUP', screenX, centerY + gobletHeight * 0.8);
+                    ctx.fillText('TRIWIZARD CUP', screenX, centerY + gobletHeight * 0.8);
                 }
             }
         }
@@ -455,8 +525,10 @@ async function createMaze3DGame(settings, callbacks = null) {
             ctx.fillStyle = '#ff0';
             ctx.fillRect(10 + game.player.x * cellSize - 2, 10 + game.player.y * cellSize - 2, 4, 4);
             
-            // Draw exit on minimap
-            ctx.fillStyle = '#0f0';
+            // Draw Triwizard Cup on minimap
+            ctx.fillStyle = '#4080ff';
+            ctx.shadowColor = '#4080ff';
+            ctx.shadowBlur = 3;
             ctx.fillRect(10 + (game.mazeSize - 2) * cellSize, 10 + (game.mazeSize - 2) * cellSize, cellSize, cellSize);
             
             // Draw artifacts on minimap
@@ -578,7 +650,7 @@ async function createMaze3DGame(settings, callbacks = null) {
     document.addEventListener('keyup', keyUpHandler);
     
     const instructions = document.createElement('p');
-    instructions.textContent = 'Navigate the 3D maze to find the exit!';
+    instructions.textContent = 'Navigate the 3D maze to find the Triwizard Cup!';
     instructions.style.textAlign = 'center';
     
     gameArea.appendChild(instructions);
