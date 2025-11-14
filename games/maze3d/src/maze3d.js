@@ -1,9 +1,28 @@
-function createMaze3DGame(settings) {
+async function createMaze3DGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
     
+    // Load 3D Maze configuration using ConfigManager
+    let mazeConfig = {};
+    if (typeof configManager !== 'undefined') {
+        mazeConfig = await configManager.loadConfig('maze3d');
+        console.log('3D Maze config loaded via ConfigManager:', mazeConfig);
+    } else {
+        console.log('ConfigManager not available, using settings fallback');
+        mazeConfig = {
+            gameplay: settings,
+            physics: settings,
+            visual: settings
+        };
+    }
+    
+    // Game state
+    let gameRunning = false;
+    let gameInterval = null;
+    let gameStarted = false;
+    
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
-    canvas.height = 600;
+    canvas.width = mazeConfig.visual?.canvasWidth || 800;
+    canvas.height = mazeConfig.visual?.canvasHeight || 600;
     canvas.style.border = '2px solid #000';
     canvas.style.background = '#000';
     
@@ -13,7 +32,7 @@ function createMaze3DGame(settings) {
         player: { x: 1.5, y: 1.5, angle: 0 },
         maze: [],
         artifacts: [],
-        mazeSize: settings.mazeSize,
+        mazeSize: mazeConfig.gameplay?.mazeSize || settings?.mazeSize || 15,
         gameOver: false,
         won: false,
         gameStarted: false
@@ -243,8 +262,8 @@ function createMaze3DGame(settings) {
         }
         
         // Draw minimap (if enabled)
-        if (settings.showMinimap) {
-            const mapSize = 120;
+        if (mazeConfig.gameplay?.showMinimap !== false) {
+            const mapSize = mazeConfig.visual?.minimapSize || 120;
             const cellSize = mapSize / game.mazeSize;
             
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -294,16 +313,21 @@ function createMaze3DGame(settings) {
         
         if (playerMapX === game.mazeSize - 2 && playerMapY === game.mazeSize - 2) {
             game.won = true;
-            gameWon = true;
-            setTimeout(showQuestion, 1000);
+            gameRunning = false;
+            
+            if (callbacks && callbacks.onGameComplete) {
+                setTimeout(() => {
+                    callbacks.onGameComplete('maze3d', { completed: true });
+                }, 1000);
+            }
         }
     }
     
     function handleMovement() {
         if (game.won || !game.gameStarted) return;
         
-        const moveSpeed = settings.moveSpeed;
-        const rotSpeed = 0.05;
+        const moveSpeed = mazeConfig.physics?.moveSpeed || settings?.moveSpeed || 0.08;
+        const rotSpeed = mazeConfig.physics?.rotSpeed || 0.05;
         
         // Movement
         if (keys['KeyW'] || keys['ArrowUp']) {
@@ -337,40 +361,48 @@ function createMaze3DGame(settings) {
     }
     
     function gameLoop() {
+        if (!gameRunning) return;
+        
         handleMovement();
         update();
         render();
-        if (!game.won) {
-            requestAnimationFrame(gameLoop);
-        }
     }
     
     const keys = {};
     
     function handleKeyDown(e) {
-        // Only handle game-related keys
+        // Immediately return if game is not running or if it's not a game key
         const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
-        if (!gameKeys.includes(e.code)) return;
+        if (!gameRunning || !gameKeys.includes(e.code)) return;
         
         keys[e.code] = true;
-        e.preventDefault();
         
         if (!game.gameStarted) {
             game.gameStarted = true;
+            gameStarted = true;
+            if (callbacks && callbacks.onGameStart) {
+                callbacks.onGameStart('maze3d');
+            }
         }
+        
+        e.preventDefault();
     }
     
     function handleKeyUp(e) {
-        // Only handle game-related keys
+        // Immediately return if game is not running or if it's not a game key
         const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
-        if (!gameKeys.includes(e.code)) return;
+        if (!gameRunning || !gameKeys.includes(e.code)) return;
         
         keys[e.code] = false;
         e.preventDefault();
     }
     
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    // Store handler references for cleanup
+    const keyDownHandler = handleKeyDown;
+    const keyUpHandler = handleKeyUp;
+    
+    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener('keyup', keyUpHandler);
     
     const instructions = document.createElement('p');
     instructions.textContent = 'Navigate the 3D maze to find the exit!';
@@ -380,5 +412,21 @@ function createMaze3DGame(settings) {
     gameArea.appendChild(canvas);
     
     generateMaze();
-    gameLoop();
+    
+    // Start game loop
+    gameRunning = true;
+    gameInterval = setInterval(gameLoop, 16); // ~60fps
+    
+    // Return cleanup function
+    return {
+        cleanup: () => {
+            gameRunning = false;
+            if (gameInterval) {
+                clearInterval(gameInterval);
+                gameInterval = null;
+            }
+            document.removeEventListener('keydown', keyDownHandler);
+            document.removeEventListener('keyup', keyUpHandler);
+        }
+    };
 }

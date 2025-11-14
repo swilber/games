@@ -1,6 +1,23 @@
 {
   "name": "3D Maze",
   "description": "Navigate through a 3D maze using raycasting",
+  "mazeSize": 15,
+  "moveSpeed": 0.08,
+  "rotSpeed": 0.05,
+  "showMinimap": true,
+  "gameplay": {
+    "mazeSize": 15,
+    "showMinimap": true
+  },
+  "physics": {
+    "moveSpeed": 0.08,
+    "rotSpeed": 0.05
+  },
+  "visual": {
+    "canvasWidth": 800,
+    "canvasHeight": 600,
+    "minimapSize": 120
+  },
   "difficulty": {
     "mazeSize": {
       "base": 5,

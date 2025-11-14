@@ -148,6 +148,8 @@ function generateConfigForm(gameType, config) {
         generateFlappyConfigForm(config, content);
     } else if (gameType === 'frogger') {
         generateFroggerConfigForm(config, content);
+    } else if (gameType === 'maze3d') {
+        generateMaze3DConfigForm(config, content);
     }
     // Add other games later
 }
@@ -364,6 +366,28 @@ function generateFlappyConfigForm(config, container) {
 }
 
 function generateFroggerConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateMaze3DConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' }
@@ -695,6 +719,7 @@ function selectLevel(levelIndex) {
 function showLevelSelection() {
     // Clean up current game
     if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {
+        console.log('Calling cleanup for current game');
         currentGameInstance.cleanup();
     }
     currentGameInstance = null;
@@ -815,6 +840,7 @@ async function initializeLevel() {
     
     // Clean up previous game
     if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {
+        console.log('Cleaning up previous game before starting new level');
         currentGameInstance.cleanup();
     }
     currentGameInstance = null;
@@ -827,11 +853,11 @@ async function initializeLevel() {
         case 'memory':
         case 'quiz':
         case 'frogger':
-        case 'maze3d':
         case 'donkeykong':
             // Legacy games without callback support
             currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
             break;
+        case 'maze3d':
         case 'mario':
         case 'pacman':
         case 'snake':
@@ -839,7 +865,9 @@ async function initializeLevel() {
         case 'breakout':
         case 'flappy':
             // Modern games with callback support
+            console.log('Creating modern game:', level.type);
             currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
+            console.log('Modern game created, has cleanup:', typeof currentGameInstance?.cleanup === 'function');
             break;
     }
 }
