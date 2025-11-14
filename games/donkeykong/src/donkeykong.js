@@ -111,6 +111,48 @@ class DKOilDrum extends DKEntity {
     }
 }
 
+class DKBarrel extends DKEntity {
+    constructor(x, y, isBlue = false) {
+        super(x, y, 16, 16, 'barrel'); // Small enough for Mario to jump over
+        this.vx = 2; // Rolling speed
+        this.vy = 0;
+        this.isBlue = isBlue;
+        this.onGround = false;
+    }
+    
+    render(ctx) {
+        // Barrel color
+        const barrelColor = this.isBlue ? '#4169E1' : '#8B4513'; // Royal blue or saddle brown
+        const shadowColor = this.isBlue ? '#191970' : '#654321'; // Darker shades
+        
+        // Main barrel body (circle)
+        ctx.fillStyle = barrelColor;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Barrel bands (horizontal lines for shading)
+        ctx.strokeStyle = shadowColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 2, this.y + 4);
+        ctx.lineTo(this.x + this.width - 2, this.y + 4);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x + 2, this.y + this.height - 4);
+        ctx.lineTo(this.x + this.width - 2, this.y + this.height - 4);
+        ctx.stroke();
+        
+        // Highlight (top-left curve for 3D effect)
+        ctx.strokeStyle = this.isBlue ? '#6495ED' : '#CD853F';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2 - 2, Math.PI, Math.PI * 1.5);
+        ctx.stroke();
+    }
+}
+
 class DKHammer extends DKEntity {
     constructor(x, y) {
         super(x, y, 15, 20, 'hammer');
@@ -278,11 +320,14 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         entities: [],
         platforms: [],
         ladders: [],
+        barrels: [],
         oildrums: [],
         hammers: [],
-        player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30 },
+        player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3 },
         donkeyKong: { x: 50, y: 50, width: 40, height: 40 },
         princess: { x: 550, y: 50, width: 20, height: 30 },
+        barrelTimer: 0,
+        barrelThrowRate: 120, // Configurable: frames between barrel throws
         gameRunning: false,
         gameInterval: null,
         keys: {}
@@ -321,6 +366,85 @@ async function createDonkeyKongGame(settings, callbacks = null) {
     
     function gameLoop() {
         if (!game.gameRunning) return;
+        
+        // Donkey Kong throws barrels
+        game.barrelTimer++;
+        if (game.barrelTimer >= game.barrelThrowRate) {
+            game.barrelTimer = 0;
+            const isBlue = Math.random() < 0.3; // 30% chance for blue barrel
+            const barrel = new DKBarrel(game.donkeyKong.x + 20, game.donkeyKong.y + 40, isBlue);
+            game.barrels.push(barrel);
+        }
+        
+        // Update barrels
+        game.barrels.forEach((barrel, index) => {
+            // Barrel physics
+            barrel.vy += 0.5; // Gravity
+            barrel.x += barrel.vx;
+            barrel.y += barrel.vy;
+            
+            // Screen edge collision (turn around)
+            if (barrel.x <= 0 || barrel.x >= canvas.width - barrel.width) {
+                barrel.vx = -barrel.vx;
+            }
+            
+            // Platform collision
+            barrel.onGround = false;
+            game.platforms.forEach(platform => {
+                if (barrel.x < platform.x + platform.width &&
+                    barrel.x + barrel.width > platform.x &&
+                    barrel.y < platform.y + platform.height &&
+                    barrel.y + barrel.height > platform.y) {
+                    
+                    if (barrel.vy > 0) {
+                        barrel.y = platform.y - barrel.height;
+                        barrel.vy = 0;
+                        barrel.onGround = true;
+                    }
+                }
+            });
+            
+            // Remove barrels that fall off screen
+            if (barrel.y > canvas.height + 50) {
+                game.barrels.splice(index, 1);
+            }
+        });
+        
+        // Check barrel-Mario collision
+        game.barrels.forEach(barrel => {
+            if (game.player.x < barrel.x + barrel.width &&
+                game.player.x + game.player.width > barrel.x &&
+                game.player.y < barrel.y + barrel.height &&
+                game.player.y + game.player.height > barrel.y) {
+                
+                // Mario hit by barrel - lose life and restart
+                game.player.lives--;
+                if (game.player.lives <= 0) {
+                    // Game over
+                    game.gameRunning = false;
+                    clearInterval(game.gameInterval);
+                    
+                    ctx.fillStyle = '#FF0000';
+                    ctx.font = '48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
+                    return;
+                } else {
+                    // Restart level - reset Mario position and clear barrels
+                    game.player.x = 50;
+                    game.player.y = 450;
+                    game.player.vx = 0;
+                    game.player.vy = 0;
+                    game.player.onGround = false;
+                    game.barrels = []; // Clear all barrels
+                    game.barrelTimer = 0;
+                }
+            }
+        });
         
         // Check if Mario is on a ladder (center must be touching ladder center)
         const marioCenter = game.player.x + game.player.width / 2;
@@ -512,6 +636,17 @@ async function createDonkeyKongGame(settings, callbacks = null) {
         ctx.fillStyle = '#FF69B4';
         ctx.fillRect(pX + 2, pY + 16, pW - 4, 2);
         ctx.fillRect(pX + 2, pY + 22, pW - 4, 2);
+        
+        // Render barrels
+        game.barrels.forEach(barrel => {
+            barrel.render(ctx);
+        });
+        
+        // Display lives
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Lives: ${game.player.lives}`, 10, 25);
     }
     
     // Controls
