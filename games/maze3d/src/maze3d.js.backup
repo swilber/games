@@ -163,110 +163,12 @@ async function createMaze3DGame(settings, callbacks = null) {
     }
     
     function render() {
-        const fov = Math.PI / 3;
-        const halfFov = fov / 2;
+        // Clear canvas
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(0, 0, canvas.width, canvas.height / 2); // Sky
         
-        // Nighttime sky gradient with lighter horizon
-        const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height / 2);
-        skyGradient.addColorStop(0, '#0a0a2e');
-        skyGradient.addColorStop(0.6, '#1a1a3a');
-        skyGradient.addColorStop(0.9, '#3a3a5a');
-        skyGradient.addColorStop(1, '#4a4a6a');
-        ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
-        
-        // Add stars with fixed world positions
-        ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 120; i++) {
-            // Fixed world angle for each star
-            const starWorldAngle = (i * 0.3) % (Math.PI * 2);
-            const starElevation = (i * 0.1) % 0.8; // Height in sky (0-0.8)
-            
-            // Calculate screen position based on player's viewing angle
-            const relativeAngle = starWorldAngle - game.player.angle;
-            let normalizedAngle = relativeAngle;
-            while (normalizedAngle > Math.PI) normalizedAngle -= 2 * Math.PI;
-            while (normalizedAngle < -Math.PI) normalizedAngle += 2 * Math.PI;
-            
-            // Only draw stars in field of view
-            if (Math.abs(normalizedAngle) < Math.PI / 3) {
-                const starX = canvas.width / 2 + (normalizedAngle / (Math.PI / 3)) * canvas.width;
-                const starY = (canvas.height / 2) * (1 - starElevation);
-                
-                if (starX >= 0 && starX < canvas.width && starY >= 0 && starY < canvas.height / 2) {
-                    const brightness = (i % 4) * 0.2 + 0.3;
-                    const size = (i % 3) + 1;
-                    
-                    ctx.globalAlpha = brightness;
-                    if (size === 1) {
-                        ctx.fillRect(starX, starY, 1, 1);
-                    } else if (size === 2) {
-                        ctx.fillRect(starX, starY, 2, 2);
-                    } else {
-                        ctx.fillRect(starX, starY, 2, 2);
-                        ctx.fillRect(starX - 1, starY + 1, 1, 1);
-                        ctx.fillRect(starX + 2, starY + 1, 1, 1);
-                        ctx.fillRect(starX + 1, starY - 1, 1, 1);
-                        ctx.fillRect(starX + 1, starY + 3, 1, 1);
-                    }
-                }
-            }
-        }
-        ctx.globalAlpha = 1;
-        
-        // Add textured moon with fixed world position
-        const moonWorldAngle = Math.PI / 4; // Fixed at 45 degrees in world
-        const moonRelativeAngle = moonWorldAngle - game.player.angle;
-        let moonNormalizedAngle = moonRelativeAngle;
-        while (moonNormalizedAngle > Math.PI) moonNormalizedAngle -= 2 * Math.PI;
-        while (moonNormalizedAngle < -Math.PI) moonNormalizedAngle += 2 * Math.PI;
-        
-        // Only draw moon if in field of view
-        if (Math.abs(moonNormalizedAngle) < fov * 1.5) { // Slightly wider FOV for moon
-            const moonX = canvas.width / 2 + (moonNormalizedAngle / fov) * canvas.width * 0.8;
-            const moonY = canvas.height * 0.15;
-            const moonRadius = 60;
-            
-            // Moon base with gradient
-            const moonGradient = ctx.createRadialGradient(
-                moonX - 15, moonY - 15, 0,
-                moonX, moonY, moonRadius
-            );
-            moonGradient.addColorStop(0, '#f5f5dc');
-            moonGradient.addColorStop(0.7, '#e0e0b0');
-            moonGradient.addColorStop(1, '#c0c090');
-            
-            ctx.fillStyle = moonGradient;
-            ctx.beginPath();
-            ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add craters (scaled up 3x)
-            ctx.fillStyle = 'rgba(180, 180, 150, 0.6)';
-            ctx.beginPath();
-            ctx.arc(moonX - 18, moonY - 12, 9, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(moonX + 12, moonY + 6, 6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(moonX - 6, moonY + 18, 4.5, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(moonX + 24, moonY - 24, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Grass ground
-        const grassGradient = ctx.createLinearGradient(0, canvas.height / 2, 0, canvas.height);
-        grassGradient.addColorStop(0, '#2d5016');
-        grassGradient.addColorStop(0.3, '#3d6020');
-        grassGradient.addColorStop(1, '#1d4010');
-        ctx.fillStyle = grassGradient;
-        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2); // Floor
         
         if (!game.gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -279,122 +181,47 @@ async function createMaze3DGame(settings, callbacks = null) {
             return;
         }
         
-        // Cast rays for each screen column
-        for (let x = 0; x < canvas.width; x++) {
-            // Calculate ray angle
-            const rayAngle = game.player.angle - halfFov + (x / canvas.width) * fov;
+        const fov = Math.PI / 3; // 60 degrees
+        const numRays = canvas.width; // Full resolution
+        
+        for (let i = 0; i < numRays; i++) {
+            const rayAngle = game.player.angle - fov / 2 + (fov * i) / numRays;
+            const distance = castRay(rayAngle);
             
-            // Ray direction
-            const rayDirX = Math.cos(rayAngle);
-            const rayDirY = Math.sin(rayAngle);
-            
-            // Current position
-            let mapX = Math.floor(game.player.x);
-            let mapY = Math.floor(game.player.y);
-            
-            // Length of ray from current position to x or y side
-            const deltaDistX = Math.abs(1 / rayDirX);
-            const deltaDistY = Math.abs(1 / rayDirY);
-            
-            let perpWallDist;
-            let stepX, stepY;
-            let sideDistX, sideDistY;
-            let hit = false;
-            let side; // 0 for x-side, 1 for y-side
-            
-            // Calculate step and initial sideDist
-            if (rayDirX < 0) {
-                stepX = -1;
-                sideDistX = (game.player.x - mapX) * deltaDistX;
-            } else {
-                stepX = 1;
-                sideDistX = (mapX + 1.0 - game.player.x) * deltaDistX;
-            }
-            
-            if (rayDirY < 0) {
-                stepY = -1;
-                sideDistY = (game.player.y - mapY) * deltaDistY;
-            } else {
-                stepY = 1;
-                sideDistY = (mapY + 1.0 - game.player.y) * deltaDistY;
-            }
-            
-            // Perform DDA
-            while (!hit) {
-                // Jump to next map square, either in x-direction, or in y-direction
-                if (sideDistX < sideDistY) {
-                    sideDistX += deltaDistX;
-                    mapX += stepX;
-                    side = 0;
+            if (distance > 0) {
+                // Fix fisheye effect
+                const correctedDistance = distance * Math.cos(rayAngle - game.player.angle);
+                
+                const wallHeight = canvas.height / correctedDistance;
+                const wallTop = (canvas.height - wallHeight) / 2;
+                
+                // Check if this wall has a special color
+                const hitX = game.player.x + Math.cos(rayAngle) * distance;
+                const hitY = game.player.y + Math.sin(rayAngle) * distance;
+                const wallX = Math.floor(hitX);
+                const wallY = Math.floor(hitY);
+                
+                let wallColor = null;
+                game.artifacts.forEach(artifact => {
+                    const artifactWallX = Math.floor(artifact.x);
+                    const artifactWallY = Math.floor(artifact.y);
+                    if (wallX === artifactWallX && wallY === artifactWallY) {
+                        if (artifact.type === 'torch') wallColor = '#8B4513'; // Brown
+                        else if (artifact.type === 'skull') wallColor = '#D2B48C'; // Tan
+                        else if (artifact.type === 'gem') wallColor = '#228B22'; // Forest Green
+                    }
+                });
+                
+                if (wallColor) {
+                    ctx.fillStyle = wallColor;
                 } else {
-                    sideDistY += deltaDistY;
-                    mapY += stepY;
-                    side = 1;
+                    // Normal wall color based on distance
+                    const brightness = Math.max(50, 255 - distance * 20);
+                    ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
                 }
                 
-                // Check if ray has hit a wall
-                if (mapX < 0 || mapX >= game.mazeSize || mapY < 0 || mapY >= game.mazeSize || 
-                    game.maze[mapY][mapX] === 1) {
-                    hit = true;
-                }
+                ctx.fillRect(i, wallTop, 1, wallHeight);
             }
-            
-            // Calculate distance
-            if (side === 0) {
-                perpWallDist = (mapX - game.player.x + (1 - stepX) / 2) / rayDirX;
-            } else {
-                perpWallDist = (mapY - game.player.y + (1 - stepY) / 2) / rayDirY;
-            }
-            
-            // Calculate height of line to draw on screen
-            const lineHeight = Math.floor(canvas.height / perpWallDist);
-            
-            // Calculate lowest and highest pixel to fill in current stripe
-            let drawStart = Math.floor(-lineHeight / 2 + canvas.height / 2);
-            if (drawStart < 0) drawStart = 0;
-            
-            let drawEnd = Math.floor(lineHeight / 2 + canvas.height / 2);
-            if (drawEnd >= canvas.height) drawEnd = canvas.height - 1;
-            
-            // Calculate texture coordinate
-            let wallX;
-            if (side === 0) {
-                wallX = game.player.y + perpWallDist * rayDirY;
-            } else {
-                wallX = game.player.x + perpWallDist * rayDirX;
-            }
-            wallX -= Math.floor(wallX);
-            
-            // Simple hedge texture using gradients (much faster)
-            const leafPattern = Math.sin(wallX * 8) * 0.2 + 0.8;
-            
-            // Base hedge colors
-            let baseGreen = 70 * leafPattern;
-            let darkGreen = 50 * leafPattern;
-            let lightGreen = 30 * leafPattern;
-            
-            // Apply wall orientation shading
-            if (side === 1) {
-                baseGreen *= 0.7;
-                darkGreen *= 0.7;
-                lightGreen *= 0.7;
-            }
-            
-            // Apply distance shading
-            const brightness = Math.max(0.3, 1 - perpWallDist * 0.15);
-            baseGreen *= brightness;
-            darkGreen *= brightness;
-            lightGreen *= brightness;
-            
-            // Create gradient for hedge appearance
-            const gradient = ctx.createLinearGradient(0, drawStart, 0, drawEnd);
-            gradient.addColorStop(0, `rgb(${lightGreen + 20}, ${baseGreen + 30}, ${darkGreen + 10})`);
-            gradient.addColorStop(0.3, `rgb(${lightGreen + 10}, ${baseGreen + 20}, ${darkGreen + 5})`);
-            gradient.addColorStop(0.7, `rgb(${lightGreen}, ${baseGreen}, ${darkGreen})`);
-            gradient.addColorStop(1, `rgb(${lightGreen - 10}, ${baseGreen - 20}, ${darkGreen - 5})`);
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
         }
         
         // Draw finish indicator if visible and not blocked by walls
