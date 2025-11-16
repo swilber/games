@@ -210,6 +210,36 @@ class DKHammer extends DKEntity {
     }
 }
 
+class DKCollectible extends DKEntity {
+    constructor(x, y, collectibleType) {
+        super(x, y, 16, 16, 'collectible');
+        this.collectibleType = collectibleType; // 'parasol', 'purse', 'hat'
+        this.collected = false;
+    }
+    
+    render(ctx) {
+        if (this.collected) return;
+        
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        
+        switch(this.collectibleType) {
+            case 'umbrella':
+                ctx.fillStyle = '#FF69B4';
+                ctx.fillText('P', this.x + this.width/2, this.y + this.height);
+                break;
+            case 'bag':
+                ctx.fillStyle = '#FFD700';
+                ctx.fillText('p', this.x + this.width/2, this.y + this.height);
+                break;
+            case 'hat':
+                ctx.fillStyle = '#8B4513';
+                ctx.fillText('h', this.x + this.width/2, this.y + this.height);
+                break;
+        }
+    }
+}
+
 // Enhanced Map Parser
 class DKMapParser {
     static async loadMap(mapPath, theme = 'girders') {
@@ -267,6 +297,15 @@ class DKMapParser {
                         break;
                     case 'p':
                         entities.push(new DKHammer(x, y - 5));
+                        break;
+                    case 'u': // Umbrella (parasol)
+                        entities.push(new DKCollectible(x, y - 5, 'umbrella'));
+                        break;
+                    case 'b': // Bag (purse)
+                        entities.push(new DKCollectible(x, y - 5, 'bag'));
+                        break;
+                    case 'h': // Hat
+                        entities.push(new DKCollectible(x, y - 5, 'hat'));
                         break;
                     case 'M':
                         entities.push({ type: 'mario', x, y: y - 20 });
@@ -486,6 +525,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         barrels: [],
         oildrums: [],
         hammers: [],
+        collectibles: [],
         player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3 },
         donkeyKong: { x: 50, y: 50, width: 40, height: 40 },
         princess: { x: 550, y: 50, width: 20, height: 30 },
@@ -493,7 +533,9 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         barrelThrowRate: 120, // Configurable: frames between barrel throws
         gameRunning: false,
         gameInterval: null,
-        keys: {}
+        keys: {},
+        score: 0,
+        currentLevel: levelNum
     };
     
     async function loadLevel() {
@@ -511,6 +553,9 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 game.entities.push(entity);
             } else if (entity.type === 'hammer') {
                 game.hammers.push(entity);
+                game.entities.push(entity);
+            } else if (entity.type === 'collectible') {
+                game.collectibles.push(entity);
                 game.entities.push(entity);
             } else if (entity.type === 'mario') {
                 game.player.x = entity.x;
@@ -609,6 +654,24 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                     game.barrels = []; // Clear all barrels
                     game.barrelTimer = 0;
                 }
+            }
+        });
+        
+        // Check collectible-Mario collision
+        game.collectibles.forEach(collectible => {
+            if (!collectible.collected &&
+                game.player.x < collectible.x + collectible.width &&
+                game.player.x + game.player.width > collectible.x &&
+                game.player.y < collectible.y + collectible.height &&
+                game.player.y + game.player.height > collectible.y) {
+                
+                // Mario collected item - add points based on level
+                collectible.collected = true;
+                let points = 300; // Level 1 default
+                if (game.currentLevel === 2) points = 500;
+                else if (game.currentLevel >= 3) points = 800;
+                
+                game.score += points;
             }
         });
         
@@ -815,6 +878,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         ctx.textAlign = 'left';
         ctx.fillText(`Lives: ${game.player.lives}`, 10, 25);
         ctx.fillText(`Level ${game.currentLevel}: ${DKLevels[game.currentLevel]?.name || 'Unknown'}`, 10, 45);
+        ctx.fillText(`Score: ${game.score}`, 10, 65);
     }
     
     // Controls

@@ -24,7 +24,7 @@
       "formula": "difficulty"
     },
     "jumpHeight": {
-      "value": 15,
+      "value": 13,
       "static": true
     },
     "gravity": {
@@ -40,7 +40,7 @@
     }
   },
   "player": {
-    "jumpHeight": 15,
+    "jumpHeight": 13,
     "moveSpeed": 4,
     "lives": 3,
     "invincibilityTime": 120
