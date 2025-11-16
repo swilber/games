@@ -313,7 +313,8 @@ class DKElevatorMarker extends DKEntity {
 
 class DKElevator extends DKEntity {
     constructor(x, y, direction, startY, endY, theme = 'girders') {
-        super(x, y, 50, 10, 'elevator'); // Two cells wide (25*2=50), girder height (10)
+        const tileHeight = 20; // Standard cell height
+        super(x, y, 50, tileHeight, 'elevator'); // Two cells wide (25*2=50), 1 cell deep (20)
         this.direction = direction; // 'up' or 'down'
         this.startY = startY;
         this.endY = endY;
@@ -336,7 +337,7 @@ class DKElevator extends DKEntity {
                 x: x,
                 y: platformY,
                 width: this.width,
-                height: this.height,
+                height: tileHeight, // 1 cell deep
                 movingUp: direction === 'up'
             });
         }
@@ -375,20 +376,51 @@ class DKElevator extends DKEntity {
             const themeColors = DKThemes[this.theme] || DKThemes.girders;
             const platformColor = themeColors.platforms;
             
-            ctx.fillStyle = platformColor;
-            ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            // Make platform 1 cell deep (same as tileHeight)
+            const tileHeight = 20; // Standard cell height
+            platform.height = tileHeight;
             
-            // Platform outline for visibility
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+            // Neon platform with rivets (same as DKPlatform)
+            ctx.strokeStyle = platformColor;
+            ctx.lineWidth = 4; // Thick lines
             
-            // Rivets
-            ctx.fillStyle = '#333';
-            for (let i = 0; i < 3; i++) {
-                const rivetX = platform.x + (i + 1) * (platform.width / 4);
-                ctx.fillRect(rivetX - 1, platform.y + 2, 2, 2);
-                ctx.fillRect(rivetX - 1, platform.y + platform.height - 4, 2, 2);
+            // Top and bottom bars
+            ctx.beginPath();
+            ctx.moveTo(platform.x, platform.y);
+            ctx.lineTo(platform.x + platform.width, platform.y);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(platform.x, platform.y + platform.height);
+            ctx.lineTo(platform.x + platform.width, platform.y + platform.height);
+            ctx.stroke();
+            
+            // Zigzag pattern through middle (two zigzags for two cells)
+            const bottomY = platform.y + platform.height - 2;
+            const topY = platform.y + 2;
+            const cellWidth = platform.width / 2; // Two cells
+            
+            // First zigzag (left cell)
+            const peak1X = platform.x + cellWidth / 2;
+            ctx.beginPath();
+            ctx.moveTo(platform.x, bottomY);
+            ctx.lineTo(peak1X, topY);
+            ctx.lineTo(platform.x + cellWidth, bottomY);
+            ctx.stroke();
+            
+            // Second zigzag (right cell)
+            const peak2X = platform.x + cellWidth + cellWidth / 2;
+            ctx.beginPath();
+            ctx.moveTo(platform.x + cellWidth, bottomY);
+            ctx.lineTo(peak2X, topY);
+            ctx.lineTo(platform.x + platform.width, bottomY);
+            ctx.stroke();
+            
+            // Rivets (use darker color like regular platforms)
+            ctx.fillStyle = '#333'; // Dark gray rivets like other platforms
+            for (let x = platform.x + 10; x < platform.x + platform.width - 5; x += 20) {
+                ctx.fillRect(x - 2, platform.y + 3, 4, 4);
+                ctx.fillRect(x - 2, platform.y + platform.height - 7, 4, 4);
             }
         });
     }
