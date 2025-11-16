@@ -319,23 +319,45 @@ class DKElevator extends DKEntity {
         this.endY = endY;
         this.speed = 1;
         this.theme = theme;
-        this.movingUp = direction === 'up';
+        this.platforms = []; // Multiple platforms on this elevator
+        this.trackHeight = Math.abs(endY - startY);
+        
+        // Create 3 platforms spaced along the track
+        const platformSpacing = this.trackHeight / 4; // Space them out
+        for (let i = 0; i < 3; i++) {
+            let platformY;
+            if (direction === 'up') {
+                platformY = startY - (i * platformSpacing);
+            } else {
+                platformY = endY + (i * platformSpacing);
+            }
+            
+            this.platforms.push({
+                x: x,
+                y: platformY,
+                width: this.width,
+                height: this.height,
+                movingUp: direction === 'up'
+            });
+        }
     }
     
     update() {
-        if (this.movingUp) {
-            this.y -= this.speed;
-            if (this.y <= this.endY) {
-                this.y = this.endY;
-                this.movingUp = false;
+        this.platforms.forEach(platform => {
+            if (platform.movingUp) {
+                platform.y -= this.speed;
+                // Teleport to bottom when reaching top
+                if (platform.y <= this.endY) {
+                    platform.y = this.startY;
+                }
+            } else {
+                platform.y += this.speed;
+                // Teleport to top when reaching bottom
+                if (platform.y >= this.startY) {
+                    platform.y = this.endY;
+                }
             }
-        } else {
-            this.y += this.speed;
-            if (this.y >= this.startY) {
-                this.y = this.startY;
-                this.movingUp = true;
-            }
-        }
+        });
     }
     
     render(ctx) {
@@ -347,25 +369,28 @@ class DKElevator extends DKEntity {
         ctx.lineTo(this.x + this.width/2, this.endY + this.height/2);
         ctx.stroke();
         
-        // Render elevator platform as girder
-        const themeColors = DKThemes[this.theme] || DKThemes.girders;
-        const platformColor = themeColors.platforms;
-        
-        ctx.fillStyle = platformColor;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        
-        // Platform outline for visibility
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(this.x, this.y, this.width, this.height);
-        
-        // Rivets
-        ctx.fillStyle = '#333';
-        for (let i = 0; i < 3; i++) {
-            const rivetX = this.x + (i + 1) * (this.width / 4);
-            ctx.fillRect(rivetX - 1, this.y + 2, 2, 2);
-            ctx.fillRect(rivetX - 1, this.y + this.height - 4, 2, 2);
-        }
+        // Render all platforms
+        this.platforms.forEach(platform => {
+            // Get theme colors
+            const themeColors = DKThemes[this.theme] || DKThemes.girders;
+            const platformColor = themeColors.platforms;
+            
+            ctx.fillStyle = platformColor;
+            ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            
+            // Platform outline for visibility
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+            
+            // Rivets
+            ctx.fillStyle = '#333';
+            for (let i = 0; i < 3; i++) {
+                const rivetX = platform.x + (i + 1) * (platform.width / 4);
+                ctx.fillRect(rivetX - 1, platform.y + 2, 2, 2);
+                ctx.fillRect(rivetX - 1, platform.y + platform.height - 4, 2, 2);
+            }
+        });
     }
 }
 
@@ -770,24 +795,24 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             console.log('Same column markers for elevator at', elevatorInfo.x, ':', sameColumn.length);
             
             if (sameColumn.length >= 2) {
-                const startMarker = sameColumn.find(m => m.markerType === 'start');
-                const endMarker = sameColumn.find(m => m.markerType === 'end');
+                // For elevators, start is always the lower position, end is always the higher position
+                const positions = sameColumn.map(m => m.y).sort((a, b) => b - a); // Sort descending (higher y = lower on screen)
+                const startY = positions[0]; // Lower position (higher y value)
+                const endY = positions[1];   // Higher position (lower y value)
                 
-                if (startMarker && endMarker) {
-                    console.log('Creating elevator from', startMarker.y, 'to', endMarker.y);
-                    const elevator = new DKElevator(
-                        elevatorInfo.x, 
-                        startMarker.y, 
-                        elevatorInfo.direction,
-                        startMarker.y,
-                        endMarker.y,
-                        levelConfig.theme
-                    );
-                    // Use the width from the grouped elevator data
-                    elevator.width = elevatorInfo.width || 50;
-                    game.elevators.push(elevator);
-                    game.entities.push(elevator);
-                }
+                console.log('Creating elevator from', startY, 'to', endY, 'direction:', elevatorInfo.direction);
+                const elevator = new DKElevator(
+                    elevatorInfo.x, 
+                    startY, 
+                    elevatorInfo.direction,
+                    startY,
+                    endY,
+                    levelConfig.theme
+                );
+                // Use the width from the grouped elevator data
+                elevator.width = elevatorInfo.width || 50;
+                game.elevators.push(elevator);
+                game.entities.push(elevator);
             }
         });
         
@@ -1031,22 +1056,48 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             
             // Check elevator collisions
             game.elevators.forEach(elevator => {
-                if (game.player.x < elevator.x + elevator.width &&
-                    game.player.x + game.player.width > elevator.x &&
-                    game.player.y + game.player.height >= elevator.y &&
-                    game.player.y + game.player.height <= elevator.y + elevator.height + 5) {
+                elevator.platforms.forEach(platform => {
+                    if (game.player.x < platform.x + platform.width &&
+                        game.player.x + game.player.width > platform.x &&
+                        game.player.y + game.player.height >= platform.y &&
+                        game.player.y + game.player.height <= platform.y + platform.height + 5) {
+                        
+                        if (game.player.vy > 0 && game.player.y + game.player.height >= platform.y) {
+                            game.player.y = platform.y - game.player.height;
+                            game.player.vy = 0;
+                            game.player.onGround = true;
+                            
+                            // Move Mario with the elevator platform
+                            if (platform.movingUp) {
+                                game.player.y -= elevator.speed;
+                                // Teleport Mario with platform
+                                if (platform.y <= elevator.endY) {
+                                    game.player.y += elevator.trackHeight;
+                                }
+                            } else {
+                                game.player.y += elevator.speed;
+                                // Teleport Mario with platform
+                                if (platform.y >= elevator.startY) {
+                                    game.player.y -= elevator.trackHeight;
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Check elevator marker collisions (yellow platforms)
+            game.entities.forEach(entity => {
+                if (entity.type === 'elevatormarker' &&
+                    game.player.x < entity.x + entity.width &&
+                    game.player.x + game.player.width > entity.x &&
+                    game.player.y + game.player.height >= entity.y &&
+                    game.player.y + game.player.height <= entity.y + entity.height + 5) {
                     
-                    if (game.player.vy > 0 && game.player.y + game.player.height >= elevator.y) {
-                        game.player.y = elevator.y - game.player.height;
+                    if (game.player.vy > 0 && game.player.y + game.player.height >= entity.y) {
+                        game.player.y = entity.y - game.player.height;
                         game.player.vy = 0;
                         game.player.onGround = true;
-                        
-                        // Move Mario with the elevator
-                        if (elevator.movingUp) {
-                            game.player.y -= elevator.speed;
-                        } else {
-                            game.player.y += elevator.speed;
-                        }
                     }
                 }
             });
