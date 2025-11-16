@@ -132,20 +132,316 @@ class DKLadder extends DKEntity {
 
 class DKOilDrum extends DKEntity {
     constructor(x, y) {
-        super(x, y, 20, 25, 'oildrum');
+        super(x, y, 25, 30, 'oildrum'); // Larger size
+        this.ignited = false;
+        this.flameTimer = 0;
+    }
+    
+    ignite() {
+        this.ignited = true;
     }
     
     render(ctx) {
-        ctx.fillStyle = '#654321';
+        // Royal blue oil drum
+        ctx.fillStyle = '#4169E1';
         ctx.fillRect(this.x, this.y, this.width, this.height);
         
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(this.x + 2, this.y + 2, this.width - 4, this.height - 4);
+        // Light blue horizontal bands
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(this.x, this.y + 8, this.width, 3);
+        ctx.fillRect(this.x, this.y + 19, this.width, 3);
         
-        // Oil drum bands
-        ctx.fillStyle = '#444';
-        ctx.fillRect(this.x, this.y + 8, this.width, 2);
-        ctx.fillRect(this.x, this.y + 15, this.width, 2);
+        // Render flames if ignited
+        if (this.ignited) {
+            this.flameTimer++;
+            const flameHeight = 10 + Math.sin(this.flameTimer * 0.3) * 4;
+            
+            // Orange flames
+            ctx.fillStyle = '#FF4500';
+            ctx.fillRect(this.x + 2, this.y - flameHeight, this.width - 4, flameHeight);
+            
+            // Yellow flame tips
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(this.x + 4, this.y - flameHeight + 3, this.width - 8, flameHeight - 6);
+        }
+    }
+}
+
+class DKFireEnemy extends DKEntity {
+    constructor(x, y) {
+        super(x, y, 20, 24, 'fireenemy'); // Larger size
+        this.vx = 0;
+        this.vy = 0;
+        this.onGround = false;
+        this.onLadder = false;
+        this.speed = 1.5;
+        this.animTimer = 0;
+    }
+    
+    update(game) {
+        this.animTimer++;
+        
+        // Original Donkey Kong fire enemy behavior:
+        // 1. Move horizontally in one direction for a set distance
+        // 2. When reaching platform edge or obstacle, reverse direction
+        // 3. Occasionally climb ladders (semi-random with preference for Mario's level)
+        // 4. Move at constant speed, not directly chasing Mario
+        
+        const tileWidth = 25; // Standard tile width
+        
+        // Initialize movement state if not set
+        if (!this.movementState) {
+            this.movementState = {
+                direction: Math.random() < 0.5 ? -1 : 1, // -1 left, 1 right
+                distanceTraveled: 0,
+                maxDistance: tileWidth * (2 + Math.floor(Math.random() * 3)), // 2-4 tiles
+                ladderCooldown: 0,
+                onPlatformEdge: false
+            };
+        }
+        
+        // Initialize climbing state if not set
+        if (!this.climbingState) {
+            this.climbingState = {
+                isClimbing: false,
+                targetDirection: 0 // -1 up, 1 down, 0 not climbing
+            };
+        }
+        
+        // Check if on ladder (more forgiving when climbing)
+        const fireCenter = this.x + this.width / 2;
+        const fireBottom = this.y + this.height;
+        const fireTop = this.y;
+        
+        this.onLadder = game.ladders.some(ladder => {
+            const ladderCenter = ladder.x + ladder.width / 2;
+            const ladderCenterZone = ladder.width * 0.8; // More forgiving horizontal zone
+            
+            // Must be horizontally aligned AND vertically overlapping with ladder
+            const horizontalMatch = Math.abs(fireCenter - ladderCenter) < ladderCenterZone / 2;
+            
+            // More forgiving vertical bounds - allow some overhang
+            let verticalMatch;
+            if (this.climbingState && this.climbingState.isClimbing) {
+                // When climbing, be more forgiving about vertical bounds
+                verticalMatch = (fireBottom > ladder.y - 10) && (fireTop < ladder.y + ladder.height + 10);
+            } else {
+                // When not climbing, use normal bounds
+                verticalMatch = (fireBottom > ladder.y) && (fireTop < ladder.y + ladder.height);
+            }
+            
+            return horizontalMatch && verticalMatch;
+        });
+        
+        // Ladder climbing logic
+        if (this.onLadder) {
+            console.log('Fire on ladder - cooldown:', this.movementState.ladderCooldown, 'isClimbing:', this.climbingState.isClimbing);
+            
+            if (this.movementState.ladderCooldown <= 0 && !this.climbingState.isClimbing) {
+                const marioY = game.player.y;
+                const fireY = this.y;
+                const diff = Math.abs(marioY - fireY);
+                
+                console.log('Mario Y:', marioY, 'Fire Y:', fireY, 'Difference:', diff);
+                
+                // Start climbing if Mario is on a different level (simplified conditions)
+                if (diff > 30) {
+                    if (marioY < fireY) {
+                        this.climbingState.isClimbing = true;
+                        this.climbingState.targetDirection = -1; // Climb up
+                        console.log('Fire enemy starting to climb UP');
+                    } else if (marioY > fireY) {
+                        this.climbingState.isClimbing = true;
+                        this.climbingState.targetDirection = 1; // Climb down
+                        console.log('Fire enemy starting to climb DOWN');
+                    }
+                } else {
+                    console.log('Mario too close vertically, not climbing');
+                }
+            }
+        }
+        
+        // Handle climbing movement
+        if (this.climbingState.isClimbing && this.onLadder) {
+            // Only Y movement while climbing
+            this.vx = 0;
+            this.vy = this.climbingState.targetDirection * this.speed;
+            
+            // Don't check for platforms immediately - let it climb at least 20 pixels first
+            if (!this.climbingState.startY) {
+                this.climbingState.startY = this.y; // Remember starting position
+            }
+            
+            const climbedDistance = Math.abs(this.y - this.climbingState.startY);
+            let shouldStop = false;
+            
+            // Find the specific ladder segment we're currently on
+            const currentLadder = game.ladders.find(ladder => {
+                const ladderCenter = ladder.x + ladder.width / 2;
+                const ladderCenterZone = ladder.width * 0.6;
+                const fireCenter = this.x + this.width / 2;
+                const fireBottom = this.y + this.height;
+                const fireTop = this.y;
+                
+                const horizontalMatch = Math.abs(fireCenter - ladderCenter) < ladderCenterZone / 2;
+                const verticalMatch = fireBottom > ladder.y && fireTop < ladder.y + ladder.height;
+                
+                return horizontalMatch && verticalMatch;
+            });
+            
+            // Check boundaries of the CURRENT ladder segment only
+            if (currentLadder) {
+                if (this.climbingState.targetDirection < 0) { // Climbing up
+                    // Stop when reaching the top of THIS specific ladder segment
+                    if (this.y <= currentLadder.y + 10) {
+                        shouldStop = true;
+                    }
+                } else { // Climbing down
+                    // Stop when reaching the bottom of THIS specific ladder segment
+                    if (this.y + this.height >= currentLadder.y + currentLadder.height - 10) {
+                        shouldStop = true;
+                    }
+                }
+            }
+            
+            // Also check for platforms after minimum climb distance
+            if (climbedDistance > 20 && !shouldStop) {
+                game.platforms.forEach(platform => {
+                    if (this.x + this.width/2 >= platform.x && 
+                        this.x + this.width/2 <= platform.x + platform.width) {
+                        
+                        if (this.climbingState.targetDirection < 0) { // Climbing up
+                            // Stop when fire is above the platform
+                            if (this.y + this.height <= platform.y + 5) {
+                                shouldStop = true;
+                            }
+                        } else { // Climbing down
+                            // Stop when fire lands on platform
+                            if (this.y + this.height >= platform.y - 5 && 
+                                this.y + this.height <= platform.y + 10) {
+                                shouldStop = true;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Stop climbing when reaching ladder end, platform, or losing ladder
+            if (shouldStop || !this.onLadder) {
+                this.climbingState.isClimbing = false;
+                this.climbingState.targetDirection = 0;
+                this.climbingState.startY = null; // Reset start position
+                this.movementState.ladderCooldown = 120;
+                this.vy = 0;
+                console.log('Fire enemy STOPPED climbing - shouldStop:', shouldStop, 'onLadder:', this.onLadder, 'climbed:', climbedDistance);
+            }
+        }
+        // Horizontal movement (only when not climbing)
+        else if (!this.climbingState.isClimbing) {
+            if (!this.onLadder) {
+                this.vy += 0.5; // Gravity only when not on ladder
+            } else {
+                this.vy = 0; // Stop vertical movement when on ladder but not climbing
+            }
+            
+            // Check for platform edges or obstacles
+            const nextX = this.x + (this.movementState.direction * this.speed);
+            
+            // Check if next position would be off platform (only when not on ladder)
+            if (!this.onLadder) {
+                let onPlatform = false;
+                game.platforms.forEach(platform => {
+                    if (nextX + this.width/2 >= platform.x && 
+                        nextX + this.width/2 <= platform.x + platform.width &&
+                        this.y + this.height >= platform.y - 5 &&
+                        this.y + this.height <= platform.y + platform.height + 5) {
+                        onPlatform = true;
+                    }
+                });
+                
+                // Reverse direction if reaching edge or max distance
+                if (!onPlatform || 
+                    this.movementState.distanceTraveled >= this.movementState.maxDistance ||
+                    nextX <= 0 || 
+                    nextX >= 600 - this.width) {
+                    
+                    this.movementState.direction *= -1;
+                    this.movementState.distanceTraveled = 0;
+                    this.movementState.maxDistance = tileWidth * (3 + Math.floor(Math.random() * 4));
+                    // Don't reset ladder cooldown here - let it countdown naturally
+                }
+            }
+            
+            // Move horizontally
+            this.vx = this.movementState.direction * this.speed;
+            this.movementState.distanceTraveled += Math.abs(this.vx);
+        }
+        
+        // Reduce ladder cooldown
+        if (this.movementState.ladderCooldown > 0) {
+            this.movementState.ladderCooldown--;
+        }
+        
+        // Apply movement
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Platform collision (only when not on ladder)
+        if (!this.onLadder) {
+            this.onGround = false;
+            game.platforms.forEach(platform => {
+                if (this.x < platform.x + platform.width &&
+                    this.x + this.width > platform.x &&
+                    this.y + this.height >= platform.y &&
+                    this.y + this.height <= platform.y + platform.height + 5) {
+                    
+                    if (this.vy > 0) {
+                        this.y = platform.y - this.height;
+                        this.vy = 0;
+                        this.onGround = true;
+                    }
+                }
+            });
+        }
+        
+        // Bounds
+        if (this.x < 0) this.x = 0;
+        if (this.x > 600 - this.width) this.x = 600 - this.width;
+    }
+    
+    render(ctx) {
+        // Animated fire sprite with flame tongues
+        const flicker = Math.sin(this.animTimer * 0.4) * 0.3 + 0.7;
+        const flicker2 = Math.sin(this.animTimer * 0.6 + 1) * 0.2 + 0.8;
+        
+        // Fire base (dark red/orange)
+        ctx.fillStyle = `rgba(139, 69, 19, ${flicker})`;
+        ctx.fillRect(this.x + 2, this.y + 16, this.width - 4, 8);
+        
+        // Main fire body (orange)
+        ctx.fillStyle = `rgba(255, 69, 0, ${flicker})`;
+        ctx.fillRect(this.x + 1, this.y + 8, this.width - 2, 16);
+        
+        // Fire middle (yellow-orange)
+        ctx.fillStyle = `rgba(255, 140, 0, ${flicker2})`;
+        ctx.fillRect(this.x + 3, this.y + 6, this.width - 6, 12);
+        
+        // Flame tongues (yellow) - multiple flickering tongues
+        ctx.fillStyle = `rgba(255, 215, 0, ${flicker})`;
+        const tongueHeight1 = 4 + Math.sin(this.animTimer * 0.5) * 2;
+        const tongueHeight2 = 3 + Math.sin(this.animTimer * 0.7 + 2) * 2;
+        const tongueHeight3 = 5 + Math.sin(this.animTimer * 0.3 + 4) * 2;
+        
+        // Left tongue
+        ctx.fillRect(this.x + 2, this.y + 2, 4, tongueHeight1);
+        // Center tongue
+        ctx.fillRect(this.x + 8, this.y, 4, tongueHeight2);
+        // Right tongue
+        ctx.fillRect(this.x + 14, this.y + 3, 4, tongueHeight3);
+        
+        // Fire core (white hot center)
+        ctx.fillStyle = `rgba(255, 255, 255, ${flicker * 0.4})`;
+        ctx.fillRect(this.x + 6, this.y + 12, this.width - 12, 6);
     }
 }
 
@@ -486,7 +782,7 @@ class DKMapParser {
                         platforms.push({x, y: y + yOffset, width: tileWidth, height: tileHeight});
                         break;
                     case 'o':
-                        entities.push(new DKOilDrum(x, y - 5));
+                        entities.push(new DKOilDrum(x, y - 20));
                         break;
                     case 'p':
                         entities.push(new DKHammer(x, y - 5));
@@ -762,6 +1058,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         hammers: [],
         elevators: [],
         collectibles: [],
+        fireEnemies: [],
         player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3, 
                  hasHammer: false, hammerTimer: 0, hammerSwingTimer: 0, facingRight: true },
         donkeyKong: { x: 50, y: 50, width: 40, height: 40 },
@@ -996,6 +1293,87 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         // Update elevators
         game.elevators.forEach(elevator => {
             elevator.update();
+        });
+        
+        // Update fire enemies
+        game.fireEnemies.forEach(fire => {
+            fire.update(game);
+        });
+        
+        // Check oil drum collisions with barrels
+        game.oildrums.forEach(oildrum => {
+            game.barrels.forEach((barrel, barrelIndex) => {
+                if (barrel.x < oildrum.x + oildrum.width &&
+                    barrel.x + barrel.width > oildrum.x &&
+                    barrel.y < oildrum.y + oildrum.height &&
+                    barrel.y + barrel.height > oildrum.y) {
+                    
+                    if (barrel.isBlue) {
+                        // Blue barrel ignites oil drum and creates fire enemy
+                        if (!oildrum.ignited) {
+                            oildrum.ignite();
+                        }
+                        
+                        // Create fire enemy
+                        const fireEnemy = new DKFireEnemy(oildrum.x, oildrum.y - 16);
+                        game.fireEnemies.push(fireEnemy);
+                        game.entities.push(fireEnemy);
+                        
+                        // Remove blue barrel
+                        game.barrels.splice(barrelIndex, 1);
+                    } else if (oildrum.ignited) {
+                        // Ignited oil drum destroys brown barrels
+                        game.barrels.splice(barrelIndex, 1);
+                        game.score += 100; // Points for destroying barrel
+                    }
+                }
+            });
+        });
+        
+        // Check fire enemy collisions with Mario
+        game.fireEnemies.forEach(fire => {
+            if (game.player.x < fire.x + fire.width &&
+                game.player.x + game.player.width > fire.x &&
+                game.player.y < fire.y + fire.height &&
+                game.player.y + game.player.height > fire.y) {
+                
+                // Mario hit by fire - lose life and restart
+                game.player.lives--;
+                if (game.player.lives <= 0) {
+                    // Game over
+                    game.gameRunning = false;
+                    clearInterval(game.gameInterval);
+                    
+                    ctx.fillStyle = '#FF0000';
+                    ctx.font = '48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
+                    return;
+                } else {
+                    // Restart level - reset Mario position and clear enemies
+                    game.player.x = 50;
+                    game.player.y = 450;
+                    game.player.vx = 0;
+                    game.player.vy = 0;
+                    game.player.onGround = false;
+                    game.barrels = [];
+                    
+                    // Remove fire enemies from entities array
+                    game.fireEnemies.forEach(fire => {
+                        const entityIndex = game.entities.indexOf(fire);
+                        if (entityIndex > -1) {
+                            game.entities.splice(entityIndex, 1);
+                        }
+                    });
+                    game.fireEnemies = [];
+                    
+                    game.barrelTimer = 0;
+                }
+            }
         });
         
         // Update hammer timer
