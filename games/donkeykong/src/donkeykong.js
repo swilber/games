@@ -579,7 +579,8 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         oildrums: [],
         hammers: [],
         collectibles: [],
-        player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3 },
+        player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3, 
+                 hasHammer: false, hammerTimer: 0, hammerSwingTimer: 0, facingRight: true },
         donkeyKong: { x: 50, y: 50, width: 40, height: 40 },
         princess: { x: 550, y: 50, width: 20, height: 30 },
         barrelTimer: 0,
@@ -728,9 +729,43 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             }
         });
         
+        // Check hammer pickup collision
+        if (!game.player.hasHammer) {
+            game.hammers.forEach((hammer, index) => {
+                if (game.player.x < hammer.x + hammer.width &&
+                    game.player.x + game.player.width > hammer.x &&
+                    game.player.y < hammer.y + hammer.height &&
+                    game.player.y + game.player.height > hammer.y) {
+                    
+                    // Mario picked up hammer
+                    game.player.hasHammer = true;
+                    game.player.hammerTimer = 1200; // 20 seconds at 60fps
+                    game.player.hammerSwingTimer = 0;
+                    
+                    // Remove hammer from game
+                    game.hammers.splice(index, 1);
+                    const entityIndex = game.entities.indexOf(hammer);
+                    if (entityIndex > -1) {
+                        game.entities.splice(entityIndex, 1);
+                    }
+                }
+            });
+        }
+        
+        // Update hammer timer
+        if (game.player.hasHammer) {
+            game.player.hammerTimer--;
+            game.player.hammerSwingTimer++;
+            
+            if (game.player.hammerTimer <= 0) {
+                game.player.hasHammer = false;
+            }
+        }
+        
         // Check if Mario is on a ladder (center must be touching ladder center)
+        // Cannot climb ladders while holding hammer
         const marioCenter = game.player.x + game.player.width / 2;
-        const onLadder = game.ladders.some(ladder => {
+        const onLadder = !game.player.hasHammer && game.ladders.some(ladder => {
             const ladderCenter = ladder.x + ladder.width / 2;
             const ladderCenterZone = ladder.width * 0.6; // 60% of ladder width for center zone
             
@@ -755,8 +790,10 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         // Handle movement
         if (game.keys['ArrowLeft']) {
             game.player.vx = -3;
+            game.player.facingRight = false;
         } else if (game.keys['ArrowRight']) {
             game.player.vx = 3;
+            game.player.facingRight = true;
         } else {
             game.player.vx = 0;
         }
@@ -869,6 +906,49 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         ctx.fillStyle = '#0000FF';
         ctx.fillRect(marioX + 2, marioY + 26, 6, 4);
         ctx.fillRect(marioX + marioW - 8, marioY + 26, 6, 4);
+        
+        // Render hammer if Mario has one
+        if (game.player.hasHammer) {
+            const swingAngle = Math.sin(game.player.hammerSwingTimer * 0.2) * 0.6; // -0.6 to 0.6 radians
+            const pivotX = marioX + marioW / 2;
+            const pivotY = marioY + 10;
+            
+            // Use player's facing direction
+            const baseAngle = game.player.facingRight ? 0 : Math.PI;
+            const finalAngle = baseAngle + swingAngle;
+            
+            // Calculate hammer position based on swing angle
+            const handleLength = 18;
+            const handleEndX = pivotX + Math.cos(finalAngle) * handleLength;
+            const handleEndY = pivotY + Math.sin(finalAngle) * handleLength;
+            
+            // Hammer handle (from pivot to end)
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(pivotX, pivotY);
+            ctx.lineTo(handleEndX, handleEndY);
+            ctx.stroke();
+            
+            // Hammer head at end of handle (vertical orientation)
+            ctx.fillStyle = '#666';
+            ctx.fillRect(handleEndX - 4, handleEndY - 7, 8, 14);
+            ctx.fillStyle = '#888';
+            ctx.fillRect(handleEndX - 3, handleEndY - 6, 6, 12);
+            
+            // Check hammer-barrel collision using hammer head position
+            game.barrels.forEach((barrel, index) => {
+                if (handleEndX - 4 < barrel.x + barrel.width &&
+                    handleEndX + 4 > barrel.x &&
+                    handleEndY - 7 < barrel.y + barrel.height &&
+                    handleEndY + 7 > barrel.y) {
+                    
+                    // Destroy barrel and add points
+                    game.barrels.splice(index, 1);
+                    game.score += 500;
+                }
+            });
+        }
         
         // Donkey Kong (brown gorilla with tie)
         const dkX = game.donkeyKong.x;
