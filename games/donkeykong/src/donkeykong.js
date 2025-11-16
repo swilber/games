@@ -295,7 +295,7 @@ class DKCollectible extends DKEntity {
 
 class DKElevatorMarker extends DKEntity {
     constructor(x, y, markerType) {
-        super(x, y, 25, 10, 'elevatormarker');
+        super(x, y, 50, 10, 'elevatormarker'); // Two cells wide to match elevator
         this.markerType = markerType; // 'start' or 'end'
     }
     
@@ -313,7 +313,7 @@ class DKElevatorMarker extends DKEntity {
 
 class DKElevator extends DKEntity {
     constructor(x, y, direction, startY, endY, theme = 'girders') {
-        super(x, y, 25, 10, 'elevator');
+        super(x, y, 50, 10, 'elevator'); // Two cells wide (25*2=50), girder height (10)
         this.direction = direction; // 'up' or 'down'
         this.startY = startY;
         this.endY = endY;
@@ -392,12 +392,19 @@ class DKMapParser {
         
         // First pass: create platforms and collect their positions
         const platforms = [];
+        const processedElevatorCells = new Set(); // Track processed elevator cells
         
         lines.forEach((line, row) => {
             for (let col = 0; col < line.length; col++) {
                 const char = line[col];
                 const x = col * tileWidth;
                 let y = row * tileHeight;
+                
+                // Skip if this elevator cell was already processed as part of a group
+                const cellKey = `${row}-${col}`;
+                if (processedElevatorCells.has(cellKey)) {
+                    continue;
+                }
                 
                 // Adjust Y position for slanted platforms every 2 cells
                 const cellPair = Math.floor(col / 2);
@@ -437,16 +444,36 @@ class DKMapParser {
                         entities.push(new DKCollectible(x, y - 25, 'hat'));
                         break;
                     case '^': // Elevator going up
-                        entities.push({ type: 'elevator', x, y, direction: 'up' });
-                        break;
                     case 'v': // Elevator going down
-                        entities.push({ type: 'elevator', x, y, direction: 'down' });
+                        // Find consecutive elevator characters of same type
+                        let width = 0;
+                        let checkCol = col;
+                        while (checkCol < line.length && line[checkCol] === char) {
+                            processedElevatorCells.add(`${row}-${checkCol}`);
+                            width++;
+                            checkCol++;
+                        }
+                        entities.push({ 
+                            type: 'elevator', 
+                            x, 
+                            y, 
+                            direction: char === '^' ? 'up' : 'down',
+                            width: width * tileWidth
+                        });
                         break;
                     case 'e': // Elevator start marker
-                        entities.push(new DKElevatorMarker(x, y, 'start'));
-                        break;
                     case 'E': // Elevator end marker
-                        entities.push(new DKElevatorMarker(x, y, 'end'));
+                        // Find consecutive elevator markers of same type
+                        let markerWidth = 0;
+                        let checkMarkerCol = col;
+                        while (checkMarkerCol < line.length && line[checkMarkerCol] === char) {
+                            processedElevatorCells.add(`${row}-${checkMarkerCol}`);
+                            markerWidth++;
+                            checkMarkerCol++;
+                        }
+                        const marker = new DKElevatorMarker(x, y, char === 'e' ? 'start' : 'end');
+                        marker.width = markerWidth * tileWidth; // Set actual width
+                        entities.push(marker);
                         break;
                     case 'M':
                         entities.push({ type: 'mario', x, y: y - 20 });
@@ -471,7 +498,8 @@ class DKMapParser {
                     
                     // Check if this column has elevator markers - if so, skip ladder creation
                     const hasElevatorMarkers = entities.some(entity => 
-                        entity.type === 'elevatormarker' && Math.abs(entity.x - x) < 5
+                        entity.type === 'elevatormarker' && 
+                        x >= entity.x && x < entity.x + entity.width
                     );
                     
                     if (hasElevatorMarkers) {
@@ -755,6 +783,8 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                         endMarker.y,
                         levelConfig.theme
                     );
+                    // Use the width from the grouped elevator data
+                    elevator.width = elevatorInfo.width || 50;
                     game.elevators.push(elevator);
                     game.entities.push(elevator);
                 }
@@ -801,6 +831,22 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                     
                     if (barrel.vy > 0) {
                         barrel.y = platform.y - barrel.height;
+                        barrel.vy = 0;
+                        barrel.onGround = true;
+                    }
+                }
+            });
+            
+            // Elevator marker collision (treat markers as platforms)
+            game.entities.forEach(entity => {
+                if (entity.type === 'elevatormarker' &&
+                    barrel.x < entity.x + entity.width &&
+                    barrel.x + barrel.width > entity.x &&
+                    barrel.y < entity.y + entity.height &&
+                    barrel.y + barrel.height > entity.y) {
+                    
+                    if (barrel.vy > 0) {
+                        barrel.y = entity.y - barrel.height;
                         barrel.vy = 0;
                         barrel.onGround = true;
                     }
