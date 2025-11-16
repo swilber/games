@@ -293,6 +293,82 @@ class DKCollectible extends DKEntity {
     }
 }
 
+class DKElevatorMarker extends DKEntity {
+    constructor(x, y, markerType) {
+        super(x, y, 25, 10, 'elevatormarker');
+        this.markerType = markerType; // 'start' or 'end'
+    }
+    
+    render(ctx) {
+        // Yellow platform marker
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Darker yellow outline
+        ctx.strokeStyle = '#DAA520';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+class DKElevator extends DKEntity {
+    constructor(x, y, direction, startY, endY, theme = 'girders') {
+        super(x, y, 25, 10, 'elevator');
+        this.direction = direction; // 'up' or 'down'
+        this.startY = startY;
+        this.endY = endY;
+        this.speed = 1;
+        this.theme = theme;
+        this.movingUp = direction === 'up';
+    }
+    
+    update() {
+        if (this.movingUp) {
+            this.y -= this.speed;
+            if (this.y <= this.endY) {
+                this.y = this.endY;
+                this.movingUp = false;
+            }
+        } else {
+            this.y += this.speed;
+            if (this.y >= this.startY) {
+                this.y = this.startY;
+                this.movingUp = true;
+            }
+        }
+    }
+    
+    render(ctx) {
+        // Render elevator track (single pink line in center)
+        ctx.strokeStyle = '#FF69B4';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(this.x + this.width/2, this.startY + this.height/2);
+        ctx.lineTo(this.x + this.width/2, this.endY + this.height/2);
+        ctx.stroke();
+        
+        // Render elevator platform as girder
+        const themeColors = DKThemes[this.theme] || DKThemes.girders;
+        const platformColor = themeColors.platforms;
+        
+        ctx.fillStyle = platformColor;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Platform outline for visibility
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        
+        // Rivets
+        ctx.fillStyle = '#333';
+        for (let i = 0; i < 3; i++) {
+            const rivetX = this.x + (i + 1) * (this.width / 4);
+            ctx.fillRect(rivetX - 1, this.y + 2, 2, 2);
+            ctx.fillRect(rivetX - 1, this.y + this.height - 4, 2, 2);
+        }
+    }
+}
+
 // Enhanced Map Parser
 class DKMapParser {
     static async loadMap(mapPath, theme = 'girders') {
@@ -360,6 +436,18 @@ class DKMapParser {
                     case 'h': // Hat
                         entities.push(new DKCollectible(x, y - 25, 'hat'));
                         break;
+                    case '^': // Elevator going up
+                        entities.push({ type: 'elevator', x, y, direction: 'up' });
+                        break;
+                    case 'v': // Elevator going down
+                        entities.push({ type: 'elevator', x, y, direction: 'down' });
+                        break;
+                    case 'e': // Elevator start marker
+                        entities.push(new DKElevatorMarker(x, y, 'start'));
+                        break;
+                    case 'E': // Elevator end marker
+                        entities.push(new DKElevatorMarker(x, y, 'end'));
+                        break;
                     case 'M':
                         entities.push({ type: 'mario', x, y: y - 20 });
                         break;
@@ -380,6 +468,15 @@ class DKMapParser {
                 if (char === 'H') {
                     const x = col * tileWidth;
                     const y = row * tileHeight;
+                    
+                    // Check if this column has elevator markers - if so, skip ladder creation
+                    const hasElevatorMarkers = entities.some(entity => 
+                        entity.type === 'elevatormarker' && Math.abs(entity.x - x) < 5
+                    );
+                    
+                    if (hasElevatorMarkers) {
+                        continue; // Skip ladder creation in elevator columns
+                    }
                     
                     // Find the closest platform above and below this ladder position
                     let platformBelow = null;
@@ -578,6 +675,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         barrels: [],
         oildrums: [],
         hammers: [],
+        elevators: [],
         collectibles: [],
         player: { x: 50, y: 450, vx: 0, vy: 0, onGround: false, width: 20, height: 30, lives: 3, 
                  hasHammer: false, hammerTimer: 0, hammerSwingTimer: 0, facingRight: true },
@@ -611,6 +709,11 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             } else if (entity.type === 'collectible') {
                 game.collectibles.push(entity);
                 game.entities.push(entity);
+            } else if (entity.type === 'elevatormarker') {
+                game.entities.push(entity);
+            } else if (entity.type === 'elevator') {
+                // Store elevator data for processing after all entities are loaded
+                entity.elevatorData = true;
             } else if (entity.type === 'mario') {
                 game.player.x = entity.x;
                 game.player.y = entity.y;
@@ -620,6 +723,41 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             } else if (entity.type === 'princess') {
                 game.princess.x = entity.x;
                 game.princess.y = entity.y;
+            }
+        });
+        
+        // Process elevators after all entities are loaded
+        const elevatorData = entities.filter(e => e.elevatorData);
+        const elevatorMarkers = entities.filter(e => e.type === 'elevatormarker');
+        
+        console.log('Elevator data found:', elevatorData.length);
+        console.log('Elevator markers found:', elevatorMarkers.length);
+        
+        elevatorData.forEach(elevatorInfo => {
+            // Find start and end markers for this elevator column
+            const sameColumn = elevatorMarkers.filter(marker => 
+                Math.abs(marker.x - elevatorInfo.x) < 15
+            );
+            
+            console.log('Same column markers for elevator at', elevatorInfo.x, ':', sameColumn.length);
+            
+            if (sameColumn.length >= 2) {
+                const startMarker = sameColumn.find(m => m.markerType === 'start');
+                const endMarker = sameColumn.find(m => m.markerType === 'end');
+                
+                if (startMarker && endMarker) {
+                    console.log('Creating elevator from', startMarker.y, 'to', endMarker.y);
+                    const elevator = new DKElevator(
+                        elevatorInfo.x, 
+                        startMarker.y, 
+                        elevatorInfo.direction,
+                        startMarker.y,
+                        endMarker.y,
+                        levelConfig.theme
+                    );
+                    game.elevators.push(elevator);
+                    game.entities.push(elevator);
+                }
             }
         });
         
@@ -752,6 +890,11 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             });
         }
         
+        // Update elevators
+        game.elevators.forEach(elevator => {
+            elevator.update();
+        });
+        
         // Update hammer timer
         if (game.player.hasHammer) {
             game.player.hammerTimer--;
@@ -836,6 +979,28 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                         game.player.y = platform.y - game.player.height;
                         game.player.vy = 0;
                         game.player.onGround = true;
+                    }
+                }
+            });
+            
+            // Check elevator collisions
+            game.elevators.forEach(elevator => {
+                if (game.player.x < elevator.x + elevator.width &&
+                    game.player.x + game.player.width > elevator.x &&
+                    game.player.y + game.player.height >= elevator.y &&
+                    game.player.y + game.player.height <= elevator.y + elevator.height + 5) {
+                    
+                    if (game.player.vy > 0 && game.player.y + game.player.height >= elevator.y) {
+                        game.player.y = elevator.y - game.player.height;
+                        game.player.vy = 0;
+                        game.player.onGround = true;
+                        
+                        // Move Mario with the elevator
+                        if (elevator.movingUp) {
+                            game.player.y -= elevator.speed;
+                        } else {
+                            game.player.y += elevator.speed;
+                        }
                     }
                 }
             });
