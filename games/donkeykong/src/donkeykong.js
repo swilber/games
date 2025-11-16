@@ -212,29 +212,82 @@ class DKHammer extends DKEntity {
 
 class DKCollectible extends DKEntity {
     constructor(x, y, collectibleType) {
-        super(x, y, 16, 16, 'collectible');
-        this.collectibleType = collectibleType; // 'parasol', 'purse', 'hat'
+        super(x, y, 32, 32, 'collectible');
+        this.collectibleType = collectibleType; // 'umbrella', 'bag', 'hat'
         this.collected = false;
     }
     
     render(ctx) {
         if (this.collected) return;
         
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
+        const centerX = this.x + this.width / 2;
+        const centerY = this.y + this.height / 2;
         
         switch(this.collectibleType) {
             case 'umbrella':
-                ctx.fillStyle = '#FF69B4';
-                ctx.fillText('P', this.x + this.width/2, this.y + this.height);
-                break;
-            case 'bag':
-                ctx.fillStyle = '#FFD700';
-                ctx.fillText('p', this.x + this.width/2, this.y + this.height);
-                break;
-            case 'hat':
+                // Umbrella handle (brown)
                 ctx.fillStyle = '#8B4513';
-                ctx.fillText('h', this.x + this.width/2, this.y + this.height);
+                ctx.fillRect(centerX - 2, centerY + 4, 4, 12);
+                
+                // Umbrella canopy (pink/magenta)
+                ctx.fillStyle = '#FF1493';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY - 4, 12, 0, Math.PI, true);
+                ctx.fill();
+                
+                // Umbrella ribs
+                ctx.strokeStyle = '#C71585';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI / 4) * i - Math.PI/2;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY - 4);
+                    ctx.lineTo(centerX + Math.cos(angle) * 12, centerY - 4 + Math.sin(angle) * 12);
+                    ctx.stroke();
+                }
+                break;
+                
+            case 'bag':
+                // Purse body (pink)
+                ctx.fillStyle = '#FF1493';
+                ctx.fillRect(centerX - 10, centerY - 4, 20, 16);
+                
+                // Purse clasp (darker pink)
+                ctx.fillStyle = '#C71585';
+                ctx.fillRect(centerX - 10, centerY - 4, 20, 4);
+                
+                // Purse handle (brown)
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY - 8, 6, 0, Math.PI, true);
+                ctx.stroke();
+                break;
+                
+            case 'hat':
+                // Hat brim (white)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY + 6, 14, 4, 0, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Hat crown (white)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(centerX - 6, centerY - 8, 12, 14);
+                
+                // Hat band (light brown/tan)
+                ctx.fillStyle = '#D2B48C';
+                ctx.fillRect(centerX - 6, centerY + 2, 12, 2);
+                
+                // Straw texture lines
+                ctx.strokeStyle = '#F5DEB3';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - 6, centerY - 6 + i * 4);
+                    ctx.lineTo(centerX + 6, centerY - 6 + i * 4);
+                    ctx.stroke();
+                }
                 break;
         }
     }
@@ -299,13 +352,13 @@ class DKMapParser {
                         entities.push(new DKHammer(x, y - 5));
                         break;
                     case 'u': // Umbrella (parasol)
-                        entities.push(new DKCollectible(x, y - 5, 'umbrella'));
+                        entities.push(new DKCollectible(x, y - 25, 'umbrella'));
                         break;
                     case 'b': // Bag (purse)
-                        entities.push(new DKCollectible(x, y - 5, 'bag'));
+                        entities.push(new DKCollectible(x, y - 25, 'bag'));
                         break;
                     case 'h': // Hat
-                        entities.push(new DKCollectible(x, y - 5, 'hat'));
+                        entities.push(new DKCollectible(x, y - 25, 'hat'));
                         break;
                     case 'M':
                         entities.push({ type: 'mario', x, y: y - 20 });
