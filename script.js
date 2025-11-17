@@ -154,6 +154,8 @@ function generateConfigForm(gameType, config) {
         generateDonkeyKongConfigForm(config, content);
     } else if (gameType === 'asteroids') {
         generateAsteroidsConfigForm(config, content);
+    } else if (gameType === 'spaceinvaders') {
+        generateSpaceInvadersConfigForm(config, content);
     }
     // Add other games later
 }
@@ -458,6 +460,30 @@ function generateAsteroidsConfigForm(config, container) {
     });
 }
 
+function generateSpaceInvadersConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'scoring', title: 'Scoring Settings' },
+        { key: 'formation', title: 'Formation Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
 function updateSaveButtonState() {
     const saveBtn = document.getElementById('save-config-btn');
     const hasChanges = JSON.stringify(currentGameConfig) !== JSON.stringify(originalConfig);
@@ -649,6 +675,17 @@ function getFallbackDifficulty(gameType, difficulty) {
                 levels: Math.max(3, Math.min(8, 3 + Math.floor(difficulty / 2))),
                 powerUpChance: 0.1
             };
+        case 'spaceinvaders':
+            return {
+                invaderSpeed: Math.max(0.5, 0.5 + (difficulty * 0.1)),
+                invaderDropSpeed: Math.max(8, 8 + (difficulty * 2)),
+                bulletSpeed: Math.max(4, 4 + (difficulty * 0.5)),
+                ufoSpawnRate: Math.max(0.001, 0.001 + (difficulty * 0.0005)),
+                lives: 3,
+                levels: Math.max(5, Math.min(10, 5 + Math.floor(difficulty / 2))),
+                playerSpeed: 4,
+                maxPlayerBullets: 1
+            };
         case 'breakout':
             const level = levels[currentLevel]; // Get current level data
             return {
@@ -674,6 +711,15 @@ function getFallbackDifficulty(gameType, difficulty) {
                 ufoSpawnRate: Math.max(0.002, 0.002 + (difficulty * 0.001)),
                 lives: 3,
                 levels: Math.max(3, Math.min(8, 3 + Math.floor(difficulty / 2)))
+            };
+        case 'spaceinvaders':
+            return {
+                invaderSpeed: Math.max(0.5, 0.5 + (difficulty * 0.1)),
+                invaderDropSpeed: Math.max(8, 8 + (difficulty * 2)),
+                bulletSpeed: Math.max(4, 4 + (difficulty * 0.5)),
+                ufoSpawnRate: Math.max(0.001, 0.001 + (difficulty * 0.0005)),
+                lives: 3,
+                levels: Math.max(5, Math.min(10, 5 + Math.floor(difficulty / 2)))
             };
         default:
             return {};
@@ -876,6 +922,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createBreakoutGame(settings, gameCallbacks);
         case 'asteroids':
             return await createAsteroidsGame(settings, gameCallbacks);
+        case 'spaceinvaders':
+            return await createSpaceInvadersGame(settings, gameCallbacks);
         case 'flappy':
             console.log('Creating flappy game with settings:', settings);
             return await createFlappyGame(settings, gameCallbacks);
@@ -932,6 +980,7 @@ async function initializeLevel() {
         case 'fake':
         case 'breakout':
         case 'asteroids':
+        case 'spaceinvaders':
         case 'flappy':
             // Modern games with callback support
             console.log('Creating modern game:', level.type);

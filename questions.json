@@ -119,6 +119,16 @@
       "answer": "abc",
       "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 13,
+      "title": "Level 13: Space Invaders",
+      "description": "Defend Earth from waves of alien invaders",
+      "type": "spaceinvaders",
+      "question": "What do you use to defend against the invaders?",
+      "answer": "abc",
+      "unlockQuestion": "What color is the goal square?",
+      "unlockAnswer": "abc"
     }
   ]
 }

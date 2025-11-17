@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 12,
+    "totalLevels": 13,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -79,6 +79,12 @@
       "order": 12,
       "enabled": true,
       "type": "asteroids"
+    },
+    {
+      "id": 13,
+      "order": 13,
+      "enabled": true,
+      "type": "spaceinvaders"
     }
   ]
 }

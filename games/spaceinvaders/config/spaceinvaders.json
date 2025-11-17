@@ -1,0 +1,104 @@
+{
+  "name": "Space Invaders",
+  "description": "Defend Earth from waves of alien invaders",
+  "difficulty": {
+    "invaderSpeed": {
+      "base": 0.5,
+      "multiplier": 0.1,
+      "min": 0.5,
+      "max": 2.0,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "invaderDropSpeed": {
+      "base": 8,
+      "multiplier": 2,
+      "min": 8,
+      "max": 20,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "bulletSpeed": {
+      "base": 4,
+      "multiplier": 0.5,
+      "min": 4,
+      "max": 8,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "lives": {
+      "value": 3,
+      "static": true
+    },
+    "levels": {
+      "base": 5,
+      "multiplier": 1,
+      "min": 5,
+      "max": 10,
+      "formula": "Math.max(5, Math.min(10, 5 + Math.floor(difficulty / 2)))"
+    },
+    "ufoSpawnRate": {
+      "base": 0.001,
+      "multiplier": 0.0005,
+      "min": 0.001,
+      "max": 0.005,
+      "formula": "base + (difficulty * multiplier)"
+    }
+  },
+  "gameplay": {
+    "lives": 3,
+    "levels": 5,
+    "invaderSpeed": 1.0,
+    "invaderDropSpeed": 12,
+    "bulletSpeed": 6,
+    "playerSpeed": 4,
+    "maxPlayerBullets": 1,
+    "maxInvaderBullets": 3,
+    "ufoSpawnRate": 0.002,
+    "invaderAcceleration": 1.1,
+    "barrierCount": 4,
+    "barrierHits": 5
+  },
+  "physics": {
+    "canvasWidth": 800,
+    "canvasHeight": 600,
+    "playerSize": 24,
+    "invaderWidth": 22,
+    "invaderHeight": 16,
+    "bulletWidth": 2,
+    "bulletHeight": 8,
+    "ufoWidth": 40,
+    "ufoHeight": 16,
+    "barrierWidth": 60,
+    "barrierHeight": 40
+  },
+  "formation": {
+    "rows": 5,
+    "cols": 11,
+    "spacing": 32,
+    "startY": 80,
+    "leftMargin": 100
+  },
+  "scoring": {
+    "topRow": 30,
+    "middleRows": 20,
+    "bottomRows": 10,
+    "ufo": 100,
+    "mysteryUfo": 300,
+    "extraLifeScore": 1500
+  },
+  "visual": {
+    "playerColor": "#00FF00",
+    "bulletColor": "#FFFFFF",
+    "invaderColor": "#FFFF00",
+    "ufoColor": "#FF00FF",
+    "barrierColor": "#00FF00",
+    "backgroundColor": "#000000",
+    "textColor": "#00FF00",
+    "scoreColor": "#FFFFFF"
+  },
+  "audio": {
+    "shootSound": true,
+    "invaderKilledSound": true,
+    "playerKilledSound": true,
+    "ufoSound": true,
+    "invaderMarchSound": true
+  }
+}
