@@ -235,141 +235,134 @@ class DKFireEnemy extends DKEntity {
         
         // Ladder climbing logic
         if (this.onLadder) {
-            console.log('Fire on ladder - cooldown:', this.movementState.ladderCooldown, 'isClimbing:', this.climbingState.isClimbing);
-            
             if (this.movementState.ladderCooldown <= 0 && !this.climbingState.isClimbing) {
                 const marioY = game.player.y;
                 const fireY = this.y;
                 const diff = Math.abs(marioY - fireY);
                 
-                console.log('Mario Y:', marioY, 'Fire Y:', fireY, 'Difference:', diff);
-                
-                // Start climbing if Mario is on a different level (simplified conditions)
+                // Start climbing if Mario is on a different level
                 if (diff > 30) {
                     if (marioY < fireY) {
                         this.climbingState.isClimbing = true;
                         this.climbingState.targetDirection = -1; // Climb up
-                        console.log('Fire enemy starting to climb UP');
                     } else if (marioY > fireY) {
                         this.climbingState.isClimbing = true;
                         this.climbingState.targetDirection = 1; // Climb down
-                        console.log('Fire enemy starting to climb DOWN');
                     }
-                } else {
-                    console.log('Mario too close vertically, not climbing');
                 }
+            }
+        } else {
+            // Reset climbing state when not on ladder
+            if (this.climbingState.isClimbing) {
+                this.climbingState.isClimbing = false;
+                this.climbingState.targetDirection = 0;
             }
         }
         
         // Handle climbing movement
-        if (this.climbingState.isClimbing && this.onLadder) {
+        if (this.climbingState.isClimbing) {
             // Only Y movement while climbing
             this.vx = 0;
             this.vy = this.climbingState.targetDirection * this.speed;
             
-            // Don't check for platforms immediately - let it climb at least 20 pixels first
+            // Track starting position to avoid stopping at starting platform
             if (!this.climbingState.startY) {
-                this.climbingState.startY = this.y; // Remember starting position
+                this.climbingState.startY = this.y;
             }
             
-            const climbedDistance = Math.abs(this.y - this.climbingState.startY);
             let shouldStop = false;
+            const climbedDistance = Math.abs(this.y - this.climbingState.startY);
             
-            // Find the specific ladder segment we're currently on
-            const currentLadder = game.ladders.find(ladder => {
-                const ladderCenter = ladder.x + ladder.width / 2;
-                const ladderCenterZone = ladder.width * 0.6;
-                const fireCenter = this.x + this.width / 2;
-                const fireBottom = this.y + this.height;
-                const fireTop = this.y;
-                
-                const horizontalMatch = Math.abs(fireCenter - ladderCenter) < ladderCenterZone / 2;
-                const verticalMatch = fireBottom > ladder.y && fireTop < ladder.y + ladder.height;
-                
-                return horizontalMatch && verticalMatch;
-            });
-            
-            // Check boundaries of the CURRENT ladder segment only
-            if (currentLadder) {
+            // Only check for platforms after climbing at least 20 pixels
+            if (climbedDistance > 20) {
+                // When climbing up, stop when fire enemy is clearly on a different platform
                 if (this.climbingState.targetDirection < 0) { // Climbing up
-                    // Stop when reaching the top of THIS specific ladder segment
-                    if (this.y <= currentLadder.y + 10) {
-                        shouldStop = true;
-                    }
-                } else { // Climbing down
-                    // Stop when reaching the bottom of THIS specific ladder segment
-                    if (this.y + this.height >= currentLadder.y + currentLadder.height - 10) {
-                        shouldStop = true;
-                    }
+                    game.platforms.forEach(platform => {
+                        // Only stop at platforms that are above the starting position
+                        if (platform.y < this.climbingState.startY - 10 &&
+                            this.x + this.width/2 >= platform.x && 
+                            this.x + this.width/2 <= platform.x + platform.width &&
+                            this.y + this.height <= platform.y + 2) {
+                            shouldStop = true;
+                        }
+                    });
+                }
+                
+                // When climbing down, stop when hitting a platform below starting position
+                if (this.climbingState.targetDirection > 0) { // Climbing down
+                    game.platforms.forEach(platform => {
+                        // Only stop at platforms that are below the starting position
+                        if (platform.y > this.climbingState.startY + 10 &&
+                            this.x + this.width/2 >= platform.x && 
+                            this.x + this.width/2 <= platform.x + platform.width &&
+                            this.y + this.height >= platform.y - 5 && 
+                            this.y + this.height <= platform.y + 15) {
+                            shouldStop = true;
+                        }
+                    });
                 }
             }
             
-            // Also check for platforms after minimum climb distance
-            if (climbedDistance > 20 && !shouldStop) {
-                game.platforms.forEach(platform => {
-                    if (this.x + this.width/2 >= platform.x && 
-                        this.x + this.width/2 <= platform.x + platform.width) {
-                        
-                        if (this.climbingState.targetDirection < 0) { // Climbing up
-                            // Stop when fire is above the platform
-                            if (this.y + this.height <= platform.y + 5) {
-                                shouldStop = true;
-                            }
-                        } else { // Climbing down
-                            // Stop when fire lands on platform
-                            if (this.y + this.height >= platform.y - 5 && 
-                                this.y + this.height <= platform.y + 10) {
-                                shouldStop = true;
-                            }
-                        }
-                    }
-                });
+            // Also stop if we've lost the ladder AND climbed some distance
+            if (!this.onLadder && climbedDistance > 10) {
+                shouldStop = true;
             }
             
-            // Stop climbing when reaching ladder end, platform, or losing ladder
-            if (shouldStop || !this.onLadder) {
+            if (shouldStop) {
                 this.climbingState.isClimbing = false;
                 this.climbingState.targetDirection = 0;
-                this.climbingState.startY = null; // Reset start position
+                this.climbingState.startY = null;
                 this.movementState.ladderCooldown = 120;
                 this.vy = 0;
-                console.log('Fire enemy STOPPED climbing - shouldStop:', shouldStop, 'onLadder:', this.onLadder, 'climbed:', climbedDistance);
             }
         }
         // Horizontal movement (only when not climbing)
         else if (!this.climbingState.isClimbing) {
-            if (!this.onLadder) {
-                this.vy += 0.5; // Gravity only when not on ladder
+            // Only apply gravity if not on ground (prevents falling off platforms)
+            if (!this.onGround && !this.onLadder) {
+                this.vy += 0.5; // Gravity only when falling
             } else {
-                this.vy = 0; // Stop vertical movement when on ladder but not climbing
+                this.vy = 0; // Stop vertical movement when on platform or ladder
             }
             
             // Check for platform edges or obstacles
             const nextX = this.x + (this.movementState.direction * this.speed);
             
-            // Check if next position would be off platform (only when not on ladder)
-            if (!this.onLadder) {
-                let onPlatform = false;
-                game.platforms.forEach(platform => {
-                    if (nextX + this.width/2 >= platform.x && 
-                        nextX + this.width/2 <= platform.x + platform.width &&
-                        this.y + this.height >= platform.y - 5 &&
-                        this.y + this.height <= platform.y + platform.height + 5) {
+            // Check if next position would be off platform
+            let onPlatform = false;
+            
+            // Check regular platforms
+            game.platforms.forEach(platform => {
+                if (nextX + this.width/2 >= platform.x && 
+                    nextX + this.width/2 <= platform.x + platform.width &&
+                    this.y + this.height >= platform.y - 5 &&
+                    this.y + this.height <= platform.y + platform.height + 5) {
+                    onPlatform = true;
+                }
+            });
+            
+            // Also check elevator markers as platforms
+            if (!onPlatform) {
+                game.entities.forEach(entity => {
+                    if (entity.type === 'elevatormarker' &&
+                        nextX + this.width/2 >= entity.x && 
+                        nextX + this.width/2 <= entity.x + entity.width &&
+                        this.y + this.height >= entity.y - 5 &&
+                        this.y + this.height <= entity.y + entity.height + 5) {
                         onPlatform = true;
                     }
                 });
+            }
+            
+            // Reverse direction if reaching edge or max distance or screen bounds
+            if (!onPlatform || 
+                this.movementState.distanceTraveled >= this.movementState.maxDistance ||
+                nextX <= 0 || 
+                nextX >= 600 - this.width) {
                 
-                // Reverse direction if reaching edge or max distance
-                if (!onPlatform || 
-                    this.movementState.distanceTraveled >= this.movementState.maxDistance ||
-                    nextX <= 0 || 
-                    nextX >= 600 - this.width) {
-                    
-                    this.movementState.direction *= -1;
-                    this.movementState.distanceTraveled = 0;
-                    this.movementState.maxDistance = tileWidth * (3 + Math.floor(Math.random() * 4));
-                    // Don't reset ladder cooldown here - let it countdown naturally
-                }
+                this.movementState.direction *= -1;
+                this.movementState.distanceTraveled = 0;
+                this.movementState.maxDistance = tileWidth * (3 + Math.floor(Math.random() * 4));
             }
             
             // Move horizontally
@@ -389,19 +382,61 @@ class DKFireEnemy extends DKEntity {
         // Platform collision (only when not on ladder)
         if (!this.onLadder) {
             this.onGround = false;
+            
+            // Check regular platforms
             game.platforms.forEach(platform => {
                 if (this.x < platform.x + platform.width &&
                     this.x + this.width > platform.x &&
-                    this.y + this.height >= platform.y &&
-                    this.y + this.height <= platform.y + platform.height + 5) {
+                    this.y + this.height >= platform.y - 2 &&
+                    this.y + this.height <= platform.y + platform.height + 8) {
                     
-                    if (this.vy > 0) {
+                    if (this.vy >= 0) { // Only when falling or stationary
                         this.y = platform.y - this.height;
                         this.vy = 0;
                         this.onGround = true;
+                        
+                        // Reset movement state if it got corrupted
+                        if (!this.movementState || !this.movementState.direction) {
+                            this.movementState = {
+                                direction: Math.random() < 0.5 ? -1 : 1,
+                                distanceTraveled: 0,
+                                maxDistance: 75 + Math.floor(Math.random() * 100),
+                                ladderCooldown: 0,
+                                onPlatformEdge: false
+                            };
+                        }
                     }
                 }
             });
+            
+            // Also check elevator marker collisions
+            if (!this.onGround) {
+                game.entities.forEach(entity => {
+                    if (entity.type === 'elevatormarker' &&
+                        this.x < entity.x + entity.width &&
+                        this.x + this.width > entity.x &&
+                        this.y + this.height >= entity.y - 2 &&
+                        this.y + this.height <= entity.y + entity.height + 8) {
+                        
+                        if (this.vy >= 0) {
+                            this.y = entity.y - this.height;
+                            this.vy = 0;
+                            this.onGround = true;
+                            
+                            // Reset movement state if needed
+                            if (!this.movementState || !this.movementState.direction) {
+                                this.movementState = {
+                                    direction: Math.random() < 0.5 ? -1 : 1,
+                                    distanceTraveled: 0,
+                                    maxDistance: 75 + Math.floor(Math.random() * 100),
+                                    ladderCooldown: 0,
+                                    onPlatformEdge: false
+                                };
+                            }
+                        }
+                    }
+                });
+            }
         }
         
         // Bounds
@@ -796,6 +831,9 @@ class DKMapParser {
                     case 'h': // Hat
                         entities.push(new DKCollectible(x, y - 25, 'hat'));
                         break;
+                    case 'f': // Fire enemy
+                        entities.push(new DKFireEnemy(x, y - 20));
+                        break;
                     case '^': // Elevator going up
                     case 'v': // Elevator going down
                         // Find consecutive elevator characters of same type
@@ -891,12 +929,14 @@ class DKMapParser {
                     let ladderHeight = tileHeight;
                     
                     if (platformAbove && platformBelow) {
-                        // Ladder spans from bottom of upper platform to top of lower platform (original way)
+                        // Ladder spans from bottom of upper platform to top of lower platform
+                        // Add 5 pixel gap above the lower platform
                         ladderY = platformAbove.y + platformAbove.height;
-                        ladderHeight = platformBelow.y - ladderY;
+                        ladderHeight = (platformBelow.y - 5) - ladderY;
                     } else if (platformBelow) {
                         // Ladder goes from current position to top of platform below
-                        ladderHeight = platformBelow.y - y;
+                        // Add 5 pixel gap above the platform
+                        ladderHeight = (platformBelow.y - 5) - y;
                     } else if (platformAbove) {
                         // Ladder goes from bottom of platform above to current position
                         ladderY = platformAbove.y + platformAbove.height;
@@ -1090,6 +1130,9 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 game.entities.push(entity);
             } else if (entity.type === 'collectible') {
                 game.collectibles.push(entity);
+                game.entities.push(entity);
+            } else if (entity.type === 'fireenemy') {
+                game.fireEnemies.push(entity);
                 game.entities.push(entity);
             } else if (entity.type === 'elevatormarker') {
                 game.entities.push(entity);
