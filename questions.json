@@ -3,89 +3,91 @@
     {
       "id": 1,
       "title": "Level 1: Memory Game",
-      "description": "Click the squares in the order they light up",
+      "description": "Remember the sequence and repeat it back",
       "type": "memory",
-      "question": "What color flashes when you click correctly?",
-      "answer": "abc"
+      "question": "What do you need to do in the memory game?",
+      "answer": "abc",
+      "unlockQuestion": "What color is the goal square?",
+      "unlockAnswer": "abc"
     },
     {
       "id": 2,
-      "title": "Level 2: Snake Game",
-      "description": "Use arrow keys to eat the red food",
+      "title": "Level 2: Snake",
+      "description": "Control the snake to eat food and grow longer",
       "type": "snake",
-      "question": "What happens when the snake hits the wall?",
+      "question": "What happens when the snake eats food?",
       "answer": "abc",
-      "unlockQuestion": "What color flashes when you click correctly?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 3,
-      "title": "Level 3: Quiz Game",
-      "description": "Answer the trivia question correctly",
+      "title": "Level 3: Quiz",
+      "description": "Answer questions correctly within the time limit",
       "type": "quiz",
-      "question": "What programming language is this game written in?",
+      "question": "What is the main challenge in the quiz game?",
       "answer": "abc",
-      "unlockQuestion": "What happens when the snake hits the wall?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 4,
       "title": "Level 4: Flappy Bird",
-      "description": "Press SPACE to flap and avoid the pipes",
+      "description": "Navigate through pipes by flapping your wings",
       "type": "flappy",
-      "question": "How many pipes did you pass?",
+      "question": "How do you control the bird in Flappy Bird?",
       "answer": "abc",
-      "unlockQuestion": "What programming language is this game written in?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 5,
       "title": "Level 5: Frogger",
-      "description": "Use arrow keys to cross the road safely",
+      "description": "Help the frog cross the road and river safely",
       "type": "frogger",
-      "question": "What do you avoid in Frogger?",
+      "question": "What must the frog avoid in Frogger?",
       "answer": "abc",
-      "unlockQuestion": "How many pipes did you pass?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 6,
       "title": "Level 6: 3D Maze",
-      "description": "Navigate the maze to find the exit",
+      "description": "Navigate through a 3D maze to find the exit",
       "type": "maze3d",
-      "question": "What perspective is this maze in?",
+      "question": "What is the goal in the 3D maze?",
       "answer": "abc",
-      "unlockQuestion": "What do you avoid in Frogger?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 7,
       "title": "Level 7: Mario Bros",
-      "description": "Jump and run to reach the flag!",
+      "description": "Jump on enemies and collect coins in this platformer",
       "type": "mario",
-      "question": "What do you collect in Mario?",
+      "question": "How do you defeat enemies in Mario?",
       "answer": "abc",
-      "unlockQuestion": "What perspective is this maze in?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 8,
       "title": "Level 8: Donkey Kong",
-      "description": "Climb ladders and avoid barrels to save the princess!",
+      "description": "Climb ladders and avoid barrels to reach the top",
       "type": "donkeykong",
-      "question": "What does Donkey Kong throw?",
+      "question": "What does Donkey Kong throw at you?",
       "answer": "abc",
-      "unlockQuestion": "What do you collect in Mario?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
       "id": 9,
       "title": "Level 9: Pac-Man",
-      "description": "Eat all the dots while avoiding ghosts!",
+      "description": "Eat dots while avoiding ghosts in the maze",
       "type": "pacman",
       "question": "What do you eat in Pac-Man?",
       "answer": "abc",
-      "unlockQuestion": "What does Donkey Kong throw?",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
@@ -93,9 +95,9 @@
       "title": "Level 10: Fake Game",
       "description": "Move the blue square to the gold square",
       "type": "fake",
-      "question": "What color is the goal square?",
-      "answer": "gold",
-      "unlockQuestion": "What do you eat in Pac-Man?",
+      "question": "What is the objective of the fake game?",
+      "answer": "abc",
+      "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
     },
     {
@@ -104,9 +106,19 @@
       "description": "Use paddle to bounce ball and break all bricks",
       "type": "breakout",
       "question": "What do you use to control the ball in Breakout?",
-      "answer": "paddle",
+      "answer": "abc",
       "unlockQuestion": "What color is the goal square?",
-      "unlockAnswer": "gold"
+      "unlockAnswer": "abc"
+    },
+    {
+      "id": 12,
+      "title": "Level 12: Asteroids",
+      "description": "Destroy asteroids and UFOs in space while avoiding collisions",
+      "type": "asteroids",
+      "question": "What happens when you shoot a large asteroid?",
+      "answer": "abc",
+      "unlockQuestion": "What color is the goal square?",
+      "unlockAnswer": "abc"
     }
   ]
 }

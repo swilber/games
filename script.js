@@ -152,6 +152,8 @@ function generateConfigForm(gameType, config) {
         generateMaze3DConfigForm(config, content);
     } else if (gameType === 'donkeykong') {
         generateDonkeyKongConfigForm(config, content);
+    } else if (gameType === 'asteroids') {
+        generateAsteroidsConfigForm(config, content);
     }
     // Add other games later
 }
@@ -433,6 +435,29 @@ function generateDonkeyKongConfigForm(config, container) {
     });
 }
 
+function generateAsteroidsConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'scoring', title: 'Scoring Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
 function updateSaveButtonState() {
     const saveBtn = document.getElementById('save-config-btn');
     const hasChanges = JSON.stringify(currentGameConfig) !== JSON.stringify(originalConfig);
@@ -615,6 +640,15 @@ function getFallbackDifficulty(gameType, difficulty) {
             return {
                 speed: 5 + difficulty
             };
+        case 'asteroids':
+            return {
+                asteroidCount: Math.max(2, 2 + Math.floor(difficulty / 2)),
+                asteroidSpeed: Math.max(0.3, 0.3 + (difficulty * 0.1)),
+                ufoSpawnRate: Math.max(0.002, 0.002 + (difficulty * 0.001)),
+                lives: 3,
+                levels: Math.max(3, Math.min(8, 3 + Math.floor(difficulty / 2))),
+                powerUpChance: 0.1
+            };
         case 'breakout':
             const level = levels[currentLevel]; // Get current level data
             return {
@@ -632,6 +666,14 @@ function getFallbackDifficulty(gameType, difficulty) {
                 powerPelletDuration: Math.max(3000, 8000 - (difficulty * 500)),
                 ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3)),
                 levelsToWin: Math.max(1, Math.min(5, Math.ceil(difficulty / 2)))
+            };
+        case 'asteroids':
+            return {
+                asteroidCount: Math.max(4, 4 + Math.floor(difficulty / 2)),
+                asteroidSpeed: Math.max(0.5, 0.5 + (difficulty * 0.1)),
+                ufoSpawnRate: Math.max(0.002, 0.002 + (difficulty * 0.001)),
+                lives: 3,
+                levels: Math.max(3, Math.min(8, 3 + Math.floor(difficulty / 2)))
             };
         default:
             return {};
@@ -832,6 +874,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createFakeGame(settings, gameCallbacks);
         case 'breakout':
             return await createBreakoutGame(settings, gameCallbacks);
+        case 'asteroids':
+            return await createAsteroidsGame(settings, gameCallbacks);
         case 'flappy':
             console.log('Creating flappy game with settings:', settings);
             return await createFlappyGame(settings, gameCallbacks);
@@ -887,6 +931,7 @@ async function initializeLevel() {
         case 'snake':
         case 'fake':
         case 'breakout':
+        case 'asteroids':
         case 'flappy':
             // Modern games with callback support
             console.log('Creating modern game:', level.type);

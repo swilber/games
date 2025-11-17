@@ -1,0 +1,102 @@
+{
+  "name": "Asteroids",
+  "description": "Destroy asteroids and UFOs in space while avoiding collisions",
+  "difficulty": {
+    "asteroidCount": {
+      "base": 2,
+      "multiplier": 0.5,
+      "min": 2,
+      "max": 8,
+      "formula": "base + Math.floor(difficulty / 2)"
+    },
+    "asteroidSpeed": {
+      "base": 0.3,
+      "multiplier": 0.1,
+      "min": 0.3,
+      "max": 2.0,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "ufoSpawnRate": {
+      "base": 0.002,
+      "multiplier": 0.001,
+      "min": 0.002,
+      "max": 0.01,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "lives": {
+      "value": 3,
+      "static": true
+    },
+    "levels": {
+      "base": 3,
+      "multiplier": 0.5,
+      "min": 3,
+      "max": 8,
+      "formula": "Math.max(3, Math.min(8, 3 + Math.floor(difficulty / 2)))"
+    },
+    "powerUpChance": {
+      "base": 0.1,
+      "multiplier": 0.01,
+      "min": 0.05,
+      "max": 0.3,
+      "formula": "base + (difficulty * multiplier)"
+    }
+  },
+  "gameplay": {
+    "lives": 3,
+    "levels": 5,
+    "asteroidCount": 4,
+    "asteroidSpeed": 1.0,
+    "ufoSpawnRate": 0.005,
+    "powerUpChance": 0.1,
+    "invulnerabilityTime": 180,
+    "hyperspaceCooldown": 300
+  },
+  "physics": {
+    "canvasWidth": 800,
+    "canvasHeight": 600,
+    "shipSize": 8,
+    "shipThrust": 0.3,
+    "shipMaxSpeed": 8,
+    "shipRotationSpeed": 0.15,
+    "bulletSpeed": 10,
+    "bulletLifetime": 60,
+    "maxBullets": 6,
+    "asteroidSizes": [40, 20, 10],
+    "ufoSize": 20,
+    "ufoSpeed": 2
+  },
+  "scoring": {
+    "largeAsteroid": 20,
+    "mediumAsteroid": 50,
+    "smallAsteroid": 100,
+    "largeUfo": 200,
+    "smallUfo": 1000,
+    "extraLifeScore": 10000
+  },
+  "visual": {
+    "shipColor": "#00FFFF",
+    "bulletColor": "#FFFFFF",
+    "asteroidColor": "#FFFF00",
+    "ufoColor": "#FF00FF",
+    "powerUpColor": "#00FF00",
+    "backgroundColor": "#000000",
+    "textColor": "#00FFFF",
+    "warningColor": "#FF0000"
+  },
+  "powerUps": {
+    "rapidFire": {
+      "duration": 600,
+      "bulletSpeed": 15,
+      "fireRate": 3
+    },
+    "shield": {
+      "duration": 300,
+      "color": "#00FF00"
+    },
+    "multiShot": {
+      "duration": 450,
+      "bullets": 3
+    }
+  }
+}

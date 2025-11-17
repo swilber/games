@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 11,
+    "totalLevels": 12,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -73,6 +73,12 @@
       "order": 11,
       "enabled": true,
       "type": "breakout"
+    },
+    {
+      "id": 12,
+      "order": 12,
+      "enabled": true,
+      "type": "asteroids"
     }
   ]
 }
