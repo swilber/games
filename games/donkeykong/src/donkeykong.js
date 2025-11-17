@@ -1623,10 +1623,16 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 ctx.fillStyle = '#00FF00';
                 ctx.fillText('CONGRATULATIONS!', canvas.width / 2, canvas.height / 2 + 20);
                 
-                ctx.font = 'bold 20px Courier New';
-                ctx.strokeText('Press R to restart', canvas.width / 2, canvas.height / 2 + 60);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 60);
+                // Show question callback after 2 seconds
+                if (!game.questionCallbackTriggered) {
+                    game.questionCallbackTriggered = true;
+                    
+                    setTimeout(() => {
+                        if (callbacks && callbacks.onGameComplete) {
+                            callbacks.onGameComplete();
+                        }
+                    }, 2000);
+                }
             }
             
             return; // Stop game loop
