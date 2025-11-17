@@ -1566,15 +1566,68 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             game.gameRunning = false;
             clearInterval(game.gameInterval);
             
-            // Show completion message
-            ctx.fillStyle = '#FFFF00';
-            ctx.font = '48px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('LEVEL COMPLETE!', canvas.width / 2, canvas.height / 2);
+            // Check if there's a next level
+            const nextLevel = game.currentLevel + 1;
+            const hasNextLevel = DKLevels[nextLevel] !== undefined;
             
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '24px Arial';
-            ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
+            if (hasNextLevel) {
+                // Darken background for better text visibility
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Show level completion and next level message with thick text
+                ctx.textAlign = 'center';
+                
+                // Level Complete text
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.font = 'bold 48px Courier New';
+                ctx.strokeText('LEVEL COMPLETE!', canvas.width / 2, canvas.height / 2 - 50);
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillText('LEVEL COMPLETE!', canvas.width / 2, canvas.height / 2 - 50);
+                
+                // Starting Level text
+                ctx.font = 'bold 32px Courier New';
+                ctx.strokeText(`STARTING LEVEL ${nextLevel}`, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillStyle = '#00FF00';
+                ctx.fillText(`STARTING LEVEL ${nextLevel}`, canvas.width / 2, canvas.height / 2 + 20);
+                
+                // Level name text
+                ctx.font = 'bold 20px Courier New';
+                ctx.strokeText(`${DKLevels[nextLevel].name.toUpperCase()}`, canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(`${DKLevels[nextLevel].name.toUpperCase()}`, canvas.width / 2, canvas.height / 2 + 60);
+                
+                // Auto-advance to next level after 3 seconds
+                setTimeout(() => {
+                    createDonkeyKongLevel(nextLevel, gameArea, settings, callbacks);
+                }, 3000);
+                
+            } else {
+                // Darken background for better text visibility
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Game complete - no more levels
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                
+                ctx.font = 'bold 48px Courier New';
+                ctx.strokeText('GAME COMPLETE!', canvas.width / 2, canvas.height / 2 - 30);
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillText('GAME COMPLETE!', canvas.width / 2, canvas.height / 2 - 30);
+                
+                ctx.font = 'bold 24px Courier New';
+                ctx.strokeText('CONGRATULATIONS!', canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillStyle = '#00FF00';
+                ctx.fillText('CONGRATULATIONS!', canvas.width / 2, canvas.height / 2 + 20);
+                
+                ctx.font = 'bold 20px Courier New';
+                ctx.strokeText('Press R to restart', canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 60);
+            }
             
             return; // Stop game loop
         }
