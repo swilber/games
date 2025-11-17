@@ -616,11 +616,15 @@ function getFallbackDifficulty(gameType, difficulty) {
                 speed: 5 + difficulty
             };
         case 'breakout':
+            const level = levels[currentLevel]; // Get current level data
             return {
                 ballSpeed: Math.max(2, 3 + (difficulty * 0.5)),
                 paddleSpeed: Math.max(4, 6 + (difficulty * 0.3)),
                 brickRows: Math.min(8, Math.floor(4 + (difficulty * 0.4))),
-                powerUpChance: Math.min(0.25, 0.1 + (difficulty * 0.01))
+                powerUpChance: Math.min(0.25, 0.1 + (difficulty * 0.01)),
+                startLevel: level?.breakoutLevel || 1, // Use specific breakout level
+                lives: 3,
+                levels: 3 // This will be overridden by ConfigManager
             };
         case 'pacman':
             return {
@@ -628,12 +632,6 @@ function getFallbackDifficulty(gameType, difficulty) {
                 powerPelletDuration: Math.max(3000, 8000 - (difficulty * 500)),
                 ghostCount: Math.min(4, 1 + Math.floor(difficulty / 3)),
                 levelsToWin: Math.max(1, Math.min(5, Math.ceil(difficulty / 2)))
-            };
-        case 'breakout':
-            return {
-                ballSpeed: Math.max(2, 3 + (difficulty * 0.5)),
-                paddleSpeed: Math.max(4, 6 + (difficulty * 0.3)),
-                lives: 3
             };
         default:
             return {};

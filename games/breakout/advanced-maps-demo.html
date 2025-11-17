@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced Brick Breaker Maps Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #000; 
+            color: #fff; 
+            margin: 0; 
+            padding: 20px;
+        }
+        .map-container { 
+            display: inline-block; 
+            margin: 10px; 
+            text-align: center;
+            border: 2px solid #333;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .map-title { 
+            font-size: 18px; 
+            font-weight: bold; 
+            margin-bottom: 10px;
+        }
+        .difficulty { 
+            font-size: 12px; 
+            color: #888; 
+            margin-bottom: 10px;
+        }
+        canvas { 
+            border: 1px solid #555; 
+            background: #111;
+        }
+        h1 { text-align: center; color: #0ff; }
+    </style>
+</head>
+<body>
+    <h1>Advanced Brick Breaker Maps</h1>
+    <div id="maps-container"></div>
+
+    <script>
+        const advancedMaps = {
+            fortress: {
+                name: "Fortress",
+                difficulty: "Hard",
+                pattern: [
+                    "RRRRRRRRRRRRRR",
+                    "R............R",
+                    "R.OOOOOOOOOO.R",
+                    "R.O........O.R",
+                    "R.O.YYYYYY.O.R",
+                    "R.O.Y....Y.O.R",
+                    "R.O.Y.GG.Y.O.R",
+                    "R.O.Y....Y.O.R",
+                    "R.O.YYYYYY.O.R",
+                    "R.O........O.R",
+                    "R.OOOOOOOOOO.R",
+                    "R............R",
+                    "RRRRRRRRRRRRRR"
+                ]
+            },
+            spiral: {
+                name: "Spiral",
+                difficulty: "Medium",
+                pattern: [
+                    "BBBBBBBBBBBBBB",
+                    "B............B",
+                    "B.GGGGGGGGGG.B",
+                    "B.G........G.B",
+                    "B.G.YYYYYY.G.B",
+                    "B.G.Y....Y.G.B",
+                    "B.G.Y.OO.Y.G.B",
+                    "B.G.Y.OR.Y.G.B",
+                    "B.G.Y.RR.Y.G.B",
+                    "B.G.YYYYYY.G.B",
+                    "B.G........G.B",
+                    "B.GGGGGGGGGG.B",
+                    "B............B",
+                    "BBBBBBBBBBBBBB"
+                ]
+            },
+            diamond: {
+                name: "Diamond",
+                difficulty: "Medium",
+                pattern: [
+                    "......RR......",
+                    ".....RRRR.....",
+                    "....RRRRRR....",
+                    "...OOOOOOOO...",
+                    "..OOOOOOOOOO..",
+                    ".YYYYYYYYYYYY.",
+                    "GGGGGGGGGGGGGG",
+                    ".YYYYYYYYYYYY.",
+                    "..OOOOOOOOOO..",
+                    "...OOOOOOOO...",
+                    "....RRRRRR....",
+                    ".....RRRR.....",
+                    "......RR......"
+                ]
+            },
+            maze: {
+                name: "Maze",
+                difficulty: "Hard",
+                pattern: [
+                    "RRRRRRRRRRRRRR",
+                    "R....R....R..R",
+                    "R.RR.R.RR.R.RR",
+                    "R....R....R..R",
+                    "RRRR.RRRR.RRRR",
+                    "O....O....O..O",
+                    "O.OO.O.OO.O.OO",
+                    "O....O....O..O",
+                    "YYYY.YYYY.YYYY",
+                    "G....G....G..G",
+                    "G.GG.G.GG.G.GG",
+                    "G....G....G..G",
+                    "BBBBBBBBBBBBBB"
+                ]
+            },
+            cross: {
+                name: "Cross",
+                difficulty: "Medium",
+                pattern: [
+                    "......RR......",
+                    "......RR......",
+                    "......RR......",
+                    "OOOOOOOOOOOOOO",
+                    "OOOOOOOOOOOOOO",
+                    "......YY......",
+                    "......YY......",
+                    "GGGGGGGGGGGGGG",
+                    "GGGGGGGGGGGGGG",
+                    "......BB......",
+                    "......BB......",
+                    "......BB......"
+                ]
+            },
+            pyramid: {
+                name: "Pyramid",
+                difficulty: "Easy",
+                pattern: [
+                    "......RR......",
+                    ".....R..R.....",
+                    "....R....R....",
+                    "...O......O...",
+                    "..O........O..",
+                    ".Y..........Y.",
+                    "G............G",
+                    "BBBBBBBBBBBBBB"
+                ]
+            },
+            checkerboard: {
+                name: "Checkerboard",
+                difficulty: "Medium",
+                pattern: [
+                    "R.R.R.R.R.R.R.",
+                    ".O.O.O.O.O.O.O",
+                    "Y.Y.Y.Y.Y.Y.Y.",
+                    ".G.G.G.G.G.G.G",
+                    "B.B.B.B.B.B.B.",
+                    ".R.R.R.R.R.R.R",
+                    "O.O.O.O.O.O.O.",
+                    ".Y.Y.Y.Y.Y.Y.Y"
+                ]
+            },
+            invaders: {
+                name: "Space Invaders",
+                difficulty: "Hard",
+                pattern: [
+                    "..RR....RR....",
+                    ".RRRR..RRRR...",
+                    "RRRRRRRRRRRRRR",
+                    "RRR.RRRR.RRRRR",
+                    "RRRRRRRRRRRRRR",
+                    "..R.RRRR.R....",
+                    ".R.R....R.R...",
+                    "R..R....R..R.."
+                ]
+            }
+        };
+
+        const brickColors = {
+            'R': '#ff0000',
+            'O': '#ff8000', 
+            'Y': '#ffff00',
+            'G': '#00ff00',
+            'B': '#0080ff'
+        };
+
+        function renderMap(mapData, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const pattern = mapData.pattern;
+            
+            canvas.width = 280;
+            canvas.height = pattern.length * 15 + 20;
+            
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const brickWidth = canvas.width / pattern[0].length;
+            const brickHeight = 12;
+            
+            for (let row = 0; row < pattern.length; row++) {
+                for (let col = 0; col < pattern[row].length; col++) {
+                    const brickType = pattern[row][col];
+                    if (brickType !== '.') {
+                        ctx.fillStyle = brickColors[brickType];
+                        ctx.fillRect(
+                            col * brickWidth + 1,
+                            row * brickHeight + 10,
+                            brickWidth - 2,
+                            brickHeight - 1
+                        );
+                    }
+                }
+            }
+        }
+
+        // Create map displays
+        const container = document.getElementById('maps-container');
+        Object.keys(advancedMaps).forEach(mapKey => {
+            const mapData = advancedMaps[mapKey];
+            const mapDiv = document.createElement('div');
+            mapDiv.className = 'map-container';
+            
+            const title = document.createElement('div');
+            title.className = 'map-title';
+            title.textContent = mapData.name;
+            
+            const difficulty = document.createElement('div');
+            difficulty.className = 'difficulty';
+            difficulty.textContent = `Difficulty: ${mapData.difficulty}`;
+            
+            const canvas = document.createElement('canvas');
+            canvas.id = `map-${mapKey}`;
+            
+            mapDiv.appendChild(title);
+            mapDiv.appendChild(difficulty);
+            mapDiv.appendChild(canvas);
+            container.appendChild(mapDiv);
+            
+            renderMap(mapData, canvas.id);
+        });
+    </script>
+</body>
+</html>

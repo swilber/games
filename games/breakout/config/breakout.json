@@ -1,42 +1,30 @@
 {
-  "name": "Breakout",
-  "description": "Classic brick-breaking game with paddle and ball",
-  "difficulty": {
-    "ballSpeed": {
-      "base": 4,
-      "multiplier": 0.5,
-      "min": 2,
-      "max": 8,
-      "formula": "base + (difficulty * multiplier)"
+    "name": "Breakout",
+    "description": "Use paddle to bounce ball and break all bricks",
+    "unlockAllLevels": false,
+    "gameplay": {
+        "lives": 3,
+        "ballSpeed": 4,
+        "paddleSpeed": 8,
+        "levels": 3,
+        "powerUpChance": 0.3,
+        "unlockAllLevels": false
     },
-    "paddleSpeed": {
-      "base": 8,
-      "multiplier": 0.3,
-      "min": 4,
-      "max": 12,
-      "formula": "base + (difficulty * multiplier)"
+    "physics": {
+        "paddleWidth": 120,
+        "paddleHeight": 15,
+        "ballRadius": 8,
+        "brickWidth": 54,
+        "brickHeight": 20
     },
-    "lives": {
-      "value": 3,
-      "static": true
+    "scoring": {
+        "levelBonus": 200,
+        "brickPoints": [10, 7, 5, 3, 1]
+    },
+    "advanced": {
+        "enableAdvancedMaps": true,
+        "advancedMapsStartLevel": 4,
+        "multiHitBricks": true,
+        "throughBallDuration": 600
     }
-  },
-  "gameplay": {
-    "ballSpeed": 4,
-    "paddleSpeed": 8,
-    "lives": 3,
-    "levels": 3
-  },
-  "physics": {
-    "ballRadius": 8,
-    "paddleWidth": 120,
-    "paddleHeight": 15,
-    "brickWidth": 55,
-    "brickHeight": 20
-  },
-  "scoring": {
-    "brickPoints": 10,
-    "powerUpChance": 0.15,
-    "levelBonus": 100
-  }
 }

@@ -1,0 +1,82 @@
+{
+    "name": "Breakout",
+    "levels": [
+        {
+            "name": "Basic Pattern",
+            "difficulty": "Easy",
+            "description": "Simple brick layout to get started",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 1,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Random Gaps", 
+            "difficulty": "Easy",
+            "description": "Some bricks are missing for variety",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 2,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Multi-Hit Bricks",
+            "difficulty": "Medium", 
+            "description": "Top rows require multiple hits",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 3,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Fortress",
+            "difficulty": "Hard",
+            "description": "Thick walls with narrow passages",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 4,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Diamond",
+            "difficulty": "Medium",
+            "description": "Classic diamond formation",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 5,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Maze",
+            "difficulty": "Hard", 
+            "description": "Complex maze requiring precision",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 6,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        },
+        {
+            "name": "Space Invaders",
+            "difficulty": "Hard",
+            "description": "Iconic retro pattern challenge",
+            "unlocked": true,
+            "settings": {
+                "startLevel": 7,
+                "lives": 3,
+                "ballSpeed": 4
+            }
+        }
+    ]
+}

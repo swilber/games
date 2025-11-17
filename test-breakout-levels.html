@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Breakout Level Selection</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; }
+        .level-button { 
+            display: inline-block; 
+            margin: 10px; 
+            padding: 15px 25px; 
+            background: #333; 
+            color: #fff; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 5px;
+        }
+        .level-button:hover { background: #555; }
+        #game-area { 
+            margin-top: 20px; 
+            border: 2px solid #333; 
+            min-height: 400px; 
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Breakout Level Selection Test</h1>
+    <div id="level-buttons">
+        <button class="level-button" onclick="testLevel(1)">Level 1: Basic</button>
+        <button class="level-button" onclick="testLevel(2)">Level 2: Gaps</button>
+        <button class="level-button" onclick="testLevel(3)">Level 3: Multi-Hit</button>
+        <button class="level-button" onclick="testLevel(4)">Level 4: Fortress</button>
+        <button class="level-button" onclick="testLevel(5)">Level 5: Diamond</button>
+        <button class="level-button" onclick="testLevel(6)">Level 6: Maze</button>
+        <button class="level-button" onclick="testLevel(7)">Level 7: Invaders</button>
+    </div>
+    
+    <div id="game-area">
+        <p>Select a level to test</p>
+    </div>
+
+    <script src="games/breakout/src/breakout.js"></script>
+    <script>
+        let currentGame = null;
+
+        async function testLevel(levelNum) {
+            // Clean up previous game
+            if (currentGame && currentGame.cleanup) {
+                currentGame.cleanup();
+            }
+
+            // Clear game area
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = '';
+
+            // Create game with specific level
+            const settings = {
+                startLevel: levelNum,
+                ballSpeed: 4,
+                paddleSpeed: 8,
+                lives: 3
+            };
+
+            console.log('Testing level:', levelNum, 'with settings:', settings);
+
+            try {
+                currentGame = await createBreakoutGame(settings);
+                console.log('Game created successfully');
+            } catch (error) {
+                console.error('Error creating game:', error);
+                gameArea.innerHTML = '<p style="color: red;">Error loading level ' + levelNum + '</p>';
+            }
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (currentGame && currentGame.cleanup) {
+                currentGame.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

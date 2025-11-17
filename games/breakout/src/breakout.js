@@ -1,52 +1,162 @@
 async function createBreakoutGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
     
-    // Load Breakout configuration using ConfigManager
+    // Load Breakout configuration using ConfigManager (same as other games)
     let breakoutConfig = {};
     if (typeof configManager !== 'undefined') {
         breakoutConfig = await configManager.loadConfig('breakout');
         console.log('Breakout config loaded via ConfigManager:', breakoutConfig);
     } else {
         console.log('ConfigManager not available, using settings fallback');
-        breakoutConfig = {
-            gameplay: settings,
-            physics: settings,
-            scoring: settings
+        breakoutConfig = settings || {};
+    }
+    
+    // Merge ConfigManager values with settings (ConfigManager takes priority)
+    const mergedSettings = {
+        ...settings,
+        ...breakoutConfig.gameplay,
+        ...breakoutConfig.physics,
+        paddleWidth: breakoutConfig.physics?.paddleWidth || settings.paddleWidth,
+        paddleHeight: breakoutConfig.physics?.paddleHeight || settings.paddleHeight,
+        ballRadius: breakoutConfig.physics?.ballRadius || settings.ballRadius
+    };
+    
+    console.log('Breakout merged settings:', mergedSettings);
+    
+    // Check if unlock all levels is enabled (same pattern as Donkey Kong)
+    const unlockAllLevels = breakoutConfig.unlockAllLevels || mergedSettings?.unlockAllLevels || 
+                           breakoutConfig.gameplay?.unlockAllLevels || false;
+    
+    console.log('Breakout - unlockAllLevels:', unlockAllLevels);
+    console.log('Breakout - full config:', breakoutConfig);
+    
+    if (unlockAllLevels) {
+        // Show level selection dialog
+        gameArea.innerHTML = `
+            <div style="text-align: center; padding: 50px; color: #FFFFFF; font-family: Arial, sans-serif; background: #000; min-height: 400px;">
+                <h1 style="color: #00FF00; font-size: 36px; margin-bottom: 30px;">BREAKOUT</h1>
+                <h2 style="color: #FFFF00; font-size: 24px; margin-bottom: 40px;">SELECT LEVEL</h2>
+                <button onclick="window.loadBreakoutLevel(1)" 
+                        style="background: #FF0000; color: #FFF; border: 2px solid #FFFF00; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 1: Basic Pattern
+                </button>
+                <button onclick="window.loadBreakoutLevel(2)" 
+                        style="background: #FF8000; color: #FFF; border: 2px solid #FFFF00; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 2: Random Gaps
+                </button>
+                <button onclick="window.loadBreakoutLevel(3)" 
+                        style="background: #FFFF00; color: #000; border: 2px solid #FF0000; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 3: Multi-Hit Bricks
+                </button>
+                <button onclick="window.loadBreakoutLevel(4)" 
+                        style="background: #00FF00; color: #000; border: 2px solid #FF0000; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 4: Fortress
+                </button>
+                <button onclick="window.loadBreakoutLevel(5)" 
+                        style="background: #0080FF; color: #FFF; border: 2px solid #FFFF00; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 5: Diamond
+                </button>
+                <button onclick="window.loadBreakoutLevel(6)" 
+                        style="background: #8000FF; color: #FFF; border: 2px solid #FFFF00; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 6: Maze
+                </button>
+                <button onclick="window.loadBreakoutLevel(7)" 
+                        style="background: #FF00FF; color: #FFF; border: 2px solid #FFFF00; 
+                               padding: 15px 30px; font-size: 18px; margin: 10px;
+                               cursor: pointer; display: block; margin: 10px auto;">
+                    Level 7: Space Invaders
+                </button>
+            </div>
+        `;
+        
+        // Global function to load specific level
+        window.loadBreakoutLevel = (levelNum) => {
+            console.log('Loading breakout level:', levelNum);
+            const levelSettings = { ...mergedSettings, startLevel: levelNum };
+            createBreakoutLevel(levelSettings, gameArea, callbacks);
+        };
+        
+        return {
+            cleanup: () => {
+                if (window.loadBreakoutLevel) {
+                    delete window.loadBreakoutLevel;
+                }
+            }
         };
     }
+    
+    // If unlock all levels is disabled, start with default level
+    return createBreakoutLevel(mergedSettings, gameArea, callbacks);
+}
+
+function createBreakoutLevel(settings, gameArea, callbacks) {
+    // Clear game area
+    gameArea.innerHTML = '';
+    
+    // Use ConfigManager values with fallbacks to settings (ConfigManager takes priority)
+    const initialLives = settings.lives || 3;
+    const initialBallSpeed = settings.ballSpeed || 4;
+    const paddleSpeed = settings.paddleSpeed || 8;
+    const paddleWidth = settings.paddleWidth || 120;
+    const paddleHeight = settings.paddleHeight || 15;
+    const ballRadius = settings.ballRadius || 8;
+    const powerUpChance = settings.powerUpChance || 0.3;
+    const totalLevels = settings.levels || 3; // This should come from ConfigManager
+    
+    console.log('Breakout createBreakoutLevel - settings:', settings);
+    console.log('Breakout createBreakoutLevel - totalLevels:', totalLevels);
     
     // Game state
     let gameRunning = false;
     let gameInterval = null;
     let gameWon = false;
     let gameStarted = false;
-    let currentLevel = 1;
-    let lives = breakoutConfig.gameplay?.lives || settings.lives || 3;
+    let levelComplete = false;
+    let showLevelStart = true;
+    let currentLevel = settings.startLevel || 1;
+    let currentLives = initialLives;
     let score = 0;
-    let ballSpeed = breakoutConfig.gameplay?.ballSpeed || settings.ballSpeed || 4;
+    let currentBallSpeed = initialBallSpeed;
+    let gameState = 'levelStart'; // 'levelStart', 'playing', 'levelComplete', 'gameComplete'
     
     // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = 800;
     canvas.height = 600;
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
     const ctx = canvas.getContext('2d');
     
-    // Game objects
+    // Game objects using config values
     const paddle = {
-        x: canvas.width / 2 - (breakoutConfig.physics?.paddleWidth || 120) / 2,
+        x: canvas.width / 2 - paddleWidth / 2,
         y: canvas.height - 30,
-        width: breakoutConfig.physics?.paddleWidth || 120,
-        height: breakoutConfig.physics?.paddleHeight || 15,
-        speed: breakoutConfig.gameplay?.paddleSpeed || 8
+        width: paddleWidth,
+        height: paddleHeight,
+        speed: paddleSpeed
     };
     
     const ball = {
         x: canvas.width / 2,
         y: canvas.height / 2,
-        radius: breakoutConfig.physics?.ballRadius || 8,
-        dx: (breakoutConfig.gameplay?.ballSpeed || 4) * (Math.random() > 0.5 ? 1 : -1),
-        dy: -(breakoutConfig.gameplay?.ballSpeed || 4),
-        stuck: true
+        radius: ballRadius,
+        dx: currentBallSpeed * (Math.random() > 0.5 ? 1 : -1),
+        dy: -currentBallSpeed,
+        stuck: true,
+        throughBall: false,
+        throughBallTimer: 0
     };
     
     let bricks = [];
@@ -57,44 +167,212 @@ async function createBreakoutGame(settings, callbacks = null) {
     const brickColors = ['#ff0000', '#ff8000', '#ffff00', '#00ff00', '#0080ff', '#8000ff'];
     const brickPoints = [7, 7, 5, 5, 3, 3, 1, 1];
     
-    function initializeLevel(level) {
-        bricks = [];
-        const rows = Math.min(8, 4 + level);
-        const cols = 14;
-        const brickWidth = breakoutConfig.physics?.brickWidth || (canvas.width - 40) / cols;
-        const brickHeight = breakoutConfig.physics?.brickHeight || 20;
+    // Configurable level progression: Basic -> Fortress -> Maze -> Diamond -> Invaders -> Spiral -> Checkerboard
+    const levelMaps = [
+        null, // Level 1: Basic pattern (generated)
+        {
+            name: "FORTRESS",
+            pattern: [
+                "RRRRRRRRRRRRRR",
+                "R............R",
+                "R.OOOOOOOOOO.R",
+                "R.O........O.R",
+                "R.O.YYYYYY.O.R",
+                "R.O.Y....Y.O.R",
+                "R.O.Y.GG.Y.O.R",
+                "R.O.Y....Y.O.R",
+                "R.O.YYYYYY.O.R",
+                "R.O........O.R",
+                "R.OOOOOOOOOO.R",
+                "R............R",
+                "RRRRRRRRRRRRRR"
+            ]
+        },
+        {
+            name: "MAZE",
+            pattern: [
+                "RRRRRRRRRRRRRR",
+                "R....R....R..R",
+                "R.RR.R.RR.R.RR",
+                "R....R....R..R",
+                "RRRR.RRRR.RRRR",
+                "O....O....O..O",
+                "O.OO.O.OO.O.OO",
+                "O....O....O..O",
+                "YYYY.YYYY.YYYY",
+                "G....G....G..G",
+                "G.GG.G.GG.G.GG",
+                "G....G....G..G",
+                "BBBBBBBBBBBBBB"
+            ]
+        },
+        {
+            name: "DIAMOND",
+            pattern: [
+                "......RR......",
+                ".....RRRR.....",
+                "....RRRRRR....",
+                "...OOOOOOOO...",
+                "..OOOOOOOOOO..",
+                ".YYYYYYYYYYYY.",
+                "GGGGGGGGGGGGGG",
+                ".YYYYYYYYYYYY.",
+                "..OOOOOOOOOO..",
+                "...OOOOOOOO...",
+                "....RRRRRR....",
+                ".....RRRR.....",
+                "......RR......"
+            ]
+        },
+        {
+            name: "INVADERS",
+            pattern: [
+                "..RR....RR....",
+                ".RRRR..RRRR...",
+                "RRRRRRRRRRRRRR",
+                "RRR.RRRR.RRRRR",
+                "RRRRRRRRRRRRRR",
+                "..R.RRRR.R....",
+                ".R.R....R.R...",
+                "R..R....R..R.."
+            ]
+        },
+        {
+            name: "SPIRAL",
+            pattern: [
+                "BBBBBBBBBBBBBB",
+                "B............B",
+                "B.GGGGGGGGGG.B",
+                "B.G........G.B",
+                "B.G.YYYYYY.G.B",
+                "B.G.Y....Y.G.B",
+                "B.G.Y.OO.Y.G.B",
+                "B.G.Y.OR.Y.G.B",
+                "B.G.Y.RR.Y.G.B",
+                "B.G.YYYYYY.G.B",
+                "B.G........G.B",
+                "B.GGGGGGGGGG.B",
+                "B............B",
+                "BBBBBBBBBBBBBB"
+            ]
+        },
+        {
+            name: "CHECKERBOARD",
+            pattern: [
+                "R.R.R.R.R.R.R.",
+                ".O.O.O.O.O.O.O",
+                "Y.Y.Y.Y.Y.Y.Y.",
+                ".G.G.G.G.G.G.G",
+                "B.B.B.B.B.B.B.",
+                ".R.R.R.R.R.R.R",
+                "O.O.O.O.O.O.O.",
+                ".Y.Y.Y.Y.Y.Y.Y"
+            ]
+        }
+    ];
+
+    const brickTypeColors = {
+        'R': { color: '#ff0000', hits: 3, points: 10 },
+        'O': { color: '#ff8000', hits: 2, points: 7 },
+        'Y': { color: '#ffff00', hits: 2, points: 5 },
+        'G': { color: '#00ff00', hits: 1, points: 3 },
+        'B': { color: '#0080ff', hits: 1, points: 1 },
+        '.': null
+    };
+
+    function generateBricksFromPattern(pattern) {
+        const bricks = [];
+        const rows = pattern.length;
+        const cols = pattern[0].length;
+        const brickWidth = (canvas.width - 40) / cols;
+        const brickHeight = 20;
         
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
-                // Skip some bricks in higher levels for patterns
-                if (level > 1 && Math.random() < 0.1) continue;
+                const brickType = pattern[row][col];
+                const brickInfo = brickTypeColors[brickType];
                 
-                bricks.push({
-                    x: 20 + col * (brickWidth + 2),
-                    y: 60 + row * (brickHeight + 5),
-                    width: brickWidth,
-                    height: brickHeight,
-                    color: brickColors[row % brickColors.length],
-                    points: breakoutConfig.scoring?.brickPoints || brickPoints[row] || 1,
-                    hits: row < 2 && level > 1 ? 2 : 1,
-                    maxHits: row < 2 && level > 1 ? 2 : 1
-                });
+                if (brickInfo) {
+                    bricks.push({
+                        x: 20 + col * (brickWidth + 2),
+                        y: 60 + row * (brickHeight + 5),
+                        width: brickWidth,
+                        height: brickHeight,
+                        color: brickInfo.color,
+                        points: brickInfo.points,
+                        hits: brickInfo.hits,
+                        maxHits: brickInfo.hits
+                    });
+                }
             }
         }
         
-        // Reset ball
+        return bricks;
+    }
+
+    function initializeLevel(level) {
+        bricks = [];
+        
+        if (level === 1) {
+            // Level 1: Basic pattern
+            const rows = 6;
+            const cols = 14;
+            const brickWidth = (canvas.width - 40) / cols;
+            const brickHeight = 20;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    bricks.push({
+                        x: 20 + col * (brickWidth + 2),
+                        y: 60 + row * (brickHeight + 5),
+                        width: brickWidth,
+                        height: brickHeight,
+                        color: brickColors[row % brickColors.length],
+                        points: brickPoints[row] || 1,
+                        hits: 1,
+                        maxHits: 1
+                    });
+                }
+            }
+        } else if (level <= totalLevels && levelMaps[level - 1]) {
+            // Level 2+: Use pattern maps
+            bricks = generateBricksFromPattern(levelMaps[level - 1].pattern);
+        } else {
+            // Fallback for levels beyond defined patterns - generate basic pattern
+            const rows = Math.min(8, 4 + level);
+            const cols = 14;
+            const brickWidth = (canvas.width - 40) / cols;
+            const brickHeight = 20;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    bricks.push({
+                        x: 20 + col * (brickWidth + 2),
+                        y: 60 + row * (brickHeight + 5),
+                        width: brickWidth,
+                        height: brickHeight,
+                        color: brickColors[row % brickColors.length],
+                        points: brickPoints[row] || 1,
+                        hits: Math.min(3, Math.floor(level / 2) + 1),
+                        maxHits: Math.min(3, Math.floor(level / 2) + 1)
+                    });
+                }
+            }
+        }
+        
         ball.x = canvas.width / 2;
         ball.y = canvas.height / 2;
-        ball.dx = (breakoutConfig.gameplay?.ballSpeed || ballSpeed) * (Math.random() > 0.5 ? 1 : -1);
-        ball.dy = -(breakoutConfig.gameplay?.ballSpeed || ballSpeed);
+        ball.dx = currentBallSpeed * (Math.random() > 0.5 ? 1 : -1);
+        ball.dy = -currentBallSpeed;
         ball.stuck = true;
-        
-        // Reset paddle
         paddle.x = canvas.width / 2 - paddle.width / 2;
+        
+        gameState = 'levelStart';
+        showLevelStart = true;
     }
     
     function createPowerUp(x, y) {
-        const types = ['expand', 'shrink', 'multiball', 'laser', 'slow', 'fast', 'life'];
+        const types = ['through', 'expand', 'shrink', 'life'];
         const type = types[Math.floor(Math.random() * types.length)];
         
         powerUps.push({
@@ -104,7 +382,9 @@ async function createBreakoutGame(settings, callbacks = null) {
             height: 15,
             dy: 2,
             type: type,
-            color: type === 'life' ? '#00ff00' : type === 'expand' ? '#0080ff' : '#ff8000'
+            color: type === 'life' ? '#00ff00' : 
+                   type === 'expand' ? '#0080ff' : 
+                   type === 'through' ? '#ff00ff' : '#ff8000'
         });
     }
     
@@ -125,7 +405,13 @@ async function createBreakoutGame(settings, callbacks = null) {
     function update() {
         if (!gameRunning || gameWon) return;
         
-        // Update particles
+        if (ball.throughBallTimer > 0) {
+            ball.throughBallTimer--;
+            if (ball.throughBallTimer <= 0) {
+                ball.throughBall = false;
+            }
+        }
+        
         particles = particles.filter(p => {
             p.x += p.dx;
             p.y += p.dy;
@@ -133,11 +419,9 @@ async function createBreakoutGame(settings, callbacks = null) {
             return p.life > 0;
         });
         
-        // Update power-ups
         powerUps = powerUps.filter(powerUp => {
             powerUp.y += powerUp.dy;
             
-            // Check collision with paddle
             if (powerUp.y + powerUp.height >= paddle.y &&
                 powerUp.x + powerUp.width >= paddle.x &&
                 powerUp.x <= paddle.x + paddle.width) {
@@ -149,12 +433,10 @@ async function createBreakoutGame(settings, callbacks = null) {
             return powerUp.y < canvas.height;
         });
         
-        // Ball movement
         if (!ball.stuck) {
             ball.x += ball.dx;
             ball.y += ball.dy;
             
-            // Wall collisions
             if (ball.x <= ball.radius || ball.x >= canvas.width - ball.radius) {
                 ball.dx = -ball.dx;
             }
@@ -162,18 +444,15 @@ async function createBreakoutGame(settings, callbacks = null) {
                 ball.dy = -ball.dy;
             }
             
-            // Paddle collision
             if (ball.y + ball.radius >= paddle.y &&
                 ball.x >= paddle.x && ball.x <= paddle.x + paddle.width &&
                 ball.dy > 0) {
                 
                 ball.dy = -ball.dy;
-                // Add spin based on where ball hits paddle
                 const hitPos = (ball.x - paddle.x) / paddle.width;
-                ball.dx = ballSpeed * (hitPos - 0.5) * 2;
+                ball.dx = currentBallSpeed * (hitPos - 0.5) * 2;
             }
             
-            // Brick collisions
             for (let i = bricks.length - 1; i >= 0; i--) {
                 const brick = bricks[i];
                 
@@ -182,14 +461,15 @@ async function createBreakoutGame(settings, callbacks = null) {
                     ball.y + ball.radius >= brick.y &&
                     ball.y - ball.radius <= brick.y + brick.height) {
                     
-                    // Determine collision side
-                    const overlapX = Math.min(ball.x + ball.radius - brick.x, brick.x + brick.width - (ball.x - ball.radius));
-                    const overlapY = Math.min(ball.y + ball.radius - brick.y, brick.y + brick.height - (ball.y - ball.radius));
-                    
-                    if (overlapX < overlapY) {
-                        ball.dx = -ball.dx;
-                    } else {
-                        ball.dy = -ball.dy;
+                    if (!ball.throughBall) {
+                        const overlapX = Math.min(ball.x + ball.radius - brick.x, brick.x + brick.width - (ball.x - ball.radius));
+                        const overlapY = Math.min(ball.y + ball.radius - brick.y, brick.y + brick.height - (ball.y - ball.radius));
+                        
+                        if (overlapX < overlapY) {
+                            ball.dx = -ball.dx;
+                        } else {
+                            ball.dy = -ball.dy;
+                        }
                     }
                     
                     brick.hits--;
@@ -198,53 +478,55 @@ async function createBreakoutGame(settings, callbacks = null) {
                     if (brick.hits <= 0) {
                         score += brick.points;
                         
-                        // Chance for power-up
-                        if (Math.random() < (breakoutConfig.scoring?.powerUpChance || 0.15)) {
+                        if (Math.random() < powerUpChance) {
                             createPowerUp(brick.x + brick.width/2, brick.y + brick.height/2);
                         }
                         
                         bricks.splice(i, 1);
                     } else {
-                        // Darken brick color for damaged bricks
                         brick.color = brick.color.replace(/ff/g, '80');
                     }
                     
-                    break;
+                    if (!ball.throughBall) break;
                 }
             }
             
-            // Ball out of bounds
             if (ball.y > canvas.height) {
-                lives--;
-                if (lives <= 0) {
+                currentLives--;
+                if (currentLives <= 0) {
                     gameRunning = false;
-                    // Game over - no callback, just restart
                 } else {
-                    // Reset ball
                     ball.x = canvas.width / 2;
                     ball.y = canvas.height / 2;
-                    ball.dx = ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-                    ball.dy = -ballSpeed;
+                    ball.dx = currentBallSpeed * (Math.random() > 0.5 ? 1 : -1);
+                    ball.dy = -currentBallSpeed;
                     ball.stuck = true;
+                    ball.throughBall = false;
+                    ball.throughBallTimer = 0;
                 }
             }
         }
         
-        // Check level complete
         if (bricks.length === 0) {
-            if (currentLevel >= (breakoutConfig.gameplay?.levels || 3)) {
+            if (currentLevel >= totalLevels) {
                 gameWon = true;
                 gameRunning = false;
-                if (callbacks && callbacks.onGameComplete) {
-                    setTimeout(() => {
+                gameState = 'gameComplete';
+                // Show question after 3 seconds
+                setTimeout(() => {
+                    if (callbacks && callbacks.onGameComplete) {
                         callbacks.onGameComplete('breakout', { completed: true, score: score });
-                    }, 1000);
-                }
+                    }
+                }, 3000);
             } else {
                 currentLevel++;
-                score += breakoutConfig.scoring?.levelBonus || 100; // Level completion bonus
-                initializeLevel(currentLevel);
-                ballSpeed = (breakoutConfig.gameplay?.ballSpeed || 4) + (currentLevel - 1) * 0.5; // Increase speed each level
+                score += 500;
+                gameState = 'levelComplete';
+                gameRunning = false;
+                // Auto-advance to next level after 2 seconds
+                setTimeout(() => {
+                    initializeLevel(currentLevel);
+                }, 2000);
             }
         }
     }
@@ -257,18 +539,12 @@ async function createBreakoutGame(settings, callbacks = null) {
             case 'shrink':
                 paddle.width = Math.max(60, paddle.width * 0.7);
                 break;
-            case 'slow':
-                ballSpeed *= 0.8;
-                ball.dx *= 0.8;
-                ball.dy *= 0.8;
-                break;
-            case 'fast':
-                ballSpeed *= 1.2;
-                ball.dx *= 1.2;
-                ball.dy *= 1.2;
-                break;
             case 'life':
-                lives++;
+                currentLives++;
+                break;
+            case 'through':
+                ball.throughBall = true;
+                ball.throughBallTimer = 600;
                 break;
         }
     }
@@ -289,10 +565,33 @@ async function createBreakoutGame(settings, callbacks = null) {
         ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
         
         // Draw ball
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
+        if (ball.throughBall) {
+            ctx.strokeStyle = 'rgba(255, 0, 255, 0.6)';
+            ctx.lineWidth = 2;
+            for (let i = 1; i <= 5; i++) {
+                const trailX = ball.x - (ball.dx * i * 0.8);
+                const trailY = ball.y - (ball.dy * i * 0.8);
+                const alpha = (6 - i) / 6 * 0.6;
+                
+                ctx.strokeStyle = `rgba(255, 0, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(trailX, trailY, ball.radius * (6 - i) / 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+        }
         
         // Draw power-ups
         powerUps.forEach(powerUp => {
@@ -312,40 +611,95 @@ async function createBreakoutGame(settings, callbacks = null) {
         });
         ctx.globalAlpha = 1;
         
+        // Retro 70s arcade font styling
+        const retroFont = 'bold 20px "Courier New", monospace';
+        const retroFontLarge = 'bold 48px "Courier New", monospace';
+        const retroFontMedium = 'bold 32px "Courier New", monospace';
+        
         // Draw UI
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '20px Arial';
+        ctx.fillStyle = '#00FF00';
+        ctx.font = retroFont;
         ctx.textAlign = 'left';
-        ctx.fillText(`Score: ${score}`, 20, 30);
-        ctx.fillText(`Lives: ${lives}`, 20, canvas.height - 10);
-        ctx.fillText(`Level: ${currentLevel}`, canvas.width - 120, 30);
+        ctx.fillText(`SCORE: ${score.toString().padStart(6, '0')}`, 20, 30);
+        ctx.fillText(`LIVES: ${currentLives}`, 20, canvas.height - 10);
         
-        if (ball.stuck) {
+        // Level display
+        const levelNames = ['', 'BASIC', 'FORTRESS', 'MAZE', 'DIAMOND', 'INVADERS', 'SPIRAL', 'CHECKERBOARD'];
+        const levelName = (currentLevel <= levelNames.length - 1) ? levelNames[currentLevel] : `LEVEL ${currentLevel}`;
+        ctx.textAlign = 'right';
+        ctx.fillText(`LEVEL ${currentLevel}: ${levelName}`, canvas.width - 20, 30);
+        
+        // Game state overlays
+        if (gameState === 'levelStart') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText('Press SPACE to launch ball', canvas.width/2, canvas.height/2 + 50);
+            ctx.fillText(`LEVEL ${currentLevel}`, canvas.width/2, canvas.height/2 - 60);
+            
+            ctx.fillStyle = '#00FFFF';
+            ctx.font = retroFontMedium;
+            ctx.fillText(levelName, canvas.width/2, canvas.height/2 - 10);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = retroFont;
+            ctx.fillText('PRESS R TO START', canvas.width/2, canvas.height/2 + 40);
         }
         
-        if (gameWon) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        if (gameState === 'levelComplete') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#00ff00';
-            ctx.font = '48px Arial';
+            
+            ctx.fillStyle = '#00FF00';
+            ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText('YOU WIN!', canvas.width/2, canvas.height/2);
-            ctx.font = '24px Arial';
-            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 60);
+            ctx.fillText('LEVEL COMPLETE!', canvas.width/2, canvas.height/2 - 20);
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = retroFont;
+            ctx.fillText('BONUS: 500 POINTS', canvas.width/2, canvas.height/2 + 30);
         }
         
-        if (!gameRunning && !gameWon && lives <= 0) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        if (gameState === 'gameComplete') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#ff0000';
-            ctx.font = '48px Arial';
+            
+            ctx.fillStyle = '#FF00FF';
+            ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
-            ctx.font = '24px Arial';
-            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 60);
-            ctx.fillText('Press R to restart', canvas.width/2, canvas.height/2 + 100);
+            ctx.fillText('GAME COMPLETE!', canvas.width/2, canvas.height/2 - 40);
+            
+            ctx.fillStyle = '#00FF00';
+            ctx.font = retroFontMedium;
+            ctx.fillText('CONGRATULATIONS!', canvas.width/2, canvas.height/2 + 10);
+            
+            ctx.fillStyle = '#FFFF00';
+            ctx.font = retroFont;
+            ctx.fillText(`FINAL SCORE: ${score.toString().padStart(6, '0')}`, canvas.width/2, canvas.height/2 + 60);
+        }
+        
+        if (ball.stuck && gameState === 'playing') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = retroFont;
+            ctx.textAlign = 'center';
+            ctx.fillText('PRESS SPACE TO LAUNCH', canvas.width/2, canvas.height/2 + 50);
+        }
+        
+        if (!gameRunning && !gameWon && currentLives <= 0) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.font = retroFontLarge;
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = retroFont;
+            ctx.fillText(`FINAL SCORE: ${score.toString().padStart(6, '0')}`, canvas.width/2, canvas.height/2 + 30);
+            ctx.fillText('PRESS R TO RESTART', canvas.width/2, canvas.height/2 + 70);
         }
     }
     
@@ -360,19 +714,22 @@ async function createBreakoutGame(settings, callbacks = null) {
             }
         }
         
-        if (e.code === 'Space' && ball.stuck) {
-            ball.stuck = false;
+        if (e.code === 'KeyR' && gameState === 'levelStart') {
+            gameState = 'playing';
             gameRunning = true;
+            showLevelStart = false;
         }
         
-        if (e.code === 'KeyR' && !gameRunning && lives <= 0) {
-            // Restart game
-            currentLevel = 1;
-            lives = breakoutConfig.gameplay?.lives || 3;
+        if (e.code === 'Space' && ball.stuck && gameState === 'playing') {
+            ball.stuck = false;
+        }
+        
+        if (e.code === 'KeyR' && !gameRunning && currentLives <= 0) {
+            currentLevel = settings.startLevel || 1;
+            currentLives = initialLives;
             score = 0;
-            ballSpeed = breakoutConfig.gameplay?.ballSpeed || 4;
+            currentBallSpeed = initialBallSpeed;
             initializeLevel(currentLevel);
-            gameRunning = false;
         }
         
         e.preventDefault();
@@ -384,7 +741,6 @@ async function createBreakoutGame(settings, callbacks = null) {
         e.preventDefault();
     }
     
-    // Continuous paddle movement
     const keys = {};
     function handleKeyDownContinuous(e) {
         const gameKeys = ['ArrowLeft', 'ArrowRight', 'Space', 'KeyR'];
@@ -408,34 +764,28 @@ async function createBreakoutGame(settings, callbacks = null) {
             paddle.x += paddle.speed;
         }
         
-        // Move ball with paddle when stuck
         if (ball.stuck) {
             ball.x = paddle.x + paddle.width / 2;
         }
     }
     
-    // Store handler references for cleanup
     const keyDownHandler = handleKeyDownContinuous;
     const keyUpHandler = handleKeyUpContinuous;
     
-    // Set up game
     document.addEventListener('keydown', keyDownHandler);
     document.addEventListener('keyup', keyUpHandler);
     gameArea.appendChild(canvas);
     
-    // Initialize first level
     initializeLevel(currentLevel);
     
-    // Start game loop
     gameInterval = setInterval(() => {
         updatePaddle();
         update();
         render();
-    }, 16); // ~60fps
+    }, 16);
     
-    render(); // Initial render
+    render();
     
-    // Return cleanup function
     return {
         cleanup: () => {
             gameRunning = false;
