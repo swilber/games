@@ -248,14 +248,10 @@ body {
 .memory-square {
     width: 100px;
     height: 100px;
-    background: #333;
     border: 2px solid #555;
     cursor: pointer;
     border-radius: 5px;
-}
-
-.memory-square.active {
-    background: #00ff88;
+    transition: opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Snake Game */
