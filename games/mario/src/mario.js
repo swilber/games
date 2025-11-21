@@ -4838,11 +4838,6 @@ async function createMarioGame(settings, callbacks = null) {
         e.preventDefault();
     }
     
-    const instructions = document.createElement('p');
-    instructions.textContent = 'Classic Mario Bros platformer - jump on enemies, collect coins, reach the flag!';
-    instructions.style.textAlign = 'center';
-    
-    gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
     document.addEventListener('keydown', handleKeyDown);

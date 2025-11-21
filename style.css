@@ -37,7 +37,7 @@ body::before {
 }
 
 #game-container {
-    max-width: 800px;
+    max-width: 900px;
     margin: 0 auto;
     text-align: center;
     position: relative;
@@ -106,7 +106,7 @@ body::before {
     gap: 20px;
     max-width: 900px;
     margin: 40px auto;
-    padding: 0 20px;
+    padding: 0;
     justify-items: center;
 }
 
@@ -240,14 +240,8 @@ body::before {
 #level-info h2 {
     color: #00ff88;
     font-size: 2rem;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
     text-shadow: 0 0 10px #00ff88;
-}
-
-#level-info p {
-    color: #00ffff;
-    font-size: 1.1rem;
-    margin-bottom: 15px;
 }
 
 #level-info button {
@@ -279,6 +273,17 @@ body::before {
     box-shadow: 
         0 0 30px rgba(0, 255, 136, 0.3),
         inset 0 0 30px rgba(0, 255, 136, 0.1);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Ensure all game canvases fit within the game area */
+#game-area canvas {
+    max-width: 100%;
+    max-height: 600px;
+    border-radius: 5px;
 }
 
 /* Configuration Modal */

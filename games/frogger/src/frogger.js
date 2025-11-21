@@ -393,11 +393,6 @@ async function createFroggerGame(settings, callbacks = null) {
     
     document.addEventListener('keydown', keyPressHandler);
     
-    const instructions = document.createElement('p');
-    instructions.textContent = 'Cross roads avoiding cars, ride logs across water!';
-    instructions.style.textAlign = 'center';
-    
-    gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
     // Start game loop

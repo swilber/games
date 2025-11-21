@@ -954,7 +954,6 @@ async function createGameLegacy(gameType, settings) {
 async function initializeLevel() {
     const level = levels[currentLevel];
     document.getElementById('level-title').textContent = level.title;
-    document.getElementById('level-description').textContent = level.description;
     
     // Clean up previous game
     if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {

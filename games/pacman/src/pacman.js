@@ -690,11 +690,6 @@ async function createPacmanGame(settings, callbacks = null) {
     const keyDownHandler = handleKeyDown;
     const keyUpHandler = handleKeyUp;
     
-    const instructions = document.createElement('p');
-    instructions.textContent = 'Classic Pac-Man - eat all dots while avoiding ghosts!';
-    instructions.style.textAlign = 'center';
-    
-    gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
     // Initialize first level

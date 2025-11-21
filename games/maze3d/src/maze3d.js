@@ -649,11 +649,6 @@ async function createMaze3DGame(settings, callbacks = null) {
     document.addEventListener('keydown', keyDownHandler);
     document.addEventListener('keyup', keyUpHandler);
     
-    const instructions = document.createElement('p');
-    instructions.textContent = 'Navigate the 3D maze to find the Triwizard Cup!';
-    instructions.style.textAlign = 'center';
-    
-    gameArea.appendChild(instructions);
     gameArea.appendChild(canvas);
     
     generateMaze();
