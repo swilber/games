@@ -1,4 +1,4 @@
-async function createMemoryGame(settings) {
+async function createMemoryGame(settings, callbacks = {}) {
     const gameArea = document.getElementById('game-area');
     
     // Load Memory configuration using ConfigManager
@@ -26,11 +26,11 @@ async function createMemoryGame(settings) {
     const maxLevels = memoryConfig.gameplay?.levels || settings.levels || 5;
     const baseSequenceLength = memoryConfig.gameplay?.baseSequenceLength || settings.sequenceLength || 4;
     
-    // Different colors for each cell
+    // Different colors for each cell - ensure 9 unique colors for 3x3 grid
     const cellColors = [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-        '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+        '#FF0000', '#00FF00', '#0000FF',  // Row 1: Red, Green, Blue
+        '#FFFF00', '#FF00FF', '#00FFFF',  // Row 2: Yellow, Magenta, Cyan  
+        '#FFA500', '#800080', '#FFC0CB'   // Row 3: Orange, Purple, Pink
     ];
     
     // Create UI container
@@ -61,7 +61,7 @@ async function createMemoryGame(settings) {
         const square = document.createElement('div');
         square.className = 'memory-square';
         square.dataset.index = i;
-        square.style.backgroundColor = cellColors[i % cellColors.length];
+        square.style.backgroundColor = cellColors[i]; // Use direct index instead of modulo
         square.style.opacity = '0.3'; // Dim by default
         square.onclick = () => handleSquareClick(i);
         grid.appendChild(square);
@@ -144,7 +144,7 @@ async function createMemoryGame(settings) {
         
         // Bright
         cell.style.opacity = '1.0';
-        cell.style.boxShadow = '0 0 20px ' + cellColors[cellIndex % cellColors.length];
+        cell.style.boxShadow = '0 0 20px ' + cellColors[cellIndex];
         
         const baseShowDuration = memoryConfig.timing?.showDuration || settings.showDuration || 500;
         const speedIncrease = memoryConfig.timing?.speedIncrease || settings.speedIncrease || 0.9;
@@ -168,7 +168,7 @@ async function createMemoryGame(settings) {
         // Add visual feedback
         const cell = grid.children[index];
         cell.style.opacity = '1.0';
-        cell.style.boxShadow = '0 0 20px ' + cellColors[index % cellColors.length];
+        cell.style.boxShadow = '0 0 20px ' + cellColors[index];
         
         setTimeout(() => {
             cell.style.opacity = '0.3';
@@ -181,7 +181,7 @@ async function createMemoryGame(settings) {
             // Show error feedback
             cell.style.backgroundColor = '#FF0000';
             setTimeout(() => {
-                cell.style.backgroundColor = cellColors[index % cellColors.length];
+                cell.style.backgroundColor = cellColors[index];
                 resetGame();
             }, 500);
             return;
@@ -195,7 +195,7 @@ async function createMemoryGame(settings) {
                 // Game complete
                 for(let i = 0; i < gridSize; i++) {
                     grid.children[i].style.opacity = '1.0';
-                    grid.children[i].style.boxShadow = '0 0 15px ' + cellColors[i % cellColors.length];
+                    grid.children[i].style.boxShadow = '0 0 15px ' + cellColors[i];
                 }
                 
                 setTimeout(() => {
@@ -203,8 +203,25 @@ async function createMemoryGame(settings) {
                         grid.children[i].style.opacity = '0.3';
                         grid.children[i].style.boxShadow = 'none';
                     }
-                    gameWon = true;
-                    setTimeout(showQuestion, 500);
+                    
+                    // Use modern callback system
+                    if (callbacks?.onGameComplete) {
+                        const currentLevelData = levels?.[currentLevel];
+                        callbacks.onGameComplete('memory', currentLevelData);
+                    } else {
+                        // Fallback to legacy system
+                        gameWon = true;
+                        window.gameWon = true;
+                        setTimeout(() => {
+                            if (typeof showQuestion === 'function') {
+                                showQuestion();
+                            } else if (typeof window.showQuestion === 'function') {
+                                window.showQuestion();
+                            } else {
+                                console.log('showQuestion not found');
+                            }
+                        }, 500);
+                    }
                 }, 1000);
             } else {
                 // Next level

@@ -899,7 +899,7 @@ async function createGameWithCallbacks(gameType, settings) {
             // Show this level's question for future reference
             const currentLevelData = levels[currentLevel];
             if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
-                questionSystem.showQuestion(currentLevel);
+                questionSystem.showQuestion(currentLevelData.id);
             }
             // Don't unlock next level or proceed automatically
             // Player will need to manually select next level and answer its question
@@ -942,8 +942,6 @@ async function createGameWithCallbacks(gameType, settings) {
 // Legacy game creation for backward compatibility
 async function createGameLegacy(gameType, settings) {
     switch(gameType) {
-        case 'memory':
-            return createMemoryGame(settings);
         case 'quiz':
             return createQuizGame(settings);
         case 'frogger':
@@ -972,6 +970,16 @@ async function initializeLevel() {
     
     switch(level.type) {
         case 'memory':
+            // Modern callback system
+            currentGameInstance = await createMemoryGame(await getDifficulty(level.type), {
+                onGameComplete: (gameId, questionData) => {
+                    const currentLevelData = levels[currentLevel];
+                    if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
+                        questionSystem.showQuestion(currentLevelData.id);
+                    }
+                }
+            });
+            break;
         case 'quiz':
         case 'frogger':
             // Legacy games without callback support
