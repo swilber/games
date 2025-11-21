@@ -777,9 +777,13 @@ function showLevelSelect() {
     const levelButtons = document.getElementById('level-buttons');
     levelButtons.innerHTML = '';
     
+    // Check if gameTitle query parameter is true
+    const urlParams = new URLSearchParams(window.location.search);
+    const showGameTitles = urlParams.get('gameTitle') === 'true';
+    
     levels.forEach((level, index) => {
         const button = document.createElement('button');
-        button.textContent = level.title;
+        button.textContent = showGameTitles ? level.title : `Level ${index + 1}`;
         button.className = 'level-button';
         
         if(unlockedLevels[index]) {
