@@ -134,7 +134,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
             for (let col = 0; col < cols; col++) {
                 const invader = {
                     x: leftMargin + col * spacing,
-                    y: startY + row * 24,
+                    y: startY + row * 36, // Increased from 24 to 36 (1.5x vertical spacing)
                     width: mergedSettings.invaderWidth || 22,
                     height: mergedSettings.invaderHeight || 16,
                     type: invaderTypes[row],
@@ -151,11 +151,14 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         const barrierCount = mergedSettings.barrierCount || 4;
         const barrierWidth = mergedSettings.barrierWidth || 60;
         const barrierHeight = mergedSettings.barrierHeight || 40;
-        const spacing = (canvas.width - (barrierCount * barrierWidth)) / (barrierCount + 1);
+        
+        // Original game spacing: barrier width between barriers
+        const totalBarrierSpace = barrierCount * barrierWidth + (barrierCount - 1) * barrierWidth; // barriers + gaps
+        const startX = (canvas.width - totalBarrierSpace) / 2; // Center the barrier group
         
         for (let i = 0; i < barrierCount; i++) {
             const barrier = {
-                x: spacing + i * (barrierWidth + spacing),
+                x: startX + i * (barrierWidth + barrierWidth), // barrier width + gap width
                 y: canvas.height - 200,
                 width: barrierWidth,
                 height: barrierHeight,
@@ -312,10 +315,10 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
                     Math.abs(inv.x - invader.x) < 16);
                 const isBottomMost = invader.y === Math.max(...sameColumnInvaders.map(inv => inv.y));
                 
-                if (isBottomMost && Math.random() < 0.02) {
+                if (isBottomMost && Math.random() < 0.08) { // Increased from 0.02 to 0.08 (4x more shooting)
                     createInvaderBullet(invader);
                 }
-                invader.shootTimer = Math.random() * 300 + 60;
+                invader.shootTimer = Math.random() * 120 + 30; // Reduced from 300+60 to 120+30 (faster reload)
             }
         });
         
@@ -403,16 +406,63 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         // Player bullets vs barriers
         playerBullets.forEach((bullet, bulletIndex) => {
             barriers.forEach(barrier => {
-                if (checkCollision(bullet, barrier)) {
-                    // Destroy barrier blocks
+                // Check collision with individual barrier blocks
+                let hit = false;
+                barrier.blocks.forEach(block => {
+                    const blockX = barrier.x + block.x;
+                    const blockY = barrier.y + block.y;
+                    
+                    if (bullet.x >= blockX && bullet.x <= blockX + 5 &&
+                        bullet.y >= blockY && bullet.y <= blockY + 5) {
+                        hit = true;
+                    }
+                });
+                
+                if (hit && barrier.blocks.length > 0) {
+                    // Destroy barrier blocks in a small area around bullet impact
+                    const impactX = bullet.x - barrier.x;
+                    const impactY = bullet.y - barrier.y;
+                    
                     barrier.blocks = barrier.blocks.filter(block => {
-                        const blockX = barrier.x + block.x;
-                        const blockY = barrier.y + block.y;
-                        const hit = bullet.x >= blockX && bullet.x <= blockX + 5 &&
-                                   bullet.y >= blockY && bullet.y <= blockY + 5;
-                        return !hit;
+                        const distance = Math.sqrt(
+                            Math.pow(block.x + 2.5 - impactX, 2) + 
+                            Math.pow(block.y + 2.5 - impactY, 2)
+                        );
+                        return distance > 8; // Remove blocks within 8 pixels of impact
                     });
                     playerBullets.splice(bulletIndex, 1);
+                }
+            });
+        });
+        
+        // Invader bullets vs barriers
+        invaderBullets.forEach((bullet, bulletIndex) => {
+            barriers.forEach(barrier => {
+                // Check collision with individual barrier blocks
+                let hit = false;
+                barrier.blocks.forEach(block => {
+                    const blockX = barrier.x + block.x;
+                    const blockY = barrier.y + block.y;
+                    
+                    if (bullet.x >= blockX && bullet.x <= blockX + 5 &&
+                        bullet.y >= blockY && bullet.y <= blockY + 5) {
+                        hit = true;
+                    }
+                });
+                
+                if (hit && barrier.blocks.length > 0) {
+                    // Destroy barrier blocks in a small area around bullet impact
+                    const impactX = bullet.x - barrier.x;
+                    const impactY = bullet.y - barrier.y;
+                    
+                    barrier.blocks = barrier.blocks.filter(block => {
+                        const distance = Math.sqrt(
+                            Math.pow(block.x + 2.5 - impactX, 2) + 
+                            Math.pow(block.y + 2.5 - impactY, 2)
+                        );
+                        return distance > 8; // Remove blocks within 8 pixels of impact
+                    });
+                    invaderBullets.splice(bulletIndex, 1);
                 }
             });
         });
@@ -433,23 +483,6 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
                 }
             });
         }
-        
-        // Invader bullets vs barriers
-        invaderBullets.forEach((bullet, bulletIndex) => {
-            barriers.forEach(barrier => {
-                if (checkCollision(bullet, barrier)) {
-                    // Destroy barrier blocks
-                    barrier.blocks = barrier.blocks.filter(block => {
-                        const blockX = barrier.x + block.x;
-                        const blockY = barrier.y + block.y;
-                        const hit = bullet.x >= blockX && bullet.x <= blockX + 5 &&
-                                   bullet.y >= blockY && bullet.y <= blockY + 5;
-                        return !hit;
-                    });
-                    invaderBullets.splice(bulletIndex, 1);
-                }
-            });
-        });
     }
     
     function render() {
@@ -471,7 +504,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         
         // Draw invaders
         ctx.fillStyle = invadersConfig.visual?.invaderColor || '#FFFF00';
-        ctx.font = '12px monospace';
+        ctx.font = '18px monospace'; // Increased from 12px to 18px (1.5x larger)
         ctx.textAlign = 'center';
         
         invaders.forEach(invader => {
@@ -484,7 +517,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         
         // Draw UFOs
         ctx.fillStyle = invadersConfig.visual?.ufoColor || '#FF00FF';
-        ctx.font = '12px monospace';
+        ctx.font = '18px monospace'; // Increased from 12px to 18px to match invaders
         ufos.forEach(ufo => {
             // Classic UFO sprite
             ctx.fillText('▄▀▀▀▄', ufo.x + ufo.width/2, ufo.y + ufo.height);

@@ -57,11 +57,11 @@
     "barrierHits": 5
   },
   "physics": {
-    "canvasWidth": 800,
+    "canvasWidth": 660,
     "canvasHeight": 600,
-    "playerSize": 24,
-    "invaderWidth": 22,
-    "invaderHeight": 16,
+    "playerSize": 36,
+    "invaderWidth": 33,
+    "invaderHeight": 24,
     "bulletWidth": 2,
     "bulletHeight": 8,
     "ufoWidth": 40,
@@ -72,7 +72,7 @@
   "formation": {
     "rows": 5,
     "cols": 11,
-    "spacing": 32,
+    "spacing": 48,
     "startY": 80,
     "leftMargin": 100
   },
