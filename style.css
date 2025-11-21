@@ -497,7 +497,6 @@ body::before {
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.3s ease;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
 }
 
 .memory-square:hover {
