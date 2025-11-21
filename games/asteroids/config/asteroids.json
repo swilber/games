@@ -24,7 +24,7 @@
       "formula": "base + (difficulty * multiplier)"
     },
     "lives": {
-      "value": 3,
+      "value": 5,
       "static": true
     },
     "levels": {
@@ -43,8 +43,8 @@
     }
   },
   "gameplay": {
-    "lives": 3,
-    "levels": 5,
+    "lives": 5,
+    "levels": 3,
     "asteroidCount": 4,
     "asteroidSpeed": 1.0,
     "ufoSpawnRate": 0.005,
