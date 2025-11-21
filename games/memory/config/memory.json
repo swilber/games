@@ -2,12 +2,19 @@
   "name": "Memory Game",
   "description": "Match the sequence of colored tiles",
   "difficulty": {
-    "sequenceLength": {
-      "base": 2,
+    "baseSequenceLength": {
+      "base": 4,
+      "multiplier": 0.5,
+      "min": 3,
+      "max": 8,
+      "formula": "Math.max(3, Math.min(8, base + Math.floor(difficulty / 2)))"
+    },
+    "levels": {
+      "base": 5,
       "multiplier": 1,
-      "min": 2,
-      "max": 12,
-      "formula": "base + (difficulty * multiplier)"
+      "min": 3,
+      "max": 10,
+      "formula": "Math.max(3, Math.min(10, base + Math.floor(difficulty / 3)))"
     },
     "showSpeed": {
       "base": 1000,
@@ -16,21 +23,29 @@
       "max": 1000,
       "formula": "base + (difficulty * multiplier)"
     },
+    "speedIncrease": {
+      "base": 0.9,
+      "multiplier": -0.02,
+      "min": 0.5,
+      "max": 1.0,
+      "formula": "Math.max(0.5, base + (difficulty * multiplier))"
+    },
     "gridSize": {
       "value": 9,
       "static": true
     }
   },
   "gameplay": {
-    "sequenceLength": 4,
+    "baseSequenceLength": 4,
+    "levels": 5,
     "showSpeed": 600,
-    "gridSize": 9,
-    "rounds": 5
+    "gridSize": 9
   },
   "timing": {
     "showDuration": 500,
     "pauseBetween": 200,
-    "inputTimeout": 5000
+    "inputTimeout": 5000,
+    "speedIncrease": 0.9
   },
   "visual": {
     "tileSize": 80,
