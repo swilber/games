@@ -132,7 +132,7 @@ async function createFlappyGame(settings, callbacks = null) {
             ctx.fillText(instructText, canvas.width / 2, canvas.height / 2);
             ctx.textAlign = 'left'; // Reset text alignment
         } else if (!gameRunning && !gameWon) {
-            ctx.font = 'bold 18px "Courier New", monospace';
+            ctx.font = 'bold 48px "Courier New", monospace';
             ctx.fillStyle = '#ff0066';
             ctx.shadowColor = '#ff0066';
             ctx.shadowBlur = 8;
@@ -141,7 +141,7 @@ async function createFlappyGame(settings, callbacks = null) {
             const restartText = 'PRESS SPACE TO RESTART';
             ctx.strokeText(gameOverText, canvas.width/2, canvas.height/2 - 10);
             ctx.fillText(gameOverText, canvas.width/2, canvas.height/2 - 10);
-            ctx.font = 'bold 12px "Courier New", monospace';
+            ctx.font = 'bold 24px "Courier New", monospace';
             ctx.strokeText(restartText, canvas.width/2, canvas.height/2 + 15);
             ctx.fillText(restartText, canvas.width/2, canvas.height/2 + 15);
         }
