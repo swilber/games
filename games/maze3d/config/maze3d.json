@@ -4,10 +4,10 @@
   "mazeSize": 50,
   "moveSpeed": 0.08,
   "rotSpeed": 0.05,
-  "showMinimap": true,
+  "showMinimap": false,
   "gameplay": {
     "mazeSize": 50,
-    "showMinimap": true
+    "showMinimap": false
   },
   "physics": {
     "moveSpeed": 0.08,
@@ -39,7 +39,7 @@
       "source": "config.gameSettings.moveSpeed"
     },
     "showMinimap": {
-      "value": true,
+      "value": false,
       "static": true,
       "source": "config.gameSettings.showMinimap"
     }
