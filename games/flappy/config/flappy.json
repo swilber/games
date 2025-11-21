@@ -17,10 +17,10 @@
       "formula": "base + (difficulty * multiplier)"
     },
     "pipesToWin": {
-      "base": 3,
+      "base": 15,
       "multiplier": 1,
-      "min": 3,
-      "max": 13,
+      "min": 10,
+      "max": 25,
       "formula": "base + difficulty"
     }
   },

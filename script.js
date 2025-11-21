@@ -924,6 +924,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createAsteroidsGame(settings, gameCallbacks);
         case 'spaceinvaders':
             return await createSpaceInvadersGame(settings, gameCallbacks);
+        case 'maze3d':
+            return await createMaze3DGame(settings, gameCallbacks);
         case 'flappy':
             console.log('Creating flappy game with settings:', settings);
             return await createFlappyGame(settings, gameCallbacks);
@@ -973,7 +975,6 @@ async function initializeLevel() {
             currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
             break;
         case 'donkeykong':
-        case 'maze3d':
         case 'mario':
         case 'pacman':
         case 'snake':
@@ -981,6 +982,7 @@ async function initializeLevel() {
         case 'breakout':
         case 'asteroids':
         case 'spaceinvaders':
+        case 'maze3d':
         case 'flappy':
             // Modern games with callback support
             console.log('Creating modern game:', level.type);

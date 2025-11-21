@@ -122,13 +122,15 @@ async function createFlappyGame(settings, callbacks = null) {
         
         // Instructions with retro glow
         if (!gameStarted) {
-            ctx.font = 'bold 14px "Courier New", monospace';
+            ctx.font = 'bold 32px "Courier New", monospace';
             ctx.fillStyle = '#ffff00';
             ctx.shadowColor = '#ffff00';
             ctx.shadowBlur = 5;
+            ctx.textAlign = 'center';
             const instructText = 'PRESS SPACE TO FLAP!';
-            ctx.strokeText(instructText, 12, canvas.height - 15);
-            ctx.fillText(instructText, 12, canvas.height - 15);
+            ctx.strokeText(instructText, canvas.width / 2, canvas.height / 2);
+            ctx.fillText(instructText, canvas.width / 2, canvas.height / 2);
+            ctx.textAlign = 'left'; // Reset text alignment
         } else if (!gameRunning && !gameWon) {
             ctx.font = 'bold 18px "Courier New", monospace';
             ctx.fillStyle = '#ff0066';
