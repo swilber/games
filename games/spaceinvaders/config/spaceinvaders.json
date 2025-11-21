@@ -45,14 +45,14 @@
   "gameplay": {
     "lives": 3,
     "levels": 5,
-    "invaderSpeed": 1.0,
+    "invaderSpeed": 1.5,
     "invaderDropSpeed": 12,
-    "bulletSpeed": 6,
+    "bulletSpeed": 9,
     "playerSpeed": 4,
     "maxPlayerBullets": 1,
     "maxInvaderBullets": 3,
     "ufoSpawnRate": 0.002,
-    "invaderAcceleration": 1.1,
+    "invaderAcceleration": 1.15,
     "barrierCount": 4,
     "barrierHits": 5
   },

@@ -43,6 +43,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
     let invaderDirection = 1; // 1 = right, -1 = left
     let invaderDropTimer = 0;
     let frameCount = 0;
+    let currentSpeedMultiplier = 1; // Track current speed for display
     
     // Create canvas with classic arcade feel
     const canvas = document.createElement('canvas');
@@ -282,8 +283,23 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         
         // Speed increases as invaders get lower on screen
         const lowestInvaderY = Math.max(...aliveInvaders.map(inv => inv.y));
-        const speedMultiplier = 1 + Math.max(0, (lowestInvaderY - 200) / 200); // Speed doubles when they reach bottom third
-        const finalSpeed = baseSpeed * speedMultiplier;
+        const positionMultiplier = 1 + Math.max(0, (lowestInvaderY - 200) / 200);
+        
+        // Speed increases as fewer invaders remain (classic mechanic)
+        const totalInvaders = 55; // 5 rows × 11 cols = 55 total invaders
+        const remainingInvaders = aliveInvaders.length;
+        let invaderCountMultiplier = 1;
+        if (remainingInvaders >= 20) invaderCountMultiplier = 1;
+        else if (remainingInvaders >= 10) invaderCountMultiplier = 2;
+        else if (remainingInvaders >= 5) invaderCountMultiplier = 4;
+        else if (remainingInvaders === 4) invaderCountMultiplier = 5;
+        else if (remainingInvaders === 3) invaderCountMultiplier = 6;
+        else if (remainingInvaders === 2) invaderCountMultiplier = 8;
+        else if (remainingInvaders === 1) invaderCountMultiplier = 10;
+        
+        currentSpeedMultiplier = invaderCountMultiplier; // Store for display
+        
+        const finalSpeed = baseSpeed * positionMultiplier * invaderCountMultiplier;
         
         if (frameCount % Math.max(1, Math.floor(60 / finalSpeed)) === 0) {
             // Check if invaders hit edge
@@ -561,6 +577,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         ctx.fillText(`SCORE: ${score.toString().padStart(6, '0')}`, 20, 30);
         ctx.fillText(`LIVES: ${lives}`, 20, canvas.height - 20);
         ctx.fillText(`LEVEL: ${currentLevel}`, canvas.width - 150, 30);
+        ctx.fillText(`SPEED: ${currentSpeedMultiplier.toFixed(1)}x`, canvas.width - 150, 55);
         
         // Game state overlays
         if (gameState === 'levelStart') {
