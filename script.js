@@ -546,6 +546,11 @@ function saveCurrentConfig() {
     updateSaveButtonState();
 }
 
+function resetProgress() {
+    localStorage.removeItem('arcadeChallengesProgress');
+    location.reload();
+}
+
 // Show debug controls if debug mode is enabled
 function initializeDebugMode() {
     const urlParams = new URLSearchParams(window.location.search);
