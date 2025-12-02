@@ -838,7 +838,7 @@ function showLevelSelect() {
             statusClass = 'locked';
         }
         
-        button.innerHTML = `<span class="status-icon">${statusIcon}</span>${showGameTitles ? level.title : `Level ${index + 1}`}`;
+        button.innerHTML = `<span class="status-icon">${statusIcon}</span>${showGameTitles ? level.title : `Challenge ${index + 1}`}`;
         button.className = `level-button ${statusClass}`;
         
         if (isAvailable) {
