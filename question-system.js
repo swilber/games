@@ -19,7 +19,6 @@ let questionSystem = {
     showAnswerPrompt(callback) {
         console.log('showAnswerPrompt called');
         console.log('currentQuestion:', this.currentQuestion);
-        console.log('expectedAnswer:', this.expectedAnswer);
         
         if (!this.currentQuestion || !this.expectedAnswer) {
             console.log('No pending question, allowing access');
@@ -39,11 +38,11 @@ let questionSystem = {
         modal.className = 'retro-modal';
         modal.innerHTML = `
             <div class="retro-container">
-                <div class="retro-header">LEVEL COMPLETE!</div>
+                <div class="retro-header">CHALLENGE COMPLETE!</div>
                 <div class="retro-content">
                     <div class="retro-text">Remember this question:</div>
                     <div class="retro-question">${question}</div>
-                    <div class="retro-instruction">You'll need to answer this to unlock the next level!</div>
+                    <div class="retro-instruction">You'll need to answer this to unlock the next challenge!</div>
                     <div class="retro-buttons">
                         <button class="retro-button" onclick="questionSystem.closeQuestionModal()">CONTINUE</button>
                     </div>
@@ -60,9 +59,9 @@ let questionSystem = {
         modal.className = 'retro-modal';
         modal.innerHTML = `
             <div class="retro-container">
-                <div class="retro-header">LEVEL LOCKED</div>
+                <div class="retro-header">CHALLENGE LOCKED</div>
                 <div class="retro-content">
-                    <div class="retro-text">Enter the answer from the previous level:</div>
+                    <div class="retro-text">Enter the answer from the previous challenge:</div>
                     <input type="text" class="retro-input" id="retro-answer-input" placeholder="Type your answer...">
                     <div class="retro-buttons">
                         <button class="retro-button" onclick="questionSystem.checkAnswer('${expectedAnswer}', ${callback})">SUBMIT</button>
@@ -100,7 +99,6 @@ let questionSystem = {
         const correctAnswer = expectedAnswer.toLowerCase();
         
         console.log('User answer:', userAnswer);
-        console.log('Expected answer:', correctAnswer);
         console.log('Match:', userAnswer === correctAnswer);
         
         if (userAnswer === correctAnswer) {
