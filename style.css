@@ -148,6 +148,57 @@ body::before {
     justify-items: center;
 }
 
+/* Progress indicator styles */
+.level-button .status-icon {
+    font-size: 1.2em;
+    margin-right: 8px;
+}
+
+.level-button.completed {
+    background: linear-gradient(45deg, #00ff00, #00cc00);
+    color: #000;
+    box-shadow: 0 0 15px #00ff00;
+}
+
+.level-button.completed .status-icon {
+    color: #ffd700;
+    text-shadow: 0 0 5px #ffd700;
+    animation: starGlow 2s ease-in-out infinite;
+}
+
+.level-button.current {
+    background: linear-gradient(45deg, #ffff00, #ffcc00);
+    color: #000;
+    box-shadow: 0 0 20px #ffff00;
+    animation: currentPulse 1.5s ease-in-out infinite;
+}
+
+.level-button.current .status-icon {
+    color: #ff0000;
+    animation: arrowBlink 1s ease-in-out infinite;
+}
+
+.level-button.locked {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+}
+
+@keyframes starGlow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+@keyframes currentPulse {
+    0%, 100% { box-shadow: 0 0 20px #ffff00; }
+    50% { box-shadow: 0 0 30px #ffff00, 0 0 40px #ffff00; }
+}
+
+@keyframes arrowBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
 .level-button {
     padding: 25px 20px;
     background: linear-gradient(135deg, #1a1a2e, #16213e);

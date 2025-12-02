@@ -1,3 +1,33 @@
+// Progress tracking system
+const ProgressTracker = {
+    getProgress() {
+        const saved = localStorage.getItem('arcadeChallengesProgress');
+        return saved ? JSON.parse(saved) : { completed: [], currentLevel: 0 };
+    },
+    
+    saveProgress(progress) {
+        localStorage.setItem('arcadeChallengesProgress', JSON.stringify(progress));
+    },
+    
+    markCompleted(levelIndex) {
+        const progress = this.getProgress();
+        if (!progress.completed.includes(levelIndex)) {
+            progress.completed.push(levelIndex);
+        }
+        // Only unlock the immediate next level
+        progress.currentLevel = Math.max(progress.currentLevel, levelIndex + 1);
+        this.saveProgress(progress);
+    },
+    
+    isCompleted(levelIndex) {
+        return this.getProgress().completed.includes(levelIndex);
+    },
+    
+    getCurrentLevel() {
+        return this.getProgress().currentLevel;
+    }
+};
+
 let currentLevel = 0;
 let gameWon = false;
 let selectedLevel = 0;
@@ -783,13 +813,32 @@ function showLevelSelect() {
     
     levels.forEach((level, index) => {
         const button = document.createElement('button');
-        button.textContent = showGameTitles ? level.title : `Level ${index + 1}`;
-        button.className = 'level-button';
+        const progress = ProgressTracker.getProgress();
+        const isCompleted = ProgressTracker.isCompleted(index);
+        const isCurrent = progress.currentLevel === index && !isCompleted;
+        const isAvailable = index <= progress.currentLevel;
         
-        if(unlockedLevels[index]) {
+        // Create retro status indicator
+        let statusIcon = '';
+        let statusClass = '';
+        
+        if (isCompleted) {
+            statusIcon = '★ ';
+            statusClass = 'completed';
+        } else if (isCurrent) {
+            statusIcon = '▶ ';
+            statusClass = 'current';
+        } else {
+            statusIcon = '◯ ';
+            statusClass = 'locked';
+        }
+        
+        button.innerHTML = `<span class="status-icon">${statusIcon}</span>${showGameTitles ? level.title : `Level ${index + 1}`}`;
+        button.className = `level-button ${statusClass}`;
+        
+        if (isAvailable) {
             button.onclick = () => selectLevel(index);
         } else {
-            button.classList.add('locked');
             button.onclick = () => selectLevel(index); // Use new system for all levels
         }
         
@@ -896,6 +945,9 @@ async function createGameWithCallbacks(gameType, settings) {
             return;
         },
         onGameComplete: (gameId, questionData) => {
+            // Mark level as completed
+            ProgressTracker.markCompleted(currentLevel);
+            
             // Show this level's question for future reference
             const currentLevelData = levels[currentLevel];
             if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
@@ -973,6 +1025,9 @@ async function initializeLevel() {
             // Modern callback system
             currentGameInstance = await createMemoryGame(await getDifficulty(level.type), {
                 onGameComplete: (gameId, questionData) => {
+                    // Mark level as completed
+                    ProgressTracker.markCompleted(currentLevel);
+                    
                     const currentLevelData = levels[currentLevel];
                     if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
                         questionSystem.showQuestion(currentLevelData.id);
