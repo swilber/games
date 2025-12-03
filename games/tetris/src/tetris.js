@@ -258,9 +258,12 @@ async function createTetrisGame(settings, callbacks = null) {
     }
     
     function getDropSpeed() {
-        const baseSpeed = tetrisConfig.gameplay?.dropSpeed || 800;
-        // Use twice as fast as level 10 speed for testing (350ms / 2 = 175ms)
-        return 175;
+        const level1Speed = 800; // Slow start
+        const level10Speed = 175; // Fast end
+        
+        // Linear interpolation between level 1 and level 10
+        const progress = (level - 1) / 9; // 0 to 1 over 9 level increments
+        return Math.round(level1Speed - (level1Speed - level10Speed) * progress);
     }
     
     function drawBlock(x, y, color, alpha = 1) {
