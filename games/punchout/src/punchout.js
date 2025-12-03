@@ -72,7 +72,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         gettingUp: false,
         getUpTimer: 0,
         getUpProgress: 0, // Progress of getting up (0 to 1)
-        buttonMashCount: 0 // Count of button presses for getting up
+        buttonMashCount: 0, // Count of button presses for getting up
+        flashTimer: 0 // Timer for pink flash when hit
     };
     
     const fighters = punchOutConfig.fighters || [
@@ -338,6 +339,11 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function updatePlayer() {
+        // Update flash timer
+        if (player.flashTimer > 0) {
+            player.flashTimer--;
+        }
+        
         // Handle player knockdown state
         if (player.knockedDown && !player.gettingUp) {
             player.knockdownTimer--;
@@ -782,7 +788,8 @@ async function createPunchOutGame(settings, callbacks = null) {
                     player.getUpProgress = 0; // Start at bottom
                     showHitEffect(player.x, player.y - 50, "KNOCKDOWN!", '#FF0000');
                 } else {
-                    showHitEffect(player.x, player.y - 50, "OUCH!", '#FF0000');
+                    // showHitEffect(player.x, player.y - 50, "OUCH!", '#FF0000');
+                    player.flashTimer = 20; // Flash pink for 20 frames
                 }
             }
             
@@ -1090,7 +1097,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fill();
         
         // Draw player body (Little Mac style)
-        ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+        const basePlayerColor = punchOutConfig.visual?.playerColor || '#FFE4B5';
+        const playerColor = player.flashTimer > 0 ? '#FFB6C1' : basePlayerColor; // Pink when flashing
+        ctx.fillStyle = playerColor;
         
         // Body
         ctx.fillRect(playerCenterX - 25, playerCenterY - 40, 50, 80);
@@ -1108,7 +1117,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         if (gameWon && victoryType) {
             // Victory celebration - arms raised high above head
-            ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+            ctx.fillStyle = playerColor;
             // Left arm raised
             ctx.fillRect(playerCenterX - 35, playerCenterY - 85, 8, 30);
             // Right arm raised  
@@ -1127,7 +1136,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             if (player.punchType === 'low-left') {
                 // Low left punch - left hand forward, right hand back and lower
-                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillStyle = playerColor;
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillRect(playerCenterX + 27, playerCenterY - 35, 8, 15); // Right arm below glove
                 ctx.fillStyle = '#FF0000';
@@ -1135,7 +1144,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
             } else if (player.punchType === 'high-left') {
                 // High left punch - left hand forward, right hand back and lower
-                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillStyle = playerColor;
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillRect(playerCenterX + 27, playerCenterY - 35, 8, 15); // Right arm below glove
                 ctx.fillStyle = '#FF0000';
@@ -1143,7 +1152,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
             } else if (player.punchType === 'low-right') {
                 // Low right punch - right hand forward, left hand back and lower
-                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillStyle = playerColor;
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 8, 15); // Left arm below glove
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
@@ -1151,7 +1160,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.fillRect(playerCenterX + 17, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
             } else if (player.punchType === 'high-right') {
                 // High right punch - right hand forward, left hand back and lower
-                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillStyle = playerColor;
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 8, 15); // Left arm below glove
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
@@ -1162,7 +1171,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.shadowBlur = 0;
         } else {
             // Normal stance - arms at shoulder level
-            ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+            ctx.fillStyle = playerColor;
             ctx.fillRect(playerCenterX - 35, playerCenterY - 45, 25, 6); // Left arm at shoulder
             ctx.fillRect(playerCenterX + 10, playerCenterY - 45, 25, 6); // Right arm at shoulder
             // Bent arm segments below gloves
