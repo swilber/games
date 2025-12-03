@@ -55,7 +55,7 @@
       "tells": ["step_back", "wind_up"]
     },
     {
-      "name": "Piston Honda",
+      "name": "Steven Wilber",
       "health": 100,
       "speed": 1.2,
       "patterns": ["rush", "jab", "hook"],
