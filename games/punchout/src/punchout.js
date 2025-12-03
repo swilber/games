@@ -130,7 +130,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             reactionTime: 120 // Faster reactions (2 seconds)
         },
         { 
-            name: "Piston Honda", 
+            name: "Steven Wilber", 
             health: 100, 
             speed: 0.7, // Fast and strong
             patterns: ["uppercut", "jab", "uppercut", "uppercut", "jab", "uppercut"], // More uppercuts
@@ -1600,7 +1600,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (opponent.bodyShape === "thin") {
             opponentColor = '#F5DEB3'; // White/pale skin tone for Glass Joe
         } else if (opponent.bodyShape === "tough") {
-            opponentColor = '#8B4513'; // Darker skin tone for Piston Honda
+            opponentColor = '#8B4513'; // Darker skin tone for Steven Wilber
         }
         
         if (opponent.stunned) {
@@ -1626,7 +1626,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             // Thinner head for Glass Joe
             ctx.fillRect(opponentCenterX - 15, opponentCenterY - 100, 30, 40);
         } else if (opponent.bodyShape === "tough") {
-            // Much bigger head for Piston Honda
+            // Much bigger head for Steven Wilber
             ctx.fillRect(opponentCenterX - 30, opponentCenterY - 120, 60, 60);
         } else {
             // Normal head for other fighters
@@ -1673,6 +1673,22 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.beginPath();
         ctx.arc(opponentCenterX, opponentCenterY - 68, 8, Math.PI * 0.2, Math.PI * 0.8);
         ctx.stroke();
+        
+        // Steven Wilber specific features (beard and hair)
+        if (opponent.bodyShape === "tough") {
+            // Short brown hair
+            ctx.fillStyle = '#8B4513'; // Brown color
+            ctx.fillRect(opponentCenterX - 28, opponentCenterY - 118, 56, 15); // Hair on top
+            ctx.fillRect(opponentCenterX - 30, opponentCenterY - 110, 10, 20); // Side hair left
+            ctx.fillRect(opponentCenterX + 20, opponentCenterY - 110, 10, 20); // Side hair right
+            
+            // Beard
+            ctx.fillStyle = '#654321'; // Darker brown for beard
+            ctx.beginPath();
+            ctx.arc(opponentCenterX, opponentCenterY - 65, 18, 0, Math.PI); // Beard shape
+            ctx.fill();
+            ctx.fillRect(opponentCenterX - 15, opponentCenterY - 65, 30, 8); // Beard bottom
+        }
         
         // Shorts - size based on body shape
         ctx.fillStyle = '#800080';
