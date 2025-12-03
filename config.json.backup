@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 14,
+    "totalLevels": 13,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -85,12 +85,6 @@
       "order": 13,
       "enabled": true,
       "type": "spaceinvaders"
-    },
-    {
-      "id": 14,
-      "order": 14,
-      "enabled": true,
-      "type": "punchout"
     }
   ]
 }

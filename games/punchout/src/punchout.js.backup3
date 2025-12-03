@@ -1,0 +1,953 @@
+async function createPunchOutGame(settings, callbacks = null) {
+    const gameArea = document.getElementById('game-area');
+    
+    // Load configuration
+    let punchOutConfig = {};
+    if (typeof configManager !== 'undefined') {
+        punchOutConfig = await configManager.loadConfig('punchout');
+    } else {
+        punchOutConfig = {
+            gameplay: settings,
+            physics: settings,
+            visual: settings,
+            fighters: [
+                { name: "Glass Joe", health: 60, speed: 0.8, patterns: ["jab"], tells: ["blink"] }
+            ]
+        };
+    }
+    
+    // Game state
+    let gameRunning = false;
+    let gameWon = false;
+    let gameStarted = false;
+    let currentRound = 1;
+    let roundTime = punchOutConfig.gameplay?.roundTime || 180;
+    let currentFighter = 0;
+    
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = punchOutConfig.physics?.canvasWidth || 800;
+    canvas.height = punchOutConfig.physics?.canvasHeight || 600;
+    const ctx = canvas.getContext('2d');
+    
+    // Game objects
+    const player = {
+        x: punchOutConfig.physics?.playerX || 400,
+        y: punchOutConfig.physics?.playerY || 450,
+        width: 60,
+        height: 100,
+        health: punchOutConfig.gameplay?.playerHealth || 100,
+        maxHealth: punchOutConfig.gameplay?.playerHealth || 100,
+        stamina: punchOutConfig.gameplay?.stamina || 100,
+        maxStamina: punchOutConfig.gameplay?.stamina || 100,
+        stars: 0,
+        maxStars: punchOutConfig.gameplay?.maxStars || 3,
+        blocking: false,
+        dodging: null, // 'left', 'right', or null
+        punching: false,
+        punchType: null, // 'left', 'right', 'star'
+        animationFrame: 0
+    };
+    
+    const fighters = punchOutConfig.fighters || [
+        { name: "Glass Joe", health: 60, speed: 0.8, patterns: ["jab"], tells: ["blink"] }
+    ];
+    
+    const opponent = {
+        x: punchOutConfig.physics?.opponentX || 400,
+        y: punchOutConfig.physics?.opponentY || 200,
+        width: 80,
+        height: 120,
+        health: fighters[currentFighter].health,
+        maxHealth: fighters[currentFighter].health,
+        name: fighters[currentFighter].name,
+        speed: fighters[currentFighter].speed,
+        patterns: fighters[currentFighter].patterns,
+        tells: fighters[currentFighter].tells,
+        currentPattern: 0,
+        patternTimer: 0,
+        tellTimer: 0,
+        attacking: false,
+        attackType: null,
+        stunned: false,
+        stunnedTimer: 0,
+        animationFrame: 0
+    };
+    
+    // Input handling
+    const keys = {};
+    
+    function handleKeyDown(e) {
+        keys[e.code] = true;
+        
+        if (!gameStarted) {
+            gameStarted = true;
+            if (callbacks && callbacks.onGameStart) {
+                callbacks.onGameStart('punchout');
+            }
+        }
+        
+        if (!gameRunning) return;
+        
+        // Player controls
+        switch(e.code) {
+            case 'ArrowLeft':
+                if (!player.punching && !player.blocking) {
+                    player.dodging = 'left';
+                }
+                break;
+            case 'ArrowRight':
+                if (!player.punching && !player.blocking) {
+                    player.dodging = 'right';
+                }
+                break;
+            case 'ArrowDown':
+                player.blocking = true;
+                break;
+            case 'KeyZ': // Left punch
+                if (!player.blocking && !player.dodging && player.stamina > 10) {
+                    player.punching = true;
+                    player.punchType = 'left';
+                    player.stamina -= 10;
+                }
+                break;
+            case 'KeyX': // Right punch
+                if (!player.blocking && !player.dodging && player.stamina > 10) {
+                    player.punching = true;
+                    player.punchType = 'right';
+                    player.stamina -= 10;
+                }
+                break;
+            case 'KeyC': // Star punch
+                if (player.stars > 0 && !player.blocking && !player.dodging) {
+                    player.punching = true;
+                    player.punchType = 'star';
+                    player.stars--;
+                }
+                break;
+        }
+    }
+    
+    function handleKeyUp(e) {
+        keys[e.code] = false;
+        
+        switch(e.code) {
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                player.dodging = null;
+                break;
+            case 'ArrowDown':
+                player.blocking = false;
+                break;
+        }
+    }
+    
+    function update() {
+        if (!gameRunning) return;
+        
+        // Update round timer
+        roundTime -= 1/60;
+        if (roundTime <= 0) {
+            endRound();
+            return;
+        }
+        
+        // Update player
+        updatePlayer();
+        
+        // Update opponent
+        updateOpponent();
+        
+        // Update hit effects
+        updateHitEffects();
+        
+        // Check collisions
+        checkCollisions();
+        
+        // Check win/lose conditions
+        if (opponent.health <= 0) {
+            winFight();
+        } else if (player.health <= 0) {
+            loseFight();
+        }
+    }
+    
+    function updatePlayer() {
+        // Regenerate stamina
+        if (player.stamina < player.maxStamina) {
+            player.stamina += 0.5;
+        }
+        
+        // Handle punch animation
+        if (player.punching) {
+            player.animationFrame++;
+            if (player.animationFrame > 15) {
+                player.punching = false;
+                player.punchType = null;
+                player.animationFrame = 0;
+            }
+        }
+        
+        // Handle dodge animation
+        if (player.dodging) {
+            player.animationFrame++;
+            if (player.animationFrame > 20) {
+                player.dodging = null;
+                player.animationFrame = 0;
+            }
+        }
+    }
+    
+    function updateOpponent() {
+        if (opponent.stunned) {
+            opponent.stunnedTimer--;
+            if (opponent.stunnedTimer <= 0) {
+                opponent.stunned = false;
+            }
+            return;
+        }
+        
+        // AI pattern behavior
+        opponent.patternTimer++;
+        
+        // Show tell before attacking
+        if (opponent.patternTimer > 60 && opponent.patternTimer < 90) {
+            opponent.tellTimer++;
+        }
+        
+        // Execute attack
+        if (opponent.patternTimer > 120) {
+            if (!opponent.attacking) {
+                const pattern = opponent.patterns[opponent.currentPattern];
+                executeOpponentAttack(pattern);
+                opponent.attacking = true;
+            }
+        }
+        
+        // Reset pattern
+        if (opponent.patternTimer > 180) {
+            opponent.patternTimer = 0;
+            opponent.attacking = false;
+            opponent.tellTimer = 0;
+            opponent.currentPattern = (opponent.currentPattern + 1) % opponent.patterns.length;
+        }
+    }
+    
+    function executeOpponentAttack(pattern) {
+        switch(pattern) {
+            case 'jab':
+                // Quick straight punch
+                if (!player.blocking && !player.dodging) {
+                    player.health -= 15;
+                }
+                break;
+            case 'hook':
+                // Side punch, can be dodged
+                if (!player.blocking && player.dodging !== 'left') {
+                    player.health -= 20;
+                }
+                break;
+            case 'uppercut':
+                // Powerful upward punch
+                if (!player.blocking) {
+                    player.health -= 25;
+                }
+                break;
+            case 'rush':
+                // Multiple quick punches
+                if (!player.blocking && !player.dodging) {
+                    player.health -= 10;
+                }
+                break;
+        }
+    }
+    
+    function checkCollisions() {
+        if (player.punching && !opponent.stunned && player.animationFrame > 3 && player.animationFrame < 15) {
+            // More precise hit detection based on punch type - punches go FORWARD (up toward opponent)
+            let punchHitbox = {};
+            const playerCenterX = player.x + (player.dodging === 'left' ? -40 : player.dodging === 'right' ? 40 : 0);
+            const playerCenterY = player.y - player.height/2;
+            const punchExtend = Math.sin(player.animationFrame * 0.5) * 250; // Match dramatically increased reach
+            
+            if (player.punchType === 'left') {
+                punchHitbox = {
+                    x: playerCenterX - 50,
+                    y: playerCenterY - 40 - punchExtend,
+                    width: 40,
+                    height: 100 + punchExtend // Much larger hit area
+                };
+            } else if (player.punchType === 'right') {
+                punchHitbox = {
+                    x: playerCenterX + 10,
+                    y: playerCenterY - 40 - punchExtend,
+                    width: 40,
+                    height: 100 + punchExtend // Much larger hit area
+                };
+            } else if (player.punchType === 'star') {
+                punchHitbox = {
+                    x: playerCenterX - 50,
+                    y: playerCenterY - 50 - punchExtend,
+                    width: 100,
+                    height: 120 + punchExtend // Much larger hit area
+                };
+            }
+            
+            // Opponent hitbox - make it larger and more forgiving
+            const opponentHitbox = {
+                x: opponent.x - 50,
+                y: opponent.y - 80,
+                width: 100,
+                height: 120
+            };
+            
+            // Check collision
+            if (punchHitbox.x < opponentHitbox.x + opponentHitbox.width &&
+                punchHitbox.x + punchHitbox.width > opponentHitbox.x &&
+                punchHitbox.y < opponentHitbox.y + opponentHitbox.height &&
+                punchHitbox.y + punchHitbox.height > opponentHitbox.y) {
+                
+                let damage = 0;
+                let hitEffect = false;
+                
+                switch(player.punchType) {
+                    case 'left':
+                    case 'right':
+                        damage = 10;
+                        // Counter punch during tell gives star and more damage
+                        if (opponent.tellTimer > 0) {
+                            player.stars = Math.min(player.stars + 1, player.maxStars);
+                            damage = 15;
+                            hitEffect = true;
+                            
+                            // Show "COUNTER!" text
+                            showHitEffect(opponent.x, opponent.y - 100, "COUNTER!", '#FFD700');
+                        } else {
+                            showHitEffect(opponent.x, opponent.y - 80, "HIT!", '#FFFFFF');
+                        }
+                        break;
+                    case 'star':
+                        damage = 30;
+                        opponent.stunned = true;
+                        opponent.stunnedTimer = 120;
+                        hitEffect = true;
+                        showHitEffect(opponent.x, opponent.y - 100, "STAR PUNCH!", '#FFFF00');
+                        break;
+                }
+                
+                opponent.health -= damage;
+                opponent.health = Math.max(0, opponent.health);
+                
+                // Reset punch to prevent multiple hits
+                player.punching = false;
+                player.punchType = null;
+                player.animationFrame = 0;
+                
+                // Screen shake effect
+                if (hitEffect) {
+                    screenShake = 10;
+                }
+            }
+        }
+        
+        // Check if opponent attacks hit player
+        if (opponent.attacking && !player.blocking && !player.dodging) {
+            const attackFrame = opponent.patternTimer - 120;
+            const attackExtend = Math.sin(attackFrame * 0.3) * 120;
+            
+            // Only hit when attack is extended enough to reach player
+            if (attackExtend > 80) {
+                const playerHitbox = {
+                    x: player.x - 30,
+                    y: player.y - 100,
+                    width: 60,
+                    height: 100
+                };
+                
+                const opponentAttackHitbox = {
+                    x: opponent.x - 30,
+                    y: opponent.y + 10 + attackExtend - 20,
+                    width: 60,
+                    height: 40
+                };
+                
+                if (opponentAttackHitbox.x < playerHitbox.x + playerHitbox.width &&
+                    opponentAttackHitbox.x + opponentAttackHitbox.width > playerHitbox.x &&
+                    opponentAttackHitbox.y < playerHitbox.y + playerHitbox.height &&
+                    opponentAttackHitbox.y + opponentAttackHitbox.height > playerHitbox.y) {
+                    
+                    // Opponent hit player
+                    let damage = 15;
+                    player.health -= damage;
+                    player.health = Math.max(0, player.health);
+                    
+                    showHitEffect(player.x, player.y - 50, "OUCH!", '#FF0000');
+                    screenShake = 5;
+                    
+                    // Prevent multiple hits per attack
+                    opponent.attacking = false;
+                }
+            }
+        }
+    }
+    
+    // Hit effect system
+    let hitEffects = [];
+    let screenShake = 0;
+    
+    function showHitEffect(x, y, text, color) {
+        hitEffects.push({
+            x: x,
+            y: y,
+            text: text,
+            color: color,
+            timer: 60,
+            scale: 1
+        });
+    }
+    
+    function updateHitEffects() {
+        hitEffects = hitEffects.filter(effect => {
+            effect.timer--;
+            effect.y -= 2;
+            effect.scale += 0.02;
+            return effect.timer > 0;
+        });
+        
+        if (screenShake > 0) {
+            screenShake--;
+        }
+    }
+    
+    function drawHitEffects() {
+        hitEffects.forEach(effect => {
+            ctx.save();
+            ctx.fillStyle = effect.color;
+            ctx.font = `bold ${16 * effect.scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#000000';
+            ctx.shadowBlur = 5;
+            ctx.fillText(effect.text, effect.x, effect.y);
+            ctx.restore();
+        });
+    }
+    
+    function render() {
+        ctx.save();
+        
+        // Apply screen shake
+        if (screenShake > 0) {
+            const shakeX = (Math.random() - 0.5) * screenShake;
+            const shakeY = (Math.random() - 0.5) * screenShake;
+            ctx.translate(shakeX, shakeY);
+        }
+        
+        // Clear canvas with gradient background
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#000080');
+        gradient.addColorStop(0.7, '#000040');
+        gradient.addColorStop(1, '#000020');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw arena lights
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        for (let i = 0; i < 4; i++) {
+            const x = (canvas.width / 5) * (i + 1);
+            ctx.beginPath();
+            ctx.ellipse(x, 50, 30, 60, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw ring with better perspective
+        const ringGradient = ctx.createLinearGradient(0, canvas.height - 100, 0, canvas.height);
+        ringGradient.addColorStop(0, '#8B4513');
+        ringGradient.addColorStop(1, '#654321');
+        ctx.fillStyle = ringGradient;
+        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        
+        // Draw ring canvas pattern
+        ctx.fillStyle = '#A0522D';
+        for (let x = 0; x < canvas.width; x += 40) {
+            for (let y = canvas.height - 50; y < canvas.height; y += 40) {
+                if ((x + y) % 80 === 0) {
+                    ctx.fillRect(x, y, 20, 20);
+                }
+            }
+        }
+        
+        // Draw ropes with better 3D effect
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 6;
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        
+        for (let i = 1; i <= 3; i++) {
+            const y = canvas.height - 50 - (i * 100);
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+            
+            // Rope posts
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(-5, y - 10, 10, 20);
+            ctx.fillRect(canvas.width - 5, y - 10, 10, 20);
+        }
+        
+        ctx.shadowBlur = 0;
+        
+        // Draw crowd silhouettes
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        for (let i = 0; i < 20; i++) {
+            const x = (canvas.width / 20) * i;
+            const height = 30 + Math.random() * 20;
+            ctx.fillRect(x, 80, canvas.width / 20, height);
+        }
+        
+        // Draw opponent first (behind player)
+        drawOpponent();
+        
+        // Draw player
+        drawPlayer();
+        
+        // Draw hit effects
+        drawHitEffects();
+        
+        // Draw UI
+        drawUI();
+        
+        ctx.restore();
+    }
+    
+    function drawPlayer() {
+        ctx.save();
+        
+        // Apply dodge offset
+        let offsetX = 0;
+        if (player.dodging === 'left') offsetX = -40;
+        if (player.dodging === 'right') offsetX = 40;
+        
+        const playerCenterX = player.x + offsetX;
+        const playerCenterY = player.y - player.height/2;
+        
+        // Draw player shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.ellipse(playerCenterX, player.y + 10, 35, 15, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw player body (Little Mac style)
+        ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+        
+        // Body
+        ctx.fillRect(playerCenterX - 25, playerCenterY - 40, 50, 80);
+        
+        // Head
+        ctx.fillRect(playerCenterX - 20, playerCenterY - 80, 40, 40);
+        
+        // Shorts
+        ctx.fillStyle = '#0000FF';
+        ctx.fillRect(playerCenterX - 25, playerCenterY + 20, 50, 30);
+        
+        // Gloves - much more visible
+        ctx.fillStyle = '#FF0000';
+        const gloveSize = 18;
+        
+        if (player.punching) {
+            // Animated punch with trail effect - punches go FORWARD toward opponent
+            ctx.shadowColor = '#FF0000';
+            ctx.shadowBlur = 10;
+            
+            const punchExtend = Math.sin(player.animationFrame * 0.5) * 250; // Dramatically increased reach
+            
+            if (player.punchType === 'left') {
+                // Left punch goes forward and slightly left
+                ctx.fillRect(playerCenterX - 30, playerCenterY - 20 - punchExtend, gloveSize + 10, gloveSize);
+                
+                // Punch trail going toward opponent
+                ctx.fillStyle = 'rgba(255,0,0,0.5)';
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillRect(playerCenterX - 28, playerCenterY - 18 - (punchExtend * 0.9) + (i * 30), 12, 14);
+                }
+            } else if (player.punchType === 'right') {
+                // Right punch goes forward and slightly right
+                ctx.fillRect(playerCenterX + 12, playerCenterY - 20 - punchExtend, gloveSize + 10, gloveSize);
+                
+                // Punch trail going toward opponent
+                ctx.fillStyle = 'rgba(255,0,0,0.5)';
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillRect(playerCenterX + 14, playerCenterY - 18 - (punchExtend * 0.9) + (i * 30), 12, 14);
+                }
+            } else if (player.punchType === 'star') {
+                // Star punch - both gloves forward toward opponent
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(playerCenterX - 30, playerCenterY - 25 - punchExtend, gloveSize + 15, gloveSize + 10);
+                ctx.fillRect(playerCenterX + 12, playerCenterY - 25 - punchExtend, gloveSize + 15, gloveSize + 10);
+                
+                // Star effects
+                ctx.fillStyle = '#FFFF00';
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * Math.PI * 2 / 5) + (player.animationFrame * 0.2);
+                    const starX = playerCenterX + Math.cos(angle) * 30;
+                    const starY = playerCenterY - 10 - punchExtend + Math.sin(angle) * 20;
+                    drawStar(starX, starY, 8);
+                }
+            }
+            
+            ctx.shadowBlur = 0;
+        } else {
+            // Normal glove position - at ready stance
+            ctx.fillRect(playerCenterX - 30, playerCenterY - 15, gloveSize, gloveSize);
+            ctx.fillRect(playerCenterX + 12, playerCenterY - 15, gloveSize, gloveSize);
+        }
+        
+        // Draw blocking stance with shield effect
+        if (player.blocking) {
+            ctx.strokeStyle = '#FFFF00';
+            ctx.lineWidth = 4;
+            ctx.shadowColor = '#FFFF00';
+            ctx.shadowBlur = 15;
+            
+            // Shield effect
+            ctx.beginPath();
+            ctx.arc(playerCenterX, playerCenterY - 20, 60, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Gloves up in blocking position
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(playerCenterX - 35, playerCenterY - 50, gloveSize, gloveSize);
+            ctx.fillRect(playerCenterX + 17, playerCenterY - 50, gloveSize, gloveSize);
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        // Draw hit detection area (debug visualization)
+        if (player.punching) {
+            ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+            ctx.lineWidth = 2;
+            const punchExtend = Math.sin(player.animationFrame * 0.5) * 150;
+            
+            if (player.punchType === 'left') {
+                ctx.strokeRect(playerCenterX - 40, playerCenterY - 30 - punchExtend, 30, 60 + punchExtend);
+            } else if (player.punchType === 'right') {
+                ctx.strokeRect(playerCenterX + 10, playerCenterY - 30 - punchExtend, 30, 60 + punchExtend);
+            } else if (player.punchType === 'star') {
+                ctx.strokeRect(playerCenterX - 40, playerCenterY - 40 - punchExtend, 80, 80 + punchExtend);
+            }
+        }
+        
+        ctx.restore();
+    }
+    
+    function drawOpponent() {
+        ctx.save();
+        
+        const opponentCenterX = opponent.x;
+        const opponentCenterY = opponent.y;
+        
+        // Draw opponent shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.ellipse(opponentCenterX, opponentCenterY + 80, 45, 20, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Opponent color based on state
+        let opponentColor = punchOutConfig.visual?.opponentColor || '#D2691E';
+        if (opponent.stunned) {
+            opponentColor = '#FFFF00'; // Yellow when stunned
+            // Add dizzy stars
+            for (let i = 0; i < 3; i++) {
+                const angle = (Date.now() * 0.01 + i * 2) % (Math.PI * 2);
+                const starX = opponentCenterX + Math.cos(angle) * 50;
+                const starY = opponentCenterY - 80 + Math.sin(angle) * 20;
+                ctx.fillStyle = '#FFFF00';
+                drawStar(starX, starY, 6);
+            }
+        }
+        
+        // Draw opponent body (larger, more imposing)
+        ctx.fillStyle = opponentColor;
+        
+        // Body
+        ctx.fillRect(opponentCenterX - 40, opponentCenterY - 60, 80, 120);
+        
+        // Head
+        ctx.fillRect(opponentCenterX - 35, opponentCenterY - 120, 70, 60);
+        
+        // Shorts
+        ctx.fillStyle = '#800080';
+        ctx.fillRect(opponentCenterX - 40, opponentCenterY + 30, 80, 40);
+        
+        // Opponent gloves - larger and more menacing
+        ctx.fillStyle = '#000000';
+        const opponentGloveSize = 25;
+        
+        if (opponent.attacking) {
+            // Animated attack with impact effects - attacks go TOWARD player
+            ctx.shadowColor = '#FF0000';
+            ctx.shadowBlur = 15;
+            
+            const attackFrame = opponent.patternTimer - 120;
+            const attackExtend = Math.sin(attackFrame * 0.3) * 120; // How far toward player the punch extends
+            
+            // Attack gloves extend toward player (downward)
+            ctx.fillRect(opponentCenterX - 25, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
+            ctx.fillRect(opponentCenterX + 5, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
+            
+            // Impact lines going toward player
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 5; i++) {
+                const lineX = opponentCenterX + (Math.random() - 0.5) * 60;
+                const lineY = opponentCenterY + 40 + (attackExtend * 0.5) + (i * 15);
+                ctx.beginPath();
+                ctx.moveTo(lineX - 15, lineY);
+                ctx.lineTo(lineX + 15, lineY);
+                ctx.stroke();
+            }
+            
+            ctx.shadowBlur = 0;
+        } else {
+            // Normal glove position - at ready stance
+            ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+        }
+        
+        // Draw tell indicator - much more visible
+        if (opponent.tellTimer > 0) {
+            const tellIntensity = Math.sin(opponent.tellTimer * 0.5);
+            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 + tellIntensity * 0.5})`;
+            ctx.shadowColor = '#FF0000';
+            ctx.shadowBlur = 20;
+            
+            // Large warning indicator
+            ctx.fillRect(opponentCenterX - 15, opponentCenterY - 140, 30, 30);
+            
+            // Warning text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('!', opponentCenterX - 5, opponentCenterY - 115);
+            
+            // Pulsing circle around opponent
+            ctx.strokeStyle = `rgba(255, 0, 0, ${tellIntensity})`;
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(opponentCenterX, opponentCenterY - 30, 80 + tellIntensity * 20, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        // Draw opponent hitbox - larger and more forgiving
+        ctx.strokeStyle = 'rgba(0,255,0,0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(opponentCenterX - 50, opponentCenterY - 80, 100, 120);
+        
+        ctx.restore();
+    }
+    
+    function drawStar(x, y, size) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * Math.PI * 2 / 5) - Math.PI / 2;
+            const x1 = Math.cos(angle) * size;
+            const y1 = Math.sin(angle) * size;
+            const x2 = Math.cos(angle + Math.PI / 5) * size * 0.5;
+            const y2 = Math.sin(angle + Math.PI / 5) * size * 0.5;
+            
+            if (i === 0) ctx.moveTo(x1, y1);
+            else ctx.lineTo(x1, y1);
+            ctx.lineTo(x2, y2);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+    
+    function drawUI() {
+        ctx.fillStyle = punchOutConfig.visual?.textColor || '#FFFFFF';
+        ctx.font = '20px Arial';
+        
+        // Round info
+        ctx.fillText(`Round ${currentRound}`, 20, 30);
+        ctx.fillText(`Time: ${Math.ceil(roundTime)}`, 20, 55);
+        
+        // Fighter name
+        ctx.fillText(opponent.name, canvas.width/2 - 60, 30);
+        
+        // Health bars
+        drawHealthBar(20, 80, player.health, player.maxHealth, '#00FF00', 'Little Mac');
+        drawHealthBar(20, 120, opponent.health, opponent.maxHealth, '#FF0000', opponent.name);
+        
+        // Stamina bar
+        drawStaminaBar(20, 160, player.stamina, player.maxStamina);
+        
+        // Stars
+        ctx.fillText(`Stars: ${'★'.repeat(player.stars)}`, canvas.width - 150, 30);
+        
+        // Controls
+        ctx.font = '14px Arial';
+        ctx.fillText('Z/X: Punch  C: Star Punch  ↓: Block  ←→: Dodge', 20, canvas.height - 20);
+        
+        // Win condition
+        if (gameWon) {
+            ctx.fillStyle = '#00FF00';
+            ctx.font = '48px Arial';
+            ctx.fillText('KNOCKOUT!', canvas.width/2 - 120, canvas.height/2);
+        }
+    }
+    
+    function drawHealthBar(x, y, health, maxHealth, color, label) {
+        const width = 200;
+        const height = 20;
+        
+        // Background
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(x, y, width, height);
+        
+        // Health
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, (health / maxHealth) * width, height);
+        
+        // Border
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeRect(x, y, width, height);
+        
+        // Label
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '12px Arial';
+        ctx.fillText(label, x, y - 5);
+    }
+    
+    function drawStaminaBar(x, y, stamina, maxStamina) {
+        const width = 200;
+        const height = 15;
+        
+        // Background
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(x, y, width, height);
+        
+        // Stamina
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillRect(x, y, (stamina / maxStamina) * width, height);
+        
+        // Border
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeRect(x, y, width, height);
+        
+        // Label
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '12px Arial';
+        ctx.fillText('Stamina', x, y - 5);
+    }
+    
+    function startGame() {
+        gameRunning = true;
+        gameLoop();
+    }
+    
+    function gameLoop() {
+        if (gameRunning) {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+    }
+    
+    function winFight() {
+        gameRunning = false;
+        gameWon = true;
+        
+        setTimeout(() => {
+            if (currentFighter < fighters.length - 1) {
+                // Next fighter
+                currentFighter++;
+                resetForNextFighter();
+            } else {
+                // Won all fights
+                if (callbacks && callbacks.onGameComplete) {
+                    callbacks.onGameComplete('punchout', { completed: true });
+                }
+            }
+        }, 2000);
+    }
+    
+    function loseFight() {
+        gameRunning = false;
+        
+        setTimeout(() => {
+            // Restart current fight
+            resetFight();
+        }, 2000);
+    }
+    
+    function endRound() {
+        currentRound++;
+        if (currentRound > 3) {
+            // Decision - opponent wins on points
+            loseFight();
+        } else {
+            // Next round
+            roundTime = punchOutConfig.gameplay?.roundTime || 180;
+            player.health = Math.min(player.maxHealth, player.health + 20);
+            opponent.health = Math.min(opponent.maxHealth, opponent.health + 10);
+        }
+    }
+    
+    function resetForNextFighter() {
+        currentFighter = Math.min(currentFighter, fighters.length - 1);
+        const fighter = fighters[currentFighter];
+        
+        opponent.health = fighter.health;
+        opponent.maxHealth = fighter.health;
+        opponent.name = fighter.name;
+        opponent.speed = fighter.speed;
+        opponent.patterns = fighter.patterns;
+        opponent.tells = fighter.tells;
+        
+        resetFight();
+    }
+    
+    function resetFight() {
+        currentRound = 1;
+        roundTime = punchOutConfig.gameplay?.roundTime || 180;
+        
+        player.health = player.maxHealth;
+        player.stamina = player.maxStamina;
+        player.stars = 0;
+        player.blocking = false;
+        player.dodging = null;
+        player.punching = false;
+        
+        opponent.currentPattern = 0;
+        opponent.patternTimer = 0;
+        opponent.tellTimer = 0;
+        opponent.attacking = false;
+        opponent.stunned = false;
+        
+        gameWon = false;
+        gameRunning = true;
+    }
+    
+    // Initialize game
+    gameArea.innerHTML = '';
+    gameArea.appendChild(canvas);
+    
+    // Add event listeners
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    
+    // Start the game
+    startGame();
+    
+    // Return game instance
+    return {
+        destroy: () => {
+            gameRunning = false;
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+            gameArea.innerHTML = '';
+        }
+    };
+}

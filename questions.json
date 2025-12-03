@@ -129,6 +129,17 @@
       "answer": "abc",
       "unlockQuestion": "What color is the goal square?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 14,
+      "order": 14,
+      "title": "Challenge 14: Punch-Out!!",
+      "description": "Boxing game inspired by Mike Tyson's Punch-Out!!",
+      "type": "punchout",
+      "question": "What key do you press for a star punch?",
+      "answer": "c",
+      "unlockQuestion": "What do you use to defend against the invaders?",
+      "unlockAnswer": "abc"
     }
   ]
 }

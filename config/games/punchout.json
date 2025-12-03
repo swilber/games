@@ -1,0 +1,73 @@
+{
+  "name": "Punch-Out!!",
+  "description": "Boxing game inspired by Mike Tyson's Punch-Out!!",
+  "difficulty": {
+    "playerHealth": {
+      "base": 100,
+      "multiplier": -5,
+      "min": 60,
+      "max": 120,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "opponentSpeed": {
+      "base": 0.8,
+      "multiplier": 0.1,
+      "min": 0.8,
+      "max": 1.5,
+      "formula": "base + (difficulty * multiplier)"
+    },
+    "roundTime": {
+      "base": 180,
+      "multiplier": -10,
+      "min": 90,
+      "max": 180,
+      "formula": "base + (difficulty * multiplier)"
+    }
+  },
+  "gameplay": {
+    "rounds": 3,
+    "roundTime": 180,
+    "playerHealth": 100,
+    "stamina": 100,
+    "maxStars": 3,
+    "fighterCount": 3
+  },
+  "physics": {
+    "canvasWidth": 800,
+    "canvasHeight": 600,
+    "playerX": 400,
+    "playerY": 450,
+    "opponentX": 400,
+    "opponentY": 200
+  },
+  "visual": {
+    "backgroundColor": "#000080",
+    "ringColor": "#8B4513",
+    "playerColor": "#FFE4B5",
+    "opponentColor": "#D2691E",
+    "textColor": "#FFFFFF"
+  },
+  "fighters": [
+    {
+      "name": "Glass Joe",
+      "health": 60,
+      "speed": 0.8,
+      "patterns": ["jab", "hook"],
+      "tells": ["blink", "lean"]
+    },
+    {
+      "name": "Von Kaiser",
+      "health": 80,
+      "speed": 1.0,
+      "patterns": ["jab", "hook", "uppercut"],
+      "tells": ["step_back", "wind_up"]
+    },
+    {
+      "name": "Piston Honda",
+      "health": 100,
+      "speed": 1.2,
+      "patterns": ["rush", "jab", "hook"],
+      "tells": ["bow", "stance"]
+    }
+  ]
+}
