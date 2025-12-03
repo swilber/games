@@ -377,8 +377,14 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.knockdownTimer--;
             
             if (player.knockdownTimer <= 0) {
-                // Time ran out but player can always try to get up, just reset timer
-                player.knockdownTimer = 600; // Give another chance
+                // After 5 knockdowns, player loses (but can still try to get up each time)
+                if (player.knockdownCount >= 5) {
+                    loseFight();
+                    return;
+                } else {
+                    // Give another chance to get up
+                    player.knockdownTimer = 600; // Reset timer
+                }
             }
             return; // Don't process other player actions while knocked down
         }
@@ -1137,11 +1143,13 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.strokeStyle = '#FFFFFF';
             ctx.strokeRect(barX, barY, barWidth, barHeight);
             
-            // Countdown timer
-            const countdown = Math.ceil(player.knockdownTimer / 60);
-            ctx.fillStyle = '#FF0000';
-            ctx.font = 'bold 48px Arial';
-            ctx.fillText(countdown.toString(), 400, 250);
+            // Countdown timer - count 1-10
+            const countdown = Math.ceil((600 - player.knockdownTimer) / 60) + 1;
+            if (countdown <= 10) {
+                ctx.fillStyle = '#FF0000';
+                ctx.font = 'bold 48px Arial';
+                ctx.fillText(countdown.toString(), 400, 250);
+            }
             
             ctx.restore();
             return;
@@ -1384,12 +1392,17 @@ async function createPunchOutGame(settings, callbacks = null) {
                 drawStar(starX, starY, 6);
             }
             
-            // Countdown timer
-            const countdown = Math.ceil(opponent.knockdownTimer / 60);
-            ctx.fillStyle = '#FF0000';
-            ctx.font = 'bold 48px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(countdown.toString(), opponentCenterX, opponentCenterY - 30);
+            // Countdown timer - only show if not TKO'd and count 1-10
+            if (!gameWon) {
+                const maxTime = tkoConfig.baseGetUpTime + (opponent.knockdownCount - 1) * tkoConfig.getUpTimeIncrease;
+                const countdown = Math.ceil((maxTime - opponent.knockdownTimer) / 60) + 1;
+                if (countdown <= 10) {
+                    ctx.fillStyle = '#FF0000';
+                    ctx.font = 'bold 48px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(countdown.toString(), opponentCenterX, opponentCenterY - 30);
+                }
+            }
             
             ctx.restore();
             return;
