@@ -575,6 +575,8 @@ async function createPunchOutGame(settings, callbacks = null) {
                         opponent.knockdownTimer = 600; // 10 seconds
                         opponent.knockdownCount++;
                         opponent.health = Math.max(1, opponent.health);
+                        // Move opponent to back of ring when knocked down
+                        opponent.y = 150; // Back of the ring
                         showHitEffect(opponent.x, opponent.y - 100, "KNOCKDOWN!", '#FF0000');
                     }
                     
@@ -904,22 +906,53 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Handle knockdown animation
         if (opponent.knockedDown && !opponent.gettingUp) {
-            // Draw opponent lying down
-            ctx.fillStyle = punchOutConfig.visual?.opponentColor || '#D2691E';
+            // Draw opponent lying down - simple and clean
+            const opponentColor = punchOutConfig.visual?.opponentColor || '#D2691E';
             
-            // Body lying horizontally
-            ctx.fillRect(opponentCenterX - 60, opponentCenterY + 40, 120, 40);
+            // Main body lying horizontally
+            ctx.fillStyle = opponentColor;
+            ctx.fillRect(opponentCenterX - 50, opponentCenterY + 45, 100, 30);
             
             // Head
-            ctx.fillRect(opponentCenterX + 50, opponentCenterY + 30, 40, 30);
+            ctx.fillRect(opponentCenterX + 45, opponentCenterY + 35, 30, 30);
+            
+            // Purple shorts
+            ctx.fillStyle = '#800080';
+            ctx.fillRect(opponentCenterX - 30, opponentCenterY + 60, 40, 15);
+            
+            // Simple splayed arms
+            ctx.fillStyle = opponentColor;
+            ctx.fillRect(opponentCenterX - 70, opponentCenterY + 30, 30, 10); // Left arm
+            ctx.fillRect(opponentCenterX + 50, opponentCenterY + 20, 30, 10); // Right arm
+            
+            // Black gloves
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(opponentCenterX - 75, opponentCenterY + 25, 12, 12); // Left glove
+            ctx.fillRect(opponentCenterX + 75, opponentCenterY + 15, 12, 12); // Right glove
+            
+            // X eyes (knocked out)
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Left eye X
+            ctx.moveTo(opponentCenterX + 50, opponentCenterY + 42);
+            ctx.lineTo(opponentCenterX + 56, opponentCenterY + 48);
+            ctx.moveTo(opponentCenterX + 56, opponentCenterY + 42);
+            ctx.lineTo(opponentCenterX + 50, opponentCenterY + 48);
+            // Right eye X
+            ctx.moveTo(opponentCenterX + 62, opponentCenterY + 42);
+            ctx.lineTo(opponentCenterX + 68, opponentCenterY + 48);
+            ctx.moveTo(opponentCenterX + 68, opponentCenterY + 42);
+            ctx.lineTo(opponentCenterX + 62, opponentCenterY + 48);
+            ctx.stroke();
             
             // Knocked out stars
-            for (let i = 0; i < 5; i++) {
-                const angle = (Date.now() * 0.005 + i * 1.2) % (Math.PI * 2);
-                const starX = opponentCenterX + Math.cos(angle) * 80;
-                const starY = opponentCenterY + 20 + Math.sin(angle) * 30;
+            for (let i = 0; i < 3; i++) {
+                const angle = (Date.now() * 0.005 + i * 2) % (Math.PI * 2);
+                const starX = opponentCenterX + Math.cos(angle) * 60;
+                const starY = opponentCenterY + 10 + Math.sin(angle) * 20;
                 ctx.fillStyle = '#FFFF00';
-                drawStar(starX, starY, 8);
+                drawStar(starX, starY, 6);
             }
             
             // Countdown timer
@@ -927,7 +960,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = '#FF0000';
             ctx.font = 'bold 48px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(countdown.toString(), opponentCenterX, opponentCenterY - 50);
+            ctx.fillText(countdown.toString(), opponentCenterX, opponentCenterY - 30);
             
             ctx.restore();
             return;
