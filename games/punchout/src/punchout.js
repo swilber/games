@@ -206,6 +206,29 @@ async function createPunchOutGame(settings, callbacks = null) {
         }
     }
     
+    // Inverse kinematics function for opponent arms
+    function calculateArmIK(shoulderX, shoulderY, targetX, targetY, upperArmLength = 25, lowerArmLength = 20) {
+        const dx = targetX - shoulderX;
+        const dy = targetY - shoulderY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Clamp distance to prevent overextension
+        const maxReach = upperArmLength + lowerArmLength - 5;
+        const clampedDistance = Math.min(distance, maxReach);
+        
+        // Calculate elbow position using law of cosines
+        const cosAngle = (upperArmLength * upperArmLength + clampedDistance * clampedDistance - lowerArmLength * lowerArmLength) / (2 * upperArmLength * clampedDistance);
+        const angle1 = Math.atan2(dy, dx);
+        const angle2 = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+        
+        // Elbow position (bend outward for natural look)
+        const elbowAngle = angle1 + angle2;
+        const elbowX = shoulderX + Math.cos(elbowAngle) * upperArmLength;
+        const elbowY = shoulderY + Math.sin(elbowAngle) * upperArmLength;
+        
+        return { elbowX, elbowY };
+    }
+    
     function updatePlayer() {
         // Regenerate stamina
         if (player.stamina < player.maxStamina) {
@@ -905,79 +928,199 @@ async function createPunchOutGame(settings, callbacks = null) {
         const opponentGloveSize = 25;
         
         if (opponent.attacking) {
-            // Animated attack with different punch types
+            // Animated attack with inverse kinematics
             ctx.shadowColor = '#FF0000';
             ctx.shadowBlur = 15;
+            ctx.lineCap = 'round';
             
             const attackFrame = opponent.patternTimer - 120;
             const attackExtend = Math.sin(attackFrame * 0.3) * 120; // How far toward player
+            
+            // Shoulder positions
+            const leftShoulderX = opponentCenterX - 35;
+            const leftShoulderY = opponentCenterY - 50;
+            const rightShoulderX = opponentCenterX + 35;
+            const rightShoulderY = opponentCenterY - 50;
             
             // Different animations based on attack pattern
             const pattern = opponent.patterns[opponent.currentPattern];
             
             if (pattern === 'jab') {
-                // Quick jab - one hand forward
                 if (opponent.attackHand === 'left') {
-                    // Left jab - left arm extends forward
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
-                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15); // Right arm back
+                    // Left jab - calculate IK for punching arm
+                    const targetX = opponentCenterX - 20 + attackExtend * 0.8;
+                    const targetY = opponentCenterY + 20 + attackExtend;
+                    const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX, targetY);
+                    
+                    // Draw punching arm with IK
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(leftShoulderX, leftShoulderY);
+                    ctx.lineTo(leftIK.elbowX, leftIK.elbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = armColor;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(leftShoulderX, leftShoulderY);
+                    ctx.lineTo(leftIK.elbowX, leftIK.elbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                    
+                    // Right arm in guard position
+                    const rightElbowX = opponentCenterX + 50;
+                    const rightElbowY = opponentCenterY - 30;
+                    const rightGloveX = opponentCenterX + 35;
+                    const rightGloveY = opponentCenterY - 15;
+                    
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(rightShoulderX, rightShoulderY);
+                    ctx.lineTo(rightElbowX, rightElbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(rightElbowX, rightElbowY);
+                    ctx.lineTo(rightGloveX, rightGloveY);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = armColor;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(rightShoulderX, rightShoulderY);
+                    ctx.lineTo(rightElbowX, rightElbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(rightElbowX, rightElbowY);
+                    ctx.lineTo(rightGloveX, rightGloveY);
+                    ctx.stroke();
+                    
+                    // Gloves
                     ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(targetX - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(rightGloveX - opponentGloveSize/2, rightGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 } else {
-                    // Right jab - right arm extends forward
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15); // Left arm back
-                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
+                    // Right jab - similar IK calculation for right arm
+                    const targetX = opponentCenterX + 20 + attackExtend * 0.8;
+                    const targetY = opponentCenterY + 20 + attackExtend;
+                    const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX, targetY);
+                    
+                    // Left arm in guard position
+                    const leftElbowX = opponentCenterX - 50;
+                    const leftElbowY = opponentCenterY - 30;
+                    const leftGloveX = opponentCenterX - 35;
+                    const leftGloveY = opponentCenterY - 15;
+                    
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(leftShoulderX, leftShoulderY);
+                    ctx.lineTo(leftElbowX, leftElbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(leftElbowX, leftElbowY);
+                    ctx.lineTo(leftGloveX, leftGloveY);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = armColor;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(leftShoulderX, leftShoulderY);
+                    ctx.lineTo(leftElbowX, leftElbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(leftElbowX, leftElbowY);
+                    ctx.lineTo(leftGloveX, leftGloveY);
+                    ctx.stroke();
+                    
+                    // Draw punching arm with IK
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 12;
+                    ctx.beginPath();
+                    ctx.moveTo(rightShoulderX, rightShoulderY);
+                    ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = armColor;
+                    ctx.lineWidth = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(rightShoulderX, rightShoulderY);
+                    ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                    ctx.stroke();
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                    ctx.lineTo(targetX, targetY);
+                    ctx.stroke();
+                    
+                    // Gloves
                     ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 17, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
-                }
-            } else if (pattern === 'uppercut') {
-                // Uppercut - arm comes up from below
-                if (opponent.attackHand === 'left') {
-                    // Left uppercut
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 30, opponentCenterY + 20 - attackExtend * 0.8, 8, 30);
-                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15); // Right arm back
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 35, opponentCenterY + 15 - attackExtend, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-                } else {
-                    // Right uppercut
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15); // Left arm back
-                    ctx.fillRect(opponentCenterX + 22, opponentCenterY + 20 - attackExtend * 0.8, 8, 30);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 17, opponentCenterY + 15 - attackExtend, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(targetX - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 }
             } else {
-                // Default punch animation
-                if (opponent.attackHand === 'left' || opponent.attackHand === 'both') {
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
-                } else {
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-                }
+                // Default punch animation with IK
+                const targetX = opponentCenterX + attackExtend * 0.5;
+                const targetY = opponentCenterY + 20 + attackExtend;
+                const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX - 20, targetY);
+                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX + 20, targetY);
                 
-                if (opponent.attackHand === 'right' || opponent.attackHand === 'both') {
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX + 17, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
-                } else {
-                    ctx.fillStyle = armColor;
-                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15);
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-                }
+                // Draw both arms with IK
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftIK.elbowX, leftIK.elbowY);
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.stroke();
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
+                ctx.lineTo(targetX - 20, targetY);
+                ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.lineTo(targetX + 20, targetY);
+                ctx.stroke();
+                
+                ctx.strokeStyle = armColor;
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftIK.elbowX, leftIK.elbowY);
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.stroke();
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
+                ctx.lineTo(targetX - 20, targetY);
+                ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.lineTo(targetX + 20, targetY);
+                ctx.stroke();
+                
+                // Gloves
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(targetX - 20 - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(targetX + 20 - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
             }
             
             ctx.shadowBlur = 0;
