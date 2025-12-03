@@ -105,8 +105,6 @@ async function createTetrisGame(settings, callbacks = null) {
     // Current and next pieces
     let currentPiece = null;
     let nextPiece = null;
-    let holdPiece = null;
-    let canHold = true;
     let ghostPiece = null;
     let flashingLines = [];
     let flashTimer = 0;
@@ -248,7 +246,6 @@ async function createTetrisGame(settings, callbacks = null) {
         
         currentPiece = createPiece(nextPiece);
         nextPiece = getRandomPiece();
-        canHold = true;
         
         // Check game over
         if (!isValidPosition(currentPiece)) {
@@ -257,23 +254,6 @@ async function createTetrisGame(settings, callbacks = null) {
             return;
         }
         
-        ghostPiece = calculateGhost(currentPiece);
-    }
-    
-    function holdCurrentPiece() {
-        if (!canHold) return;
-        
-        if (holdPiece) {
-            const temp = holdPiece;
-            holdPiece = currentPiece.type;
-            currentPiece = createPiece(temp);
-        } else {
-            holdPiece = currentPiece.type;
-            spawnNewPiece();
-            return;
-        }
-        
-        canHold = false;
         ghostPiece = calculateGhost(currentPiece);
     }
     
@@ -378,33 +358,13 @@ async function createTetrisGame(settings, callbacks = null) {
             }
         }
         
-        // Hold piece
-        ctx.fillStyle = tetrisConfig.visual?.textColor || '#ffffff';
-        ctx.fillText('HOLD', uiX, 350);
-        if (holdPiece) {
-            const holdTemplate = TETROMINOES[holdPiece];
-            ctx.fillStyle = canHold ? holdTemplate.color : '#666666';
-            for (let y = 0; y < holdTemplate.shape.length; y++) {
-                for (let x = 0; x < holdTemplate.shape[y].length; x++) {
-                    if (holdTemplate.shape[y][x]) {
-                        ctx.fillRect(
-                            uiX + x * 20, 
-                            370 + y * 20, 
-                            18, 18
-                        );
-                    }
-                }
-            }
-        }
-        
         // Controls
         ctx.font = '12px Arial';
         ctx.fillStyle = '#cccccc';
-        ctx.fillText('← → Move', uiX, 480);
-        ctx.fillText('↓ Soft Drop', uiX, 500);
-        ctx.fillText('↑ Hard Drop', uiX, 520);
-        ctx.fillText('SPACE Rotate', uiX, 540);
-        ctx.fillText('C Hold', uiX, 560);
+        ctx.fillText('← → Move', uiX, 400);
+        ctx.fillText('↓ Soft Drop', uiX, 420);
+        ctx.fillText('↑ Hard Drop', uiX, 440);
+        ctx.fillText('SPACE Rotate', uiX, 460);
     }
     
     function render() {
@@ -530,10 +490,6 @@ async function createTetrisGame(settings, callbacks = null) {
                 if (isValidPosition(rotatedCW)) {
                     currentPiece.shape = rotatedCW.shape;
                 }
-                break;
-                
-            case 'KeyC':
-                holdCurrentPiece();
                 break;
         }
         
