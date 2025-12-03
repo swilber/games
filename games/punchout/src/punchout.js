@@ -609,28 +609,36 @@ async function createPunchOutGame(settings, callbacks = null) {
             const punchExtend = Math.sin(player.animationFrame * 0.4) * 60; // Slower animation (0.4 vs 0.8)
             
             if (player.punchType === 'low-left') {
-                // Low left punch - left hand forward to body from shoulder
+                // Low left punch - left hand forward, right hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillRect(playerCenterX + 10, playerCenterY - 35, 25, 6); // Right arm lower
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
+                ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
             } else if (player.punchType === 'high-left') {
-                // High left punch - left hand forward to head from shoulder
+                // High left punch - left hand forward, right hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillRect(playerCenterX + 10, playerCenterY - 35, 25, 6); // Right arm lower
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 70 - punchExtend, gloveSize, gloveSize);
+                ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
             } else if (player.punchType === 'low-right') {
-                // Low right punch - right hand forward to body from shoulder
+                // Low right punch - right hand forward, left hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 25, 6); // Left arm lower
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX - 40, playerCenterY - 40, gloveSize, gloveSize); // Left glove lower
                 ctx.fillRect(playerCenterX + 17, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
             } else if (player.punchType === 'high-right') {
-                // High right punch - right hand forward to head from shoulder
+                // High right punch - right hand forward, left hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 25, 6); // Left arm lower
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX - 40, playerCenterY - 40, gloveSize, gloveSize); // Left glove lower
                 ctx.fillRect(playerCenterX + 17, playerCenterY - 70 - punchExtend, gloveSize, gloveSize);
             }
             
@@ -640,6 +648,9 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
             ctx.fillRect(playerCenterX - 35, playerCenterY - 45, 25, 6); // Left arm at shoulder
             ctx.fillRect(playerCenterX + 10, playerCenterY - 45, 25, 6); // Right arm at shoulder
+            // Bent arm segments below gloves
+            ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 8, 15); // Left forearm
+            ctx.fillRect(playerCenterX + 27, playerCenterY - 35, 8, 15); // Right forearm
             ctx.fillStyle = '#FF0000';
             ctx.fillRect(playerCenterX - 40, playerCenterY - 50, gloveSize, gloveSize); // Left glove
             ctx.fillRect(playerCenterX + 22, playerCenterY - 50, gloveSize, gloveSize); // Right glove
