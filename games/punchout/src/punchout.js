@@ -136,7 +136,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             patterns: ["uppercut", "jab", "uppercut", "uppercut", "jab", "uppercut"], // More uppercuts
             tells: ["crouch"],
             bodyShape: "tough",
-            blockChance: 0.8, // Much better blocking (was 0.6)
+            blockChance: 0.98, // Blocks almost everything normally
             attackFrequency: 0.8, // Very aggressive
             reactionTime: 60, // Very fast reactions (1 second)
             punchDamage: 25 // Hits much harder (default is 15)
@@ -191,7 +191,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         knockdownCount: 0,
         gettingUp: false,
         getUpTimer: 0,
-        animationFrame: 0
+        animationFrame: 0,
+        vulnerableTimer: 0 // For Steven Wilber's vulnerability window
     };
     
     // Force update opponent name to ensure it reflects current fighter data
@@ -608,7 +609,12 @@ async function createPunchOutGame(settings, callbacks = null) {
                 const currentPattern = opponent.blockPatterns[opponent.currentBlockPattern];
                 
                 // Only do reactive blocking if current pattern is 'none' and random chance
-                if (currentPattern === 'none' && Math.random() < opponent.blockChance) {
+                // Steven Wilber can't block during vulnerability window
+                const canBlock = opponent.name === "Steven Wilber" ? 
+                    (opponent.vulnerableTimer <= 0 && Math.random() < opponent.blockChance) :
+                    Math.random() < opponent.blockChance;
+                    
+                if (currentPattern === 'none' && canBlock) {
                     opponent.blocking = true;
                     // Block high or low based on player's punch type
                     if (player.punchType && player.punchType.includes('high')) {
@@ -630,6 +636,11 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // AI pattern behavior - enhanced with difficulty
             opponent.patternTimer++;
+            
+            // Steven Wilber vulnerability timer countdown
+            if (opponent.vulnerableTimer > 0) {
+                opponent.vulnerableTimer--;
+            }
             
             // Smarter attack timing based on player state and difficulty
             const shouldAttack = Math.random() < opponent.attackFrequency;
@@ -664,6 +675,11 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.attacking = false;
                 opponent.tellTimer = 0;
                 opponent.currentPattern = (opponent.currentPattern + 1) % opponent.patterns.length;
+                
+                // Steven Wilber vulnerability window - can be hit for 1 second after attacking
+                if (opponent.name === "Steven Wilber") {
+                    opponent.vulnerableTimer = 60; // 1 second vulnerability window
+                }
             } else if (opponent.patternTimer % 60 === 0) {
                 // Debug log every second to see timer progress
                 console.log('Pattern timer:', opponent.patternTimer, 'Reset time:', resetTime, 'Pattern:', pattern);
