@@ -326,7 +326,7 @@ async function createTetrisGame(settings, callbacks = null) {
         const uiX = BOARD_WIDTH * BLOCK_SIZE + 20;
         
         ctx.fillStyle = tetrisConfig.visual?.textColor || '#ffffff';
-        ctx.font = '20px Arial';
+        ctx.font = '20px "Courier New", monospace';
         
         // Score
         ctx.fillText('SCORE', uiX, 30);
@@ -359,7 +359,7 @@ async function createTetrisGame(settings, callbacks = null) {
         }
         
         // Controls
-        ctx.font = '12px Arial';
+        ctx.font = '12px "Courier New", monospace';
         ctx.fillStyle = '#cccccc';
         ctx.fillText('← → Move', uiX, 400);
         ctx.fillText('↓ Soft Drop', uiX, 420);
@@ -392,9 +392,9 @@ async function createTetrisGame(settings, callbacks = null) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#ffffff';
-            ctx.font = '24px Arial';
+            ctx.font = '24px "Courier New", monospace';
             ctx.fillText('TETRIS', canvas.width/2 - 50, canvas.height/2 - 50);
-            ctx.font = '16px Arial';
+            ctx.font = '16px "Courier New", monospace';
             ctx.fillText('Press any key to start', canvas.width/2 - 80, canvas.height/2);
         }
         
@@ -402,7 +402,7 @@ async function createTetrisGame(settings, callbacks = null) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#ff0000';
-            ctx.font = '36px Arial';
+            ctx.font = '36px "Courier New", monospace';
             ctx.fillText('GAME OVER', canvas.width/2 - 100, canvas.height/2);
         }
     }
