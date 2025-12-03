@@ -717,9 +717,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                         opponent.knockdownCount++;
                         opponent.health = Math.max(1, opponent.health);
                         
-                        // Check for fast knockout (instant TKO)
+                        // Check for fast knockout (instant TKO) - only if player hasn't been knocked down
                         const fightDuration = (Date.now() - fightStartTime) / 1000;
-                        if (fightDuration <= tkoConfig.fastKnockoutTime) {
+                        if (fightDuration <= tkoConfig.fastKnockoutTime && player.knockdownCount === 0) {
                             // Fast knockout - instant TKO
                             gameRunning = false;
                             gameWon = true;
