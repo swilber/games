@@ -108,6 +108,8 @@ async function createTetrisGame(settings, callbacks = null) {
     let holdPiece = null;
     let canHold = true;
     let ghostPiece = null;
+    let flashingLines = [];
+    let flashTimer = 0;
     
     // Input handling
     const keys = {};
@@ -184,16 +186,33 @@ async function createTetrisGame(settings, callbacks = null) {
     }
     
     function clearLines() {
-        let linesCleared = 0;
+        const linesToClear = [];
         
+        // Find complete lines
         for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
             if (board[y].every(cell => cell !== 0)) {
-                board.splice(y, 1);
-                board.unshift(Array(BOARD_WIDTH).fill(0));
-                linesCleared++;
-                y++; // Check same line again
+                linesToClear.push(y);
             }
         }
+        
+        if (linesToClear.length > 0) {
+            // Start flashing animation
+            flashingLines = [...linesToClear];
+            flashTimer = 300; // Flash for 300ms
+            return linesToClear.length;
+        }
+        
+        return 0;
+    }
+    
+    function removeFlashingLines() {
+        let linesCleared = flashingLines.length;
+        
+        // Remove the flashing lines
+        flashingLines.forEach(lineY => {
+            board.splice(lineY, 1);
+            board.unshift(Array(BOARD_WIDTH).fill(0));
+        });
         
         if (linesCleared > 0) {
             lines += linesCleared;
@@ -209,6 +228,8 @@ async function createTetrisGame(settings, callbacks = null) {
             }
         }
         
+        flashingLines = [];
+        flashTimer = 0;
         return linesCleared;
     }
     
@@ -293,7 +314,13 @@ async function createTetrisGame(settings, callbacks = null) {
         for (let y = 0; y < BOARD_HEIGHT; y++) {
             for (let x = 0; x < BOARD_WIDTH; x++) {
                 if (board[y][x]) {
-                    drawBlock(x, y, board[y][x]);
+                    // Flash completed lines
+                    if (flashingLines.includes(y)) {
+                        const flashIntensity = Math.sin(Date.now() * 0.02) * 0.5 + 0.5;
+                        drawBlock(x, y, '#ffffff', flashIntensity);
+                    } else {
+                        drawBlock(x, y, board[y][x]);
+                    }
                 }
             }
         }
@@ -424,6 +451,16 @@ async function createTetrisGame(settings, callbacks = null) {
     function update(deltaTime) {
         if (!gameRunning || gameOver || !currentPiece) return;
         
+        // Handle flashing lines animation
+        if (flashTimer > 0) {
+            flashTimer -= deltaTime;
+            if (flashTimer <= 0) {
+                removeFlashingLines();
+                spawnNewPiece();
+            }
+            return; // Don't update game while flashing
+        }
+        
         dropTimer += deltaTime;
         const currentDropSpeed = softDrop ? 50 : getDropSpeed();
         
@@ -432,10 +469,12 @@ async function createTetrisGame(settings, callbacks = null) {
                 currentPiece.y++;
                 lockTimer = 0;
             } else {
-                // Piece can't fall further - place it immediately
+                // Piece can't fall further - place it and check for lines
                 placePiece(currentPiece);
-                clearLines();
-                spawnNewPiece();
+                const linesFound = clearLines();
+                if (linesFound === 0) {
+                    spawnNewPiece();
+                }
                 lockTimer = 0;
             }
             dropTimer = 0;
