@@ -1422,20 +1422,20 @@ async function createPunchOutGame(settings, callbacks = null) {
             case "tough":
             default:
                 console.log('Drawing tough body');
-                // Tough body - wide trapezoid (original)
+                // Tough body - much larger wide trapezoid
                 ctx.beginPath();
-                ctx.moveTo(centerX - 45, centerY - 60); // Wide shoulders
-                ctx.lineTo(centerX + 45, centerY - 60);
-                ctx.lineTo(centerX + 30, centerY + 20); // Narrow waist
-                ctx.lineTo(centerX - 30, centerY + 20);
+                ctx.moveTo(centerX - 65, centerY - 80); // Much wider shoulders
+                ctx.lineTo(centerX + 65, centerY - 80);
+                ctx.lineTo(centerX + 40, centerY + 40); // Much longer torso
+                ctx.lineTo(centerX - 40, centerY + 40);
                 ctx.closePath();
                 ctx.fill();
                 
-                // Chest definition
+                // Chest definition - bigger
                 ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 4;
                 ctx.beginPath();
-                ctx.moveTo(centerX, centerY - 50);
+                ctx.moveTo(centerX, centerY - 70);
                 ctx.lineTo(centerX, centerY - 10);
                 ctx.stroke();
                 break;
@@ -1574,6 +1574,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Set skin tone based on body shape
         if (opponent.bodyShape === "thin") {
             opponentColor = '#F5DEB3'; // White/pale skin tone for Glass Joe
+        } else if (opponent.bodyShape === "tough") {
+            opponentColor = '#8B4513'; // Darker skin tone for Piston Honda
         }
         
         if (opponent.stunned) {
@@ -1592,9 +1594,19 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillStyle = opponentColor;
         drawOpponentBody(opponentCenterX, opponentCenterY, opponent.bodyShape);
         
-        // Smaller, more realistic head
+        // Head and facial features based on body shape
         ctx.fillStyle = opponentColor;
-        ctx.fillRect(opponentCenterX - 20, opponentCenterY - 100, 40, 40);
+        
+        if (opponent.bodyShape === "thin") {
+            // Thinner head for Glass Joe
+            ctx.fillRect(opponentCenterX - 15, opponentCenterY - 100, 30, 40);
+        } else if (opponent.bodyShape === "tough") {
+            // Much bigger head for Piston Honda
+            ctx.fillRect(opponentCenterX - 30, opponentCenterY - 120, 60, 60);
+        } else {
+            // Normal head for other fighters
+            ctx.fillRect(opponentCenterX - 20, opponentCenterY - 100, 40, 40);
+        }
         
         // Facial features - more fearsome
         ctx.fillStyle = '#000000';
@@ -1641,14 +1653,14 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillStyle = '#800080';
         switch(opponent.bodyShape) {
             case "thin":
-                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 30, 50, 40); // Narrow shorts
+                ctx.fillRect(opponentCenterX - 20, opponentCenterY + 30, 40, 40); // Extra narrow shorts
                 break;
             case "fat":
                 ctx.fillRect(opponentCenterX - 50, opponentCenterY + 20, 100, 50); // Wide shorts
                 break;
             case "tough":
             default:
-                ctx.fillRect(opponentCenterX - 40, opponentCenterY + 30, 80, 40); // Normal shorts
+                ctx.fillRect(opponentCenterX - 50, opponentCenterY + 50, 100, 50); // Much bigger shorts
                 break;
         }
         
@@ -1682,7 +1694,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Opponent arms and gloves
         const armColor = opponentColor; // Same color as body
-        const opponentGloveSize = 25;
+        const opponentGloveSize = opponent.bodyShape === "tough" ? 35 : 25; // Bigger gloves for tough fighters
         
         if (opponent.attacking) {
             // Animated attack with inverse kinematics and stepping
