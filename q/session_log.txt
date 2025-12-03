@@ -5,17 +5,18 @@ Last Updated: 2025-12-03T13:43:26.870-07:00
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Punch Out level completion and training animation system
+- **Working on**: Punch Out opponent AI attack execution
 - **Latest changes**: 
+  - **FIXED**: Opponent attack timing issue - opponents now punch properly
+  - Attack timing changed from reactionTime-based calculation to fixed 60 frames
+  - Resolved conflict where attacks (180+ frames) happened after pattern reset (90-120 frames)
+  - Pattern cycling works correctly, attacks execute before reset
+- **Previous changes**: 
   - Implemented complete level progression system
   - Victory screen now shows "Press Enter to Face the Next Fighter"
   - Added 10-second training animation with trainer on bike and Little Mac running
   - Animated background with moving clouds, city skyline, and scrolling ground
   - Proper level completion flow: Victory → Enter → Training → Next Fighter
-- **Previous changes**: 
-  - Added game over screen with "Press R to Restart Game" functionality
-  - Fixed knockdown logic to properly end game when countdown reaches 10
-  - Complete UI overhaul to fighter game style with proper positioning
 - **Key improvements**:
   - Complete level progression system with proper game flow
   - Animated training sequence between fights (10 seconds)
@@ -25,20 +26,20 @@ Track recent commands and context to recover from context window overflows.
   - Fixed TKO logic and proper game over/restart functionality
   - Complete retro NES font styling throughout game
   - 800+ audience faces with proper perspective and density
-- **Status**: Complete game with full level progression and training animations
-- **Last changes**: Level completion system and training animation implementation
+- **Status**: Punch Out game fully functional with working opponent AI attacks
+- **Last changes**: Fixed opponent attack timing - attacks execute at 60 frames before pattern reset
 
 ## RECENT COMMANDS (Last 10)
-1. `node -c punchout.js` - Verified syntax after level completion system
-2. Implemented complete training animation with moving background
-3. Added level completion logic with Enter key progression
-4. `cp punchout.js punchout.js.backup7` - Created backup before level system
-5. `git push` - Pushed game over functionality and knockdown fix
-6. Fixed player knockdown logic to end game when countdown reaches 10
-7. Added game over screen and R key restart functionality
-8. Fixed TKO logic to prevent TKO if player has been knocked down
-9. Redesigned entire UI to fighter game style with proper layout
-10. Updated all game fonts to "Courier New", monospace for NES feel
+1. `git push` - Pushed opponent attack timing fix (commit 98c0e91)
+2. Fixed opponent attack timing - attacks now execute at 60 frames before pattern reset
+3. Debugged pattern cycling issue where opponents weren't punching
+4. `node -c punchout.js` - Verified syntax after attack timing fix
+5. Analyzed attack timing calculation vs pattern reset timing conflict
+6. `node -c punchout.js` - Verified syntax after level completion system
+7. Implemented complete training animation with moving background
+8. Added level completion logic with Enter key progression
+9. `cp punchout.js punchout.js.backup7` - Created backup before level system
+10. `git push` - Pushed game over functionality and knockdown fix
 
 ## ACTIVE CONTEXT
 - **Working directory**: /Users/P2176038/Desktop/greg
