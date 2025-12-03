@@ -194,6 +194,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         animationFrame: 0
     };
     
+    // Force update opponent name to ensure it reflects current fighter data
+    opponent.name = fighters[currentFighter].name;
+    
     console.log('Opponent initialized with bodyShape:', opponent.bodyShape);
     
     // Input handling
