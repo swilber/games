@@ -25,7 +25,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     let gameRunning = false;
     let gameWon = false;
     let gameTKO = false;
-    let gameOver = false;
     let victoryType = null; // 'KO', 'TKO', or null
     let gameStarted = false;
     let currentRound = 1;
@@ -156,12 +155,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     
     function handleKeyDown(e) {
         keys[e.code] = true;
-        
-        // Handle restart on game over
-        if (gameOver && e.code === 'KeyR') {
-            restartGame();
-            return;
-        }
         
         if (!gameStarted) {
             gameStarted = true;
@@ -384,9 +377,14 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.knockdownTimer--;
             
             if (player.knockdownTimer <= 0) {
-                // Player couldn't get up in time - game over
-                loseFight();
-                return;
+                // After 5 knockdowns, player loses (but can still try to get up each time)
+                if (player.knockdownCount >= 5) {
+                    loseFight();
+                    return;
+                } else {
+                    // Give another chance to get up
+                    player.knockdownTimer = 600; // Reset timer
+                }
             }
             return; // Don't process other player actions while knocked down
         }
@@ -1086,24 +1084,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 36px "Courier New", monospace';
             ctx.fillText('You Win!', canvas.width/2, canvas.height/2 + 40);
-        }
-        
-        // Draw game over overlay
-        if (gameOver) {
-            // Darken the screen
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw "GAME OVER" text
-            ctx.fillStyle = '#FF0000';
-            ctx.font = 'bold 72px "Courier New", monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 40);
-            
-            // Draw restart instruction
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 24px "Courier New", monospace';
-            ctx.fillText('Press R to Restart Game', canvas.width/2, canvas.height/2 + 40);
         }
         
         ctx.restore();
@@ -2093,7 +2073,11 @@ async function createPunchOutGame(settings, callbacks = null) {
     
     function loseFight() {
         gameRunning = false;
-        gameOver = true;
+        
+        setTimeout(() => {
+            // Restart current fight
+            resetFight();
+        }, 2000);
     }
     
     function endRound() {
@@ -2123,68 +2107,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         resetFight();
     }
     
-    function restartGame() {
-        // Reset to very beginning
-        currentFighter = 0;
-        currentRound = 1;
-        roundTime = punchOutConfig.gameplay?.roundTime || 180;
-        fightStartTime = Date.now();
-        
-        // Reset game states
-        gameRunning = true;
-        gameWon = false;
-        gameTKO = false;
-        gameOver = false;
-        victoryType = null;
-        gameStarted = true;
-        
-        // Reset player
-        player.x = 400;
-        player.y = 450;
-        player.health = player.maxHealth;
-        player.stamina = player.maxStamina;
-        player.stars = 0;
-        player.knockedDown = false;
-        player.knockdownTimer = 0;
-        player.knockdownCount = 0;
-        player.gettingUp = false;
-        player.getUpTimer = 0;
-        player.buttonMashCount = 0;
-        player.getUpProgress = 0;
-        player.blocking = false;
-        player.dodging = false;
-        player.dodgeDirection = 0;
-        player.dodgeTimer = 0;
-        player.punchCooldown = 0;
-        player.stunnedTimer = 0;
-        
-        // Reset opponent to first fighter
-        const fighterData = fighters[currentFighter];
-        opponent.name = fighterData.name;
-        opponent.x = 400;
-        opponent.y = 200;
-        opponent.width = fighterData.width || 80;
-        opponent.height = fighterData.height || 120;
-        opponent.health = fighterData.health || 100;
-        opponent.maxHealth = opponent.health;
-        opponent.speed = fighterData.speed || 2;
-        opponent.punchDamage = fighterData.punchDamage || 15;
-        opponent.punchCooldown = 0;
-        opponent.moveTimer = 0;
-        opponent.moveDirection = 1;
-        opponent.attackTimer = Math.random() * 120 + 60;
-        opponent.stunnedTimer = 0;
-        opponent.knockedDown = false;
-        opponent.knockdownTimer = 0;
-        opponent.knockdownCount = 0;
-        opponent.gettingUp = false;
-        opponent.getUpTimer = 0;
-        opponent.animationFrame = 0;
-        
-        // Start game loop
-        gameLoop();
-    }
-    
     function resetFight() {
         currentRound = 1;
         roundTime = punchOutConfig.gameplay?.roundTime || 180;
@@ -2193,7 +2115,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Reset game states
         gameWon = false;
         gameTKO = false;
-        gameOver = false;
         victoryType = null;
         
         player.health = player.maxHealth;

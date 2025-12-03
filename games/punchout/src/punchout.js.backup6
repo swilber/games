@@ -384,9 +384,14 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.knockdownTimer--;
             
             if (player.knockdownTimer <= 0) {
-                // Player couldn't get up in time - game over
-                loseFight();
-                return;
+                // After 5 knockdowns, player loses (but can still try to get up each time)
+                if (player.knockdownCount >= 5) {
+                    loseFight();
+                    return;
+                } else {
+                    // Give another chance to get up
+                    player.knockdownTimer = 600; // Reset timer
+                }
             }
             return; // Don't process other player actions while knocked down
         }
