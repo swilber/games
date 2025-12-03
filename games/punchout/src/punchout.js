@@ -54,7 +54,14 @@ async function createPunchOutGame(settings, callbacks = null) {
     };
     
     const fighters = punchOutConfig.fighters || [
-        { name: "Glass Joe", health: 60, speed: 0.8, patterns: ["jab"], tells: ["blink"] }
+        { 
+            name: "Glass Joe", 
+            health: 60, 
+            speed: 0.8, 
+            patterns: ["uppercut", "uppercut", "jab", "uppercut"], 
+            tells: ["blink"],
+            uppercutFrequency: 0.75 // 75% chance of uppercut attacks
+        }
     ];
     
     const opponent = {
@@ -395,6 +402,22 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function executeOpponentAttack(pattern) {
+        console.log('Original pattern:', pattern);
+        console.log('Current pattern index:', opponent.currentPattern);
+        console.log('Available patterns:', opponent.patterns);
+        
+        // Check if we should override with uppercut based on frequency
+        const fighterData = fighters[currentFighter] || fighters[0];
+        console.log('Fighter data patterns:', fighterData.patterns);
+        console.log('Uppercut frequency:', fighterData.uppercutFrequency);
+        
+        if (fighterData.uppercutFrequency && Math.random() < fighterData.uppercutFrequency) {
+            pattern = 'uppercut';
+            console.log('Overriding with uppercut due to frequency');
+        }
+        
+        console.log('Final pattern:', pattern);
+        
         // Set which hand to use for this attack
         switch(pattern) {
             case 'jab':
@@ -403,6 +426,12 @@ async function createPunchOutGame(settings, callbacks = null) {
                 if (!player.blocking && !player.dodging) {
                     player.health -= 15;
                 }
+                break;
+            case 'uppercut':
+                // Powerful uppercut - always use dominant hand (right)
+                opponent.attackHand = 'right';
+                console.log('Uppercut with dominant hand:', opponent.attackHand);
+                // Damage is handled in collision detection for uppercuts
                 break;
             case 'hook':
                 // Side punch - right hand
@@ -518,8 +547,22 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (opponent.attacking && opponent.patternTimer > 140) {
             // Check if player is vulnerable (not blocking or dodging)
             let playerHit = true;
+            const pattern = opponent.patterns[opponent.currentPattern];
             
-            if (player.blocking) {
+            if (pattern === 'uppercut') {
+                // Uppercuts cannot be blocked, only dodged
+                if (player.dodging) {
+                    playerHit = false; // Dodged the uppercut
+                    showHitEffect(player.x, player.y - 50, "DODGED UPPERCUT!", '#00FFFF');
+                } else {
+                    // Uppercut hits - massive damage
+                    player.health -= 25; // Heavy damage
+                    showHitEffect(player.x, player.y - 50, "UPPERCUT!", '#FF0000');
+                    // Screen shake for dramatic effect
+                    ctx.save();
+                    ctx.translate(Math.random() * 10 - 5, Math.random() * 10 - 5);
+                }
+            } else if (player.blocking) {
                 playerHit = false; // Blocked the attack
                 showHitEffect(player.x, player.y - 50, "BLOCKED!", '#00FF00');
             } else if (player.dodging) {
@@ -785,14 +828,22 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Calculate stepping during attacks
         let stepOffset = 0;
+        let duckOffset = 0;
         if (opponent.attacking) {
             const attackFrame = opponent.patternTimer - 120;
             const attackProgress = Math.sin(attackFrame * 0.3);
             stepOffset = Math.abs(attackProgress) * 20; // Step forward during punch
+            
+            // Add ducking for uppercuts
+            const pattern = opponent.patterns[opponent.currentPattern];
+            if (pattern === 'uppercut') {
+                const duckAmount = Math.max(0, Math.sin(attackFrame * 0.2) * 30); // Duck down first
+                duckOffset = duckAmount;
+            }
         }
         
         const opponentCenterX = opponent.x;
-        const opponentCenterY = opponent.y + stepOffset; // Step forward (down toward Mac)
+        const opponentCenterY = opponent.y + stepOffset + duckOffset; // Step forward AND duck down
         
         // Debug logging
         if (opponent.knockedDown || opponent.gettingUp) {
@@ -970,6 +1021,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Different animations based on attack pattern
             const pattern = opponent.patterns[opponent.currentPattern];
+            console.log('Drawing attack pattern:', pattern, 'with hand:', opponent.attackHand);
             
             if (pattern === 'jab') {
                 if (opponent.attackHand === 'left') {
@@ -1103,12 +1155,87 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                     ctx.fillRect(rightIK.targetX - opponentGloveSize/2, rightIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 }
+            } else if (pattern === 'uppercut') {
+                // Uppercut - duck down then swing up from below (body ducking handled above)
+                const uppercutRise = Math.max(0, Math.sin((attackFrame - 30) * 0.4) * 80); // Rise up motion
+                
+                // Target comes up from below - right hand only
+                const uppercutTargetX = opponentCenterX + 10;
+                const uppercutTargetY = currentOpponentY + 60 - uppercutRise; // Starts low, swings up
+                
+                // Right uppercut only (dominant hand)
+                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, uppercutTargetX, uppercutTargetY);
+                
+                // Left arm stays in guard
+                const leftElbowX = opponentCenterX - 50;
+                const leftElbowY = currentOpponentY - 30;
+                const leftGloveX = opponentCenterX - 35;
+                const leftGloveY = currentOpponentY - 15;
+                
+                // Draw left guard arm
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.stroke();
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.moveTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
+                
+                ctx.strokeStyle = armColor;
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.stroke();
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
+                
+                // Draw uppercut arm (right hand)
+                ctx.strokeStyle = '#FF0000';
+                ctx.lineWidth = 16;
+                ctx.beginPath();
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.stroke();
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.lineTo(rightIK.targetX, rightIK.targetY);
+                ctx.stroke();
+                
+                ctx.strokeStyle = armColor;
+                ctx.lineWidth = 14;
+                ctx.beginPath();
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.stroke();
+                ctx.lineWidth = 10;
+                ctx.beginPath();
+                ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
+                ctx.lineTo(rightIK.targetX, rightIK.targetY);
+                ctx.stroke();
+                
+                // Gloves
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                ctx.fillStyle = '#FF0000';
+                ctx.shadowColor = '#FF0000';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(rightIK.targetX - (opponentGloveSize + 8)/2, rightIK.targetY - (opponentGloveSize + 8)/2, opponentGloveSize + 8, opponentGloveSize + 8);
+                ctx.shadowBlur = 0;
             } else {
                 // Default punch animation - punch downward toward Mac
-                const targetX = opponentCenterX;
-                const targetY = currentOpponentY + 50 + attackExtend; // Downward toward Mac
-                const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX - 15, targetY);
-                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX + 15, targetY);
+                const defaultTargetX = opponentCenterX;
+                const defaultTargetY = currentOpponentY + 50 + attackExtend; // Downward toward Mac
+                const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, defaultTargetX - 15, defaultTargetY);
+                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, defaultTargetX + 15, defaultTargetY);
                 
                 // Draw both arms with IK
                 ctx.strokeStyle = '#000000';
