@@ -831,14 +831,70 @@ async function createPunchOutGame(settings, callbacks = null) {
             }
         }
         
-        // Draw opponent body (larger, more imposing)
+        // Draw opponent body - more human proportions
         ctx.fillStyle = opponentColor;
         
-        // Body
-        ctx.fillRect(opponentCenterX - 40, opponentCenterY - 60, 80, 120);
+        // Trapezoidal torso (wider at shoulders, narrower at waist)
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX - 45, opponentCenterY - 60); // Top left (wide shoulders)
+        ctx.lineTo(opponentCenterX + 45, opponentCenterY - 60); // Top right (wide shoulders)
+        ctx.lineTo(opponentCenterX + 30, opponentCenterY + 20); // Bottom right (narrow waist)
+        ctx.lineTo(opponentCenterX - 30, opponentCenterY + 20); // Bottom left (narrow waist)
+        ctx.closePath();
+        ctx.fill();
         
-        // Head
-        ctx.fillRect(opponentCenterX - 35, opponentCenterY - 120, 70, 60);
+        // Chest definition
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX, opponentCenterY - 50);
+        ctx.lineTo(opponentCenterX, opponentCenterY - 10);
+        ctx.stroke();
+        
+        // Smaller, more realistic head
+        ctx.fillStyle = opponentColor;
+        ctx.fillRect(opponentCenterX - 20, opponentCenterY - 100, 40, 40);
+        
+        // Facial features - more fearsome
+        ctx.fillStyle = '#000000';
+        // Angry eyes (angled downward)
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX - 15, opponentCenterY - 92);
+        ctx.lineTo(opponentCenterX - 8, opponentCenterY - 88);
+        ctx.lineTo(opponentCenterX - 8, opponentCenterY - 85);
+        ctx.lineTo(opponentCenterX - 15, opponentCenterY - 89);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX + 8, opponentCenterY - 88);
+        ctx.lineTo(opponentCenterX + 15, opponentCenterY - 92);
+        ctx.lineTo(opponentCenterX + 15, opponentCenterY - 89);
+        ctx.lineTo(opponentCenterX + 8, opponentCenterY - 85);
+        ctx.closePath();
+        ctx.fill();
+        // Angry eyebrows
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX - 18, opponentCenterY - 95);
+        ctx.lineTo(opponentCenterX - 5, opponentCenterY - 90);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX + 5, opponentCenterY - 90);
+        ctx.lineTo(opponentCenterX + 18, opponentCenterY - 95);
+        ctx.stroke();
+        // Larger, more aggressive nose
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX, opponentCenterY - 82);
+        ctx.lineTo(opponentCenterX - 3, opponentCenterY - 74);
+        ctx.lineTo(opponentCenterX + 3, opponentCenterY - 74);
+        ctx.closePath();
+        ctx.fill();
+        // Scowling mouth
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(opponentCenterX, opponentCenterY - 68, 8, Math.PI * 0.2, Math.PI * 0.8);
+        ctx.stroke();
         
         // Shorts
         ctx.fillStyle = '#800080';
@@ -951,8 +1007,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             } else {
                 // Normal stance - anatomically correct angled arms
-                ctx.strokeStyle = armColor;
-                ctx.lineWidth = 8;
                 ctx.lineCap = 'round';
                 
                 // Left arm system (shoulder -> elbow -> glove)
@@ -963,18 +1017,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 const leftGloveX = opponentCenterX - 35; // Angled back in toward body
                 const leftGloveY = opponentCenterY - 15;
                 
-                // Left upper arm (shoulder to elbow) - angled out
-                ctx.beginPath();
-                ctx.moveTo(leftShoulderX, leftShoulderY);
-                ctx.lineTo(leftElbowX, leftElbowY);
-                ctx.stroke();
-                
-                // Left lower arm (elbow to glove) - angled in
-                ctx.beginPath();
-                ctx.moveTo(leftElbowX, leftElbowY);
-                ctx.lineTo(leftGloveX, leftGloveY);
-                ctx.stroke();
-                
                 // Right arm system (shoulder -> elbow -> glove)
                 const rightShoulderX = opponentCenterX + 35;
                 const rightShoulderY = opponentCenterY - 50;
@@ -983,47 +1025,55 @@ async function createPunchOutGame(settings, callbacks = null) {
                 const rightGloveX = opponentCenterX + 35; // Angled back in toward body
                 const rightGloveY = opponentCenterY - 15;
                 
-                // Right upper arm (shoulder to elbow) - angled out
+                // Black outlines for the arms
+                ctx.strokeStyle = '#000000';
+                // Left arm outlines - thicker upper arm
+                ctx.lineWidth = 12; // Thicker outline for upper arm
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.stroke();
+                ctx.lineWidth = 8; // Thinner outline for lower arm
+                ctx.beginPath();
+                ctx.moveTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
+                
+                // Right arm outlines - thicker upper arm
+                ctx.lineWidth = 12; // Thicker outline for upper arm
                 ctx.beginPath();
                 ctx.moveTo(rightShoulderX, rightShoulderY);
                 ctx.lineTo(rightElbowX, rightElbowY);
                 ctx.stroke();
-                
-                // Right lower arm (elbow to glove) - angled in
+                ctx.lineWidth = 8; // Thinner outline for lower arm
                 ctx.beginPath();
                 ctx.moveTo(rightElbowX, rightElbowY);
                 ctx.lineTo(rightGloveX, rightGloveY);
                 ctx.stroke();
                 
-                // Black outlines for the arms
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 10;
-                // Left arm outlines
+                // Redraw arms on top of outlines with muscle definition
+                ctx.strokeStyle = armColor;
+                // Left arm - thicker upper arm
+                ctx.lineWidth = 10; // Muscular upper arm
                 ctx.beginPath();
                 ctx.moveTo(leftShoulderX, leftShoulderY);
                 ctx.lineTo(leftElbowX, leftElbowY);
-                ctx.lineTo(leftGloveX, leftGloveY);
                 ctx.stroke();
-                // Right arm outlines
+                ctx.lineWidth = 6; // Thinner lower arm
                 ctx.beginPath();
-                ctx.moveTo(rightShoulderX, rightShoulderY);
-                ctx.lineTo(rightElbowX, rightElbowY);
-                ctx.lineTo(rightGloveX, rightGloveY);
+                ctx.moveTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
                 ctx.stroke();
                 
-                // Redraw arms on top of outlines
-                ctx.strokeStyle = armColor;
-                ctx.lineWidth = 8;
-                // Left arm
-                ctx.beginPath();
-                ctx.moveTo(leftShoulderX, leftShoulderY);
-                ctx.lineTo(leftElbowX, leftElbowY);
-                ctx.lineTo(leftGloveX, leftGloveY);
-                ctx.stroke();
-                // Right arm
+                // Right arm - thicker upper arm
+                ctx.lineWidth = 10; // Muscular upper arm
                 ctx.beginPath();
                 ctx.moveTo(rightShoulderX, rightShoulderY);
                 ctx.lineTo(rightElbowX, rightElbowY);
+                ctx.stroke();
+                ctx.lineWidth = 6; // Thinner lower arm
+                ctx.beginPath();
+                ctx.moveTo(rightElbowX, rightElbowY);
                 ctx.lineTo(rightGloveX, rightGloveY);
                 ctx.stroke();
                 
