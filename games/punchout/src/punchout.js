@@ -69,6 +69,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         tellTimer: 0,
         attacking: false,
         attackType: null,
+        attackHand: null,
         stunned: false,
         stunnedTimer: 0,
         knockedDown: false,
@@ -277,27 +278,32 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function executeOpponentAttack(pattern) {
+        // Set which hand to use for this attack
         switch(pattern) {
             case 'jab':
-                // Quick straight punch
+                // Quick straight punch - left hand
+                opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
                     player.health -= 15;
                 }
                 break;
             case 'hook':
-                // Side punch, can be dodged
+                // Side punch - right hand
+                opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
                     player.health -= 20;
                 }
                 break;
             case 'uppercut':
-                // Powerful upward punch
+                // Powerful upward punch - right hand
+                opponent.attackHand = 'right';
                 if (!player.blocking) {
                     player.health -= 25;
                 }
                 break;
             case 'rush':
-                // Multiple quick punches
+                // Multiple quick punches - alternating hands
+                opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
                     player.health -= 10;
                 }
@@ -709,34 +715,47 @@ async function createPunchOutGame(settings, callbacks = null) {
         const opponentGloveSize = 25;
         
         if (opponent.attacking) {
-            // Animated attack with impact effects
+            // Animated attack with impact effects - attacks go TOWARD player (downward)
             ctx.shadowColor = '#FF0000';
             ctx.shadowBlur = 15;
             
             const attackFrame = opponent.patternTimer - 120;
-            const attackExtend = Math.sin(attackFrame * 0.3) * 100;
+            const attackExtend = Math.sin(attackFrame * 0.3) * 120; // How far toward player
             
-            // Attack gloves extend toward player
-            ctx.fillRect(opponentCenterX - 50 - attackExtend, opponentCenterY - 10, opponentGloveSize + 15, opponentGloveSize);
-            ctx.fillRect(opponentCenterX + 25 + attackExtend, opponentCenterY - 10, opponentGloveSize + 15, opponentGloveSize);
+            // Draw attacking hand(s) based on attack type
+            if (opponent.attackHand === 'left' || opponent.attackHand === 'both') {
+                // Left glove attacking
+                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
+            } else {
+                // Left glove in normal position
+                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            }
             
-            // Impact lines
+            if (opponent.attackHand === 'right' || opponent.attackHand === 'both') {
+                // Right glove attacking
+                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
+            } else {
+                // Right glove in normal position
+                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            }
+            
+            // Impact lines going toward player (downward) - only where punching
             ctx.strokeStyle = '#FF0000';
             ctx.lineWidth = 3;
-            for (let i = 0; i < 5; i++) {
-                const lineX = opponentCenterX + (Math.random() - 0.5) * 100;
-                const lineY = opponentCenterY + (Math.random() - 0.5) * 60;
+            for (let i = 0; i < 3; i++) {
+                const lineX = opponentCenterX + (Math.random() - 0.5) * 40;
+                const lineY = opponentCenterY + 40 + (attackExtend * 0.5) + (i * 15);
                 ctx.beginPath();
-                ctx.moveTo(lineX - 20, lineY);
-                ctx.lineTo(lineX + 20, lineY);
+                ctx.moveTo(lineX - 10, lineY);
+                ctx.lineTo(lineX + 10, lineY);
                 ctx.stroke();
             }
             
             ctx.shadowBlur = 0;
         } else {
-            // Normal glove position
-            ctx.fillRect(opponentCenterX - 50, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
-            ctx.fillRect(opponentCenterX + 25, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+            // Normal glove position - both hands at ready
+            ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
         }
         
         // Draw tell indicator - much more visible
