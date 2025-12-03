@@ -950,49 +950,87 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.fillRect(opponentCenterX + 10, opponentCenterY - 25, opponentGloveSize, opponentGloveSize);
                 }
             } else {
-                // Normal stance - anatomically correct arms
-                ctx.fillStyle = armColor;
+                // Normal stance - anatomically correct angled arms
+                ctx.strokeStyle = armColor;
+                ctx.lineWidth = 8;
+                ctx.lineCap = 'round';
                 
                 // Left arm system (shoulder -> elbow -> glove)
                 const leftShoulderX = opponentCenterX - 35;
                 const leftShoulderY = opponentCenterY - 50;
-                const leftElbowX = opponentCenterX - 45;
+                const leftElbowX = opponentCenterX - 50; // Angled out from body
                 const leftElbowY = opponentCenterY - 30;
-                const leftGloveX = opponentCenterX - 35;
-                const leftGloveY = opponentCenterY - 25;
+                const leftGloveX = opponentCenterX - 35; // Angled back in toward body
+                const leftGloveY = opponentCenterY - 15;
                 
-                // Left upper arm (shoulder to elbow)
-                ctx.fillRect(leftShoulderX, leftShoulderY, 8, 20);
-                // Left lower arm (elbow to glove)
-                ctx.fillRect(leftElbowX, leftElbowY, 8, 15);
+                // Left upper arm (shoulder to elbow) - angled out
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.stroke();
+                
+                // Left lower arm (elbow to glove) - angled in
+                ctx.beginPath();
+                ctx.moveTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
                 
                 // Right arm system (shoulder -> elbow -> glove)
-                const rightShoulderX = opponentCenterX + 27;
+                const rightShoulderX = opponentCenterX + 35;
                 const rightShoulderY = opponentCenterY - 50;
-                const rightElbowX = opponentCenterX + 37;
+                const rightElbowX = opponentCenterX + 50; // Angled out from body
                 const rightElbowY = opponentCenterY - 30;
-                const rightGloveX = opponentCenterX + 10;
-                const rightGloveY = opponentCenterY - 25;
+                const rightGloveX = opponentCenterX + 35; // Angled back in toward body
+                const rightGloveY = opponentCenterY - 15;
                 
-                // Right upper arm (shoulder to elbow)
-                ctx.fillRect(rightShoulderX, rightShoulderY, 8, 20);
-                // Right lower arm (elbow to glove)
-                ctx.fillRect(rightElbowX, rightElbowY, 8, 15);
+                // Right upper arm (shoulder to elbow) - angled out
+                ctx.beginPath();
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightElbowX, rightElbowY);
+                ctx.stroke();
                 
-                // Outline all arm segments
+                // Right lower arm (elbow to glove) - angled in
+                ctx.beginPath();
+                ctx.moveTo(rightElbowX, rightElbowY);
+                ctx.lineTo(rightGloveX, rightGloveY);
+                ctx.stroke();
+                
+                // Black outlines for the arms
                 ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 10;
                 // Left arm outlines
-                ctx.strokeRect(leftShoulderX, leftShoulderY, 8, 20); // Upper arm
-                ctx.strokeRect(leftElbowX, leftElbowY, 8, 15); // Lower arm
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
                 // Right arm outlines
-                ctx.strokeRect(rightShoulderX, rightShoulderY, 8, 20); // Upper arm
-                ctx.strokeRect(rightElbowX, rightElbowY, 8, 15); // Lower arm
+                ctx.beginPath();
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightElbowX, rightElbowY);
+                ctx.lineTo(rightGloveX, rightGloveY);
+                ctx.stroke();
+                
+                // Redraw arms on top of outlines
+                ctx.strokeStyle = armColor;
+                ctx.lineWidth = 8;
+                // Left arm
+                ctx.beginPath();
+                ctx.moveTo(leftShoulderX, leftShoulderY);
+                ctx.lineTo(leftElbowX, leftElbowY);
+                ctx.lineTo(leftGloveX, leftGloveY);
+                ctx.stroke();
+                // Right arm
+                ctx.beginPath();
+                ctx.moveTo(rightShoulderX, rightShoulderY);
+                ctx.lineTo(rightElbowX, rightElbowY);
+                ctx.lineTo(rightGloveX, rightGloveY);
+                ctx.stroke();
                 
                 // Gloves
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(leftGloveX, leftGloveY, opponentGloveSize, opponentGloveSize);
-                ctx.fillRect(rightGloveX, rightGloveY, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(rightGloveX - opponentGloveSize/2, rightGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
             }
         }
         
