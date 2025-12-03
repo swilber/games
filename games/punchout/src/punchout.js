@@ -60,6 +60,9 @@ async function createPunchOutGame(settings, callbacks = null) {
     const opponent = {
         x: punchOutConfig.physics?.opponentX || 400,
         y: punchOutConfig.physics?.opponentY || 200,
+        targetX: 400, // Target position to walk to
+        walkingToPosition: true, // Whether opponent is walking to fighting position
+        fightingDistance: 150, // Distance from player to maintain
         width: 80,
         height: 120,
         health: fighters[currentFighter].health,
@@ -277,6 +280,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.attacking = false;
                 opponent.patternTimer = 0;
                 opponent.tellTimer = 0;
+                opponent.walkingToPosition = true; // Walk back to fighting position
                 opponent.health = Math.min(opponent.maxHealth, opponent.health + 20);
                 console.log('States after getting up:', {
                     gettingUp: opponent.gettingUp,
@@ -289,6 +293,25 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Only do AI behavior if not in special states
         if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp) {
+            // Handle opponent movement - walk toward fighting position
+            if (opponent.walkingToPosition) {
+                const targetY = player.y - 160; // Stop 160 pixels above Mac (50 pixels further back)
+                const distanceToTarget = Math.abs(opponent.y - targetY);
+                
+                if (distanceToTarget > 5) {
+                    // Walk toward target position (downward toward Mac)
+                    const walkSpeed = 2;
+                    if (opponent.y > targetY) {
+                        opponent.y -= walkSpeed;
+                    } else {
+                        opponent.y += walkSpeed;
+                    }
+                } else {
+                    // Reached fighting position
+                    opponent.walkingToPosition = false;
+                }
+            }
+            
             // Check if player is punching and decide whether to block
             if (player.punching && !opponent.blocking && !opponent.attacking) {
                 if (Math.random() < opponent.blockChance) {
