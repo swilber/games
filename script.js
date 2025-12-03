@@ -174,8 +174,6 @@ function generateConfigForm(gameType, config) {
         generateMemoryConfigForm(config, content);
     } else if (gameType === 'fake') {
         generateFakeConfigForm(config, content);
-    } else if (gameType === 'galaga') {
-        generateGalagaConfigForm(config, content);
     } else if (gameType === 'flappy') {
         generateFlappyConfigForm(config, content);
     } else if (gameType === 'frogger') {
@@ -358,29 +356,6 @@ function generateMemoryConfigForm(config, container) {
 }
 
 function generateFakeConfigForm(config, container) {
-    const sections = [
-        { key: 'gameplay', title: 'Gameplay Settings' },
-        { key: 'physics', title: 'Physics Settings' },
-        { key: 'visual', title: 'Visual Settings' }
-    ];
-    
-    sections.forEach(section => {
-        if (config[section.key]) {
-            const sectionDiv = document.createElement('div');
-            sectionDiv.className = 'config-section';
-            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
-            
-            Object.entries(config[section.key]).forEach(([key, value]) => {
-                const field = createConfigField(section.key, key, value);
-                sectionDiv.appendChild(field);
-            });
-            
-            container.appendChild(sectionDiv);
-        }
-    });
-}
-
-function generateGalagaConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' },
@@ -726,13 +701,6 @@ function getFallbackDifficulty(gameType, difficulty) {
             return {
                 speed: 5 + difficulty
             };
-        case 'galaga':
-            return {
-                enemySpeed: 1 + (difficulty * 0.2),
-                bulletSpeed: 5 + (difficulty * 0.5),
-                enemyCount: 20 + (difficulty * 2),
-                playerSpeed: 4
-            };
         case 'asteroids':
             return {
                 asteroidCount: Math.max(2, 2 + Math.floor(difficulty / 2)),
@@ -1029,8 +997,6 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createSnakeGame(settings, gameCallbacks);
         case 'fake':
             return await createFakeGame(settings, gameCallbacks);
-        case 'galaga':
-            return await createGalagaGame(settings, gameCallbacks);
         case 'breakout':
             return await createBreakoutGame(settings, gameCallbacks);
         case 'asteroids':
@@ -1104,7 +1070,6 @@ async function initializeLevel() {
         case 'pacman':
         case 'snake':
         case 'fake':
-        case 'galaga':
         case 'breakout':
         case 'asteroids':
         case 'spaceinvaders':

@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 15,
+    "totalLevels": 14,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -91,12 +91,6 @@
       "order": 14,
       "enabled": true,
       "type": "punchout"
-    },
-    {
-      "id": 15,
-      "order": 15,
-      "enabled": true,
-      "type": "galaga"
     }
   ]
 }

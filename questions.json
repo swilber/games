@@ -140,17 +140,6 @@
       "answer": "abc",
       "unlockQuestion": "What do you use to defend against the invaders?",
       "unlockAnswer": "abc"
-    },
-    {
-      "id": 15,
-      "order": 15,
-      "title": "Challenge 15: Galaga",
-      "description": "Classic arcade space shooter - destroy alien formations",
-      "type": "galaga",
-      "question": "What key do you press to shoot in Galaga?",
-      "answer": "abc",
-      "unlockQuestion": "What key do you press for a star punch?",
-      "unlockAnswer": "c"
     }
   ]
 }
