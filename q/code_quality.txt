@@ -1,0 +1,59 @@
+# Code Quality & Refactoring Monitor
+Last Updated: 2025-12-03T10:57:38.150-07:00
+
+## PURPOSE
+Regularly assess code quality and identify refactoring opportunities to maintain code health.
+
+## CODE SMELL CHECKLIST
+Q should check for these issues during development:
+
+### FUNCTION COMPLEXITY
+- [ ] Functions longer than 50 lines
+- [ ] Functions with more than 4 parameters
+- [ ] Deeply nested code (more than 3 levels)
+- [ ] Functions doing multiple things
+
+### DUPLICATION
+- [ ] Duplicate code blocks
+- [ ] Similar functions with slight variations
+- [ ] Repeated logic patterns
+- [ ] Copy-paste code sections
+
+### MAINTAINABILITY ISSUES
+- [ ] Hard-coded values that should be configurable
+- [ ] Magic numbers without explanation
+- [ ] Inconsistent naming conventions
+- [ ] Missing error handling
+- [ ] Overly complex conditional logic
+
+### FILE ORGANIZATION
+- [ ] Files growing too large (>500 lines)
+- [ ] Mixed concerns in single files
+- [ ] Unclear file structure
+- [ ] Missing documentation for complex logic
+
+## REFACTORING TRIGGERS
+**Prompt user for refactoring when:**
+- Adding new features becomes difficult due to code complexity
+- Bug fixes require changes in multiple unrelated places
+- Code duplication reaches 3+ instances
+- Functions become hard to understand or test
+- File sizes exceed reasonable limits
+
+## REFACTORING OPPORTUNITIES
+**Current codebase assessment:**
+- script.js: Large file (1100+ lines) - consider splitting by concern
+- Game creation functions: Some duplication in callback patterns
+- Configuration loading: Repeated patterns across games
+- Error handling: Inconsistent across different games
+
+## MAINTENANCE SCHEDULE
+- **After each major feature**: Quick smell check
+- **Weekly**: Full codebase review for refactoring opportunities
+- **Before major releases**: Comprehensive quality assessment
+
+## USER PROMPTS
+When issues are found, use prompts like:
+- "I've noticed [specific issue]. This could make future changes more difficult. Should we refactor this now?"
+- "The [file/function] is getting complex. Would you like me to suggest some improvements?"
+- "I see duplicate code in [locations]. Shall we consolidate this to improve maintainability?"

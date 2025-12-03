@@ -1,5 +1,5 @@
 # Coding Standards & Workflow
-Last Updated: 2025-12-03T10:53:32.213-07:00
+Last Updated: 2025-12-03T10:57:38.150-07:00
 
 ## Q FILE MAINTENANCE
 - **Update these /q files regularly** as new patterns emerge
@@ -7,6 +7,21 @@ Last Updated: 2025-12-03T10:53:32.213-07:00
 - **Prioritize actionable information** over historical details
 - **Add new files** if better organization is needed
 - **Keep information current** and relevant to ongoing work
+- **Update session_log.txt** with recent commands and context after significant work
+
+## CODE QUALITY MONITORING
+- **Check code_quality.txt regularly** for refactoring opportunities
+- **Assess code smells** during development work
+- **Prompt user for refactoring** when code becomes difficult to maintain
+- **Monitor file sizes** and function complexity
+- **Identify duplication** and suggest consolidation
+
+## SESSION LOG MAINTENANCE
+- Keep last 10-15 commands in session_log.txt
+- Update current session summary with major changes
+- Include enough context to recover from overflow
+- Remove old entries when they become irrelevant
+- Focus on actionable information for continuity
 
 ## BACKUP PROTOCOL
 1. Always create backups before making changes
@@ -20,6 +35,7 @@ Last Updated: 2025-12-03T10:53:32.213-07:00
 3. Check syntax after each modification
 4. Commit working states frequently
 5. Use meaningful commit messages
+6. **Assess code quality** after significant changes
 
 ## ERROR HANDLING
 1. Add minimal debug statements only when debugging
@@ -38,3 +54,4 @@ Last Updated: 2025-12-03T10:53:32.213-07:00
 - Avoid verbose implementations
 - Follow existing code patterns in the project
 - Maintain consistent indentation and formatting
+- **Proactively identify refactoring opportunities**

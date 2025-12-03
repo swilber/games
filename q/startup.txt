@@ -1,11 +1,24 @@
 # Q Startup Instructions
-Last Updated: 2025-12-03T10:53:32.213-07:00
+Last Updated: 2025-12-03T10:59:15.399-07:00
 
 ## HOW TO START A NEW Q SESSION
 Use this exact prompt:
 ```
 Please read and follow the instructions in /Users/P2176038/Desktop/greg/q/startup.txt and all related files in the /q directory before proceeding with any work.
 ```
+
+## CONTEXT OVERFLOW DETECTION
+**If Q seems to have lost context mid-conversation, the user should immediately use:**
+```
+Context overflow detected. Please read /Users/P2176038/Desktop/greg/q/startup.txt and /Users/P2176038/Desktop/greg/q/session_log.txt to recover context before continuing.
+```
+
+## CONTEXT OVERFLOW RECOVERY
+If starting due to context window overflow, **read session_log.txt first** to understand:
+- What was being worked on
+- Recent commands executed
+- Current project state
+- How to continue from where we left off
 
 ## IMPORTANT: Q FILE MANAGEMENT
 **All files in the /q directory are updatable by Q as needed.**
@@ -16,21 +29,27 @@ Q should:
 - Decide what information is useful now vs. useful for all time
 - Keep files current and practical for future sessions
 - Add new files if needed for better organization
+- **Update session_log.txt with recent commands and context**
+- **Monitor code quality and prompt for refactoring when needed**
 
 ## QUICK START
 1. Read all files in this /q directory before starting work
-2. Follow coding_standards.txt for all development work
-3. Check project_state.txt for current status
-4. Reference architecture.txt for system understanding
-5. Update relevant files as work progresses
+2. Check session_log.txt for recent context (especially after overflow)
+3. Follow coding_standards.txt for all development work
+4. Check project_state.txt for current status
+5. Reference architecture.txt for system understanding
+6. **Review code_quality.txt for refactoring opportunities**
+7. Update relevant files as work progresses
 
 ## FILE STRUCTURE
 - startup.txt (this file) - Main entry point and session instructions
+- session_log.txt - Recent commands and context for overflow recovery
 - coding_standards.txt - Development workflow and standards
 - project_state.txt - Current project status and recent changes
 - architecture.txt - System design and file structure
 - common_issues.txt - Known problems and solutions
 - recent_patterns.txt - Newly discovered patterns and learnings
+- code_quality.txt - Code smell monitoring and refactoring guidance
 
 ## CORE PRINCIPLE
-Always update these files as new information is discovered to maintain continuity across Q sessions. Keep information relevant and actionable.
+Always update these files as new information is discovered to maintain continuity across Q sessions. Keep information relevant and actionable. Proactively maintain code quality.
