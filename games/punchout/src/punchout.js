@@ -45,7 +45,10 @@ async function createPunchOutGame(settings, callbacks = null) {
         blocking: false,
         dodging: null, // 'left', 'right', or null
         punching: false,
-        punchType: null, // 'left', 'right', 'star'
+        punchType: null, // 'low', 'high', 'power', 'star'
+        punchHeight: 'body', // 'body' or 'head'
+        jumping: false,
+        jumpHeight: 0,
         animationFrame: 0
     };
     
@@ -110,25 +113,40 @@ async function createPunchOutGame(settings, callbacks = null) {
             case 'ArrowDown':
                 player.blocking = true;
                 break;
-            case 'KeyZ': // Left punch
+            case 'ShiftLeft': // Left punch
                 if (!player.blocking && !player.dodging && player.stamina > 10) {
                     player.punching = true;
-                    player.punchType = 'left';
-                    player.stamina -= 10;
+                    if (keys['ArrowUp']) {
+                        // High left punch
+                        player.punchType = 'high-left';
+                        player.punchHeight = 'head';
+                        player.jumping = true;
+                        player.jumpHeight = 20;
+                        player.stamina -= 15;
+                    } else {
+                        // Low left punch
+                        player.punchType = 'low-left';
+                        player.punchHeight = 'body';
+                        player.stamina -= 10;
+                    }
                 }
                 break;
-            case 'KeyX': // Right punch
-                if (!player.blocking && !player.dodging && player.stamina > 10) {
+            case 'ShiftRight': // Right punch
+                if (!player.blocking && !player.dodging && player.stamina > 15) {
                     player.punching = true;
-                    player.punchType = 'right';
-                    player.stamina -= 10;
-                }
-                break;
-            case 'KeyC': // Star punch
-                if (player.stars > 0 && !player.blocking && !player.dodging) {
-                    player.punching = true;
-                    player.punchType = 'star';
-                    player.stars--;
+                    if (keys['ArrowUp']) {
+                        // High right punch
+                        player.punchType = 'high-right';
+                        player.punchHeight = 'head';
+                        player.jumping = true;
+                        player.jumpHeight = 25;
+                        player.stamina -= 20;
+                    } else {
+                        // Low right punch
+                        player.punchType = 'low-right';
+                        player.punchHeight = 'body';
+                        player.stamina -= 15;
+                    }
                 }
                 break;
         }
@@ -185,10 +203,20 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.stamina += 0.5;
         }
         
+        // Handle jump animation
+        if (player.jumping) {
+            if (player.jumpHeight > 0) {
+                player.jumpHeight -= 2; // Fall down
+            } else {
+                player.jumping = false;
+                player.jumpHeight = 0;
+            }
+        }
+        
         // Handle punch animation
         if (player.punching) {
             player.animationFrame++;
-            if (player.animationFrame > 15) {
+            if (player.animationFrame > 25) { // Increased from 15 to 25 for slower animation
                 player.punching = false;
                 player.punchType = null;
                 player.animationFrame = 0;
@@ -313,7 +341,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     
     function checkCollisions() {
         // Player hitting opponent - simple state check
-        if (player.punching && player.animationFrame > 8 && player.animationFrame < 12) {
+        if (player.punching && player.animationFrame > 10 && player.animationFrame < 20) { // Adjusted timing for slower animation
             // Check if opponent is vulnerable (not blocking or dodging)
             if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp) {
                 let damage = 0;
@@ -323,23 +351,45 @@ async function createPunchOutGame(settings, callbacks = null) {
                 
                 if (hitSuccess) {
                     switch(player.punchType) {
-                        case 'left':
-                        case 'right':
-                            damage = 10;
-                            // Counter punch during tell gives star
+                        case 'low-left':
+                            damage = 8; // Lower damage for body shots
+                            if (opponent.tellTimer > 0) {
+                                player.stars = Math.min(player.stars + 1, player.maxStars);
+                                damage = 12;
+                                showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
+                            } else {
+                                showHitEffect(opponent.x, opponent.y - 80, "LEFT BODY!", '#FFFFFF');
+                            }
+                            break;
+                        case 'high-left':
+                            damage = 12; // Medium damage for head shots
+                            if (opponent.tellTimer > 0) {
+                                player.stars = Math.min(player.stars + 1, player.maxStars);
+                                damage = 18;
+                                showHitEffect(opponent.x, opponent.y - 80, "HEAD COUNTER!", '#FFD700');
+                            } else {
+                                showHitEffect(opponent.x, opponent.y - 80, "LEFT HEAD!", '#FFFFFF');
+                            }
+                            break;
+                        case 'low-right':
+                            damage = 10; // Right hand hits harder
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
                                 damage = 15;
-                                showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
+                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT COUNTER!", '#FFD700');
                             } else {
-                                showHitEffect(opponent.x, opponent.y - 80, "HIT!", '#FFFFFF');
+                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT BODY!", '#FFFFFF');
                             }
                             break;
-                        case 'star':
-                            damage = 30;
-                            opponent.stunned = true;
-                            opponent.stunnedTimer = 120;
-                            showHitEffect(opponent.x, opponent.y - 80, "STAR PUNCH!", '#FFFF00');
+                        case 'high-right':
+                            damage = 15; // High damage for right head shots
+                            if (opponent.tellTimer > 0) {
+                                player.stars = Math.min(player.stars + 1, player.maxStars);
+                                damage = 22;
+                                showHitEffect(opponent.x, opponent.y - 80, "POWER COUNTER!", '#FFD700');
+                            } else {
+                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT HEAD!", '#FF8800');
+                            }
                             break;
                     }
                     
@@ -527,7 +577,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (player.dodging === 'right') offsetX = 40;
         
         const playerCenterX = player.x + offsetX;
-        const playerCenterY = player.y - player.height/2;
+        const playerCenterY = player.y - player.height/2 - player.jumpHeight; // Apply jump offset
         
         // Draw player shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -547,35 +597,52 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillStyle = '#0000FF';
         ctx.fillRect(playerCenterX - 25, playerCenterY + 20, 50, 30);
         
-        // Gloves - much more visible
+        // Gloves - show different punch types
         ctx.fillStyle = '#FF0000';
         const gloveSize = 18;
         
         if (player.punching) {
-            // Animated punch with trail effect - punches go FORWARD toward opponent
+            // Animated punch with proper arms - punches go FORWARD toward opponent from very top of torso
             ctx.shadowColor = '#FF0000';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 5;
             
-            const punchExtend = Math.sin(player.animationFrame * 0.5) * 200;
+            const punchExtend = Math.sin(player.animationFrame * 0.4) * 60; // Slower animation (0.4 vs 0.8)
             
-            if (player.punchType === 'left') {
-                // Left punch goes forward toward opponent
-                ctx.fillRect(playerCenterX - 30, playerCenterY - 20 - punchExtend, gloveSize + 10, gloveSize);
-            } else if (player.punchType === 'right') {
-                // Right punch goes forward toward opponent  
-                ctx.fillRect(playerCenterX + 12, playerCenterY - 20 - punchExtend, gloveSize + 10, gloveSize);
-            } else if (player.punchType === 'star') {
-                // Star punch - both gloves forward toward opponent
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(playerCenterX - 30, playerCenterY - 25 - punchExtend, gloveSize + 15, gloveSize + 10);
-                ctx.fillRect(playerCenterX + 12, playerCenterY - 25 - punchExtend, gloveSize + 15, gloveSize + 10);
+            if (player.punchType === 'low-left') {
+                // Low left punch - left hand forward to body from shoulder
+                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX - 30, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
+            } else if (player.punchType === 'high-left') {
+                // High left punch - left hand forward to head from shoulder
+                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX - 30, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 70 - punchExtend, gloveSize, gloveSize);
+            } else if (player.punchType === 'low-right') {
+                // Low right punch - right hand forward to body from shoulder
+                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX + 22, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX + 17, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
+            } else if (player.punchType === 'high-right') {
+                // High right punch - right hand forward to head from shoulder
+                ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+                ctx.fillRect(playerCenterX + 22, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(playerCenterX + 17, playerCenterY - 70 - punchExtend, gloveSize, gloveSize);
             }
             
             ctx.shadowBlur = 0;
         } else {
-            // Normal glove position
-            ctx.fillRect(playerCenterX - 30, playerCenterY - 15, gloveSize, gloveSize);
-            ctx.fillRect(playerCenterX + 12, playerCenterY - 15, gloveSize, gloveSize);
+            // Normal stance - arms at shoulder level
+            ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+            ctx.fillRect(playerCenterX - 35, playerCenterY - 45, 25, 6); // Left arm at shoulder
+            ctx.fillRect(playerCenterX + 10, playerCenterY - 45, 25, 6); // Right arm at shoulder
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(playerCenterX - 40, playerCenterY - 50, gloveSize, gloveSize); // Left glove
+            ctx.fillRect(playerCenterX + 22, playerCenterY - 50, gloveSize, gloveSize); // Right glove
         }
         
         // Draw blocking stance with shield effect
@@ -835,7 +902,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Controls
         ctx.font = '14px Arial';
-        ctx.fillText('Z/X: Punch  C: Star Punch  ↓: Block  ←→: Dodge', 20, canvas.height - 20);
+        ctx.fillText('L-Shift: Left Punch  R-Shift: Right Punch  +↑: High Punch  ↓: Block  ←→: Dodge', 20, canvas.height - 20);
         
         // Win condition
         if (gameWon) {
