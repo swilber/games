@@ -213,7 +213,48 @@ async function createPunchOutGame(settings, callbacks = null) {
         }
     }
     
-    // Inverse kinematics function for opponent arms
+    // Animation keyframe system
+    function getUppercutKeyframe(attackFrame) {
+        const totalFrames = 40; // Much faster animation
+        const progress = Math.min(attackFrame / totalFrames, 1);
+        
+        console.log('Uppercut frame:', attackFrame, 'progress:', progress);
+        
+        // Define keyframes for uppercut animation - VERY dramatic
+        const keyframes = [
+            { time: 0.0, bodyDuck: 0, gloveY: -15, gloveX: 35 },        // Standing straight
+            { time: 0.25, bodyDuck: 80, gloveY: 120, gloveX: 0 },       // DEEP duck, glove WAY down
+            { time: 0.5, bodyDuck: 60, gloveY: 40, gloveX: -10 },       // Start rising, glove moving up fast
+            { time: 0.75, bodyDuck: 20, gloveY: -80, gloveX: -30 },     // Body rising, glove at face level
+            { time: 1.0, bodyDuck: 0, gloveY: -150, gloveX: -60 }       // Full extension, punch WAY up
+        ];
+        
+        // Find the two keyframes to interpolate between
+        let startFrame = keyframes[0];
+        let endFrame = keyframes[keyframes.length - 1];
+        
+        for (let i = 0; i < keyframes.length - 1; i++) {
+            if (progress >= keyframes[i].time && progress <= keyframes[i + 1].time) {
+                startFrame = keyframes[i];
+                endFrame = keyframes[i + 1];
+                break;
+            }
+        }
+        
+        // Calculate interpolation factor
+        const segmentProgress = (progress - startFrame.time) / (endFrame.time - startFrame.time);
+        const t = Math.max(0, Math.min(1, segmentProgress || 0));
+        
+        // Interpolate between keyframes
+        const result = {
+            bodyDuck: startFrame.bodyDuck + (endFrame.bodyDuck - startFrame.bodyDuck) * t,
+            gloveY: startFrame.gloveY + (endFrame.gloveY - startFrame.gloveY) * t,
+            gloveX: startFrame.gloveX + (endFrame.gloveX - startFrame.gloveX) * t
+        };
+        
+        console.log('Keyframe result:', result);
+        return result;
+    }
     function calculateArmIK(shoulderX, shoulderY, targetX, targetY, upperArmLength = 25, lowerArmLength = 20) {
         const dx = targetX - shoulderX;
         const dy = targetY - shoulderY;
@@ -391,8 +432,10 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             }
             
-            // Reset pattern
-            if (opponent.patternTimer > 180) {
+            // Reset pattern - longer duration for uppercuts
+            const pattern = opponent.patterns[opponent.currentPattern];
+            const resetTime = pattern === 'uppercut' ? 240 : 180; // Longer for uppercuts
+            if (opponent.patternTimer > resetTime) {
                 opponent.patternTimer = 0;
                 opponent.attacking = false;
                 opponent.tellTimer = 0;
@@ -834,16 +877,16 @@ async function createPunchOutGame(settings, callbacks = null) {
             const attackProgress = Math.sin(attackFrame * 0.3);
             stepOffset = Math.abs(attackProgress) * 20; // Step forward during punch
             
-            // Add ducking for uppercuts
+            // Add keyframe-based ducking for uppercuts
             const pattern = opponent.patterns[opponent.currentPattern];
             if (pattern === 'uppercut') {
-                const duckAmount = Math.max(0, Math.sin(attackFrame * 0.2) * 30); // Duck down first
-                duckOffset = duckAmount;
+                const keyframe = getUppercutKeyframe(attackFrame);
+                duckOffset = keyframe.bodyDuck; // Use keyframe ducking value
             }
         }
         
         const opponentCenterX = opponent.x;
-        const opponentCenterY = opponent.y + stepOffset + duckOffset; // Step forward AND duck down
+        const opponentCenterY = opponent.y + stepOffset + duckOffset; // Step forward AND duck based on keyframes
         
         // Debug logging
         if (opponent.knockedDown || opponent.gettingUp) {
@@ -1156,14 +1199,17 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.fillRect(rightIK.targetX - opponentGloveSize/2, rightIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 }
             } else if (pattern === 'uppercut') {
-                // Uppercut - duck down then swing up from below (body ducking handled above)
-                const uppercutRise = Math.max(0, Math.sin((attackFrame - 30) * 0.4) * 80); // Rise up motion
+                // Uppercut with proper keyframe animation
+                const keyframe = getUppercutKeyframe(attackFrame);
+                console.log('Using keyframe for uppercut:', keyframe);
                 
-                // Target comes up from below - right hand only
-                const uppercutTargetX = opponentCenterX + 10;
-                const uppercutTargetY = currentOpponentY + 60 - uppercutRise; // Starts low, swings up
+                // Apply keyframe values - glove position is RELATIVE to the ducked body position
+                const uppercutTargetX = opponentCenterX + keyframe.gloveX;
+                const uppercutTargetY = opponentCenterY - 50 + keyframe.gloveY; // Relative to shoulder, not screen
                 
-                // Right uppercut only (dominant hand)
+                console.log('Uppercut target:', uppercutTargetX, uppercutTargetY);
+                
+                // Right uppercut only (dominant hand) with keyframe-based IK
                 const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, uppercutTargetX, uppercutTargetY);
                 
                 // Left arm stays in guard
@@ -1197,38 +1243,43 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.lineTo(leftGloveX, leftGloveY);
                 ctx.stroke();
                 
-                // Draw uppercut arm (right hand)
-                ctx.strokeStyle = '#FF0000';
-                ctx.lineWidth = 16;
+                // Draw uppercut arm (right hand) with keyframe animation
+                const intensity = Math.min(1, attackFrame / 30); // Build intensity over time
+                ctx.strokeStyle = `rgba(255, 0, 0, ${0.5 + intensity * 0.5})`;
+                ctx.lineWidth = 14 + intensity * 4; // Arm gets thicker as punch builds
                 ctx.beginPath();
                 ctx.moveTo(rightShoulderX, rightShoulderY);
                 ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
                 ctx.stroke();
-                ctx.lineWidth = 12;
+                ctx.lineWidth = 10 + intensity * 4;
                 ctx.beginPath();
                 ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
                 ctx.lineTo(rightIK.targetX, rightIK.targetY);
                 ctx.stroke();
                 
                 ctx.strokeStyle = armColor;
-                ctx.lineWidth = 14;
+                ctx.lineWidth = 12 + intensity * 2;
                 ctx.beginPath();
                 ctx.moveTo(rightShoulderX, rightShoulderY);
                 ctx.lineTo(rightIK.elbowX, rightIK.elbowY);
                 ctx.stroke();
-                ctx.lineWidth = 10;
+                ctx.lineWidth = 8 + intensity * 2;
                 ctx.beginPath();
                 ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
                 ctx.lineTo(rightIK.targetX, rightIK.targetY);
                 ctx.stroke();
                 
-                // Gloves
+                // Gloves with intensity-based effects
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
-                ctx.fillStyle = '#FF0000';
+                
+                // Uppercut glove with progressive effects
+                const glowIntensity = intensity * 15;
+                ctx.fillStyle = `rgba(255, 0, 0, ${0.7 + intensity * 0.3})`;
                 ctx.shadowColor = '#FF0000';
-                ctx.shadowBlur = 10;
-                ctx.fillRect(rightIK.targetX - (opponentGloveSize + 8)/2, rightIK.targetY - (opponentGloveSize + 8)/2, opponentGloveSize + 8, opponentGloveSize + 8);
+                ctx.shadowBlur = glowIntensity;
+                const gloveSize = opponentGloveSize + intensity * 8;
+                ctx.fillRect(rightIK.targetX - gloveSize/2, rightIK.targetY - gloveSize/2, gloveSize, gloveSize);
                 ctx.shadowBlur = 0;
             } else {
                 // Default punch animation - punch downward toward Mac
