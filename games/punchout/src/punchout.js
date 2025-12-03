@@ -47,6 +47,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         punching: false,
         punchType: null, // 'low', 'high', 'power', 'star'
         punchHeight: 'body', // 'body' or 'head'
+        punchCooldown: 0, // Cooldown timer for punches
         jumping: false,
         jumpHeight: 0,
         animationFrame: 0
@@ -114,8 +115,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 player.blocking = true;
                 break;
             case 'ShiftLeft': // Left punch
-                if (!player.blocking && !player.dodging && player.stamina > 10) {
+                if (!player.blocking && !player.dodging && player.stamina > 10 && player.punchCooldown <= 0) {
                     player.punching = true;
+                    player.punchCooldown = 45; // 45 frame cooldown (3/4 second)
                     if (keys['ArrowUp']) {
                         // High left punch
                         player.punchType = 'high-left';
@@ -132,8 +134,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'ShiftRight': // Right punch
-                if (!player.blocking && !player.dodging && player.stamina > 15) {
+                if (!player.blocking && !player.dodging && player.stamina > 15 && player.punchCooldown <= 0) {
                     player.punching = true;
+                    player.punchCooldown = 45; // 45 frame cooldown (3/4 second)
                     if (keys['ArrowUp']) {
                         // High right punch
                         player.punchType = 'high-right';
@@ -221,6 +224,11 @@ async function createPunchOutGame(settings, callbacks = null) {
                 player.punchType = null;
                 player.animationFrame = 0;
             }
+        }
+        
+        // Handle punch cooldown
+        if (player.punchCooldown > 0) {
+            player.punchCooldown--;
         }
         
         // Handle dodge animation
