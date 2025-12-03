@@ -24,6 +24,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     // Game state
     let gameRunning = false;
     let gameWon = false;
+    let gameTKO = false;
     let gameStarted = false;
     let currentRound = 1;
     let roundTime = punchOutConfig.gameplay?.roundTime || 180;
@@ -127,7 +128,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Handle button mashing to get up when knocked down
         if (player.knockedDown && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) {
             player.buttonMashCount++;
-            player.getUpProgress = Math.min(1, player.buttonMashCount / 50); // Need 50 button presses
+            // Increase difficulty with each knockdown: 50, 75, 100 button presses
+            const requiredPresses = 50 + (player.knockdownCount - 1) * 25;
+            player.getUpProgress = Math.min(1, player.buttonMashCount / requiredPresses);
             
             // Move Mac up from bottom of screen based on progress
             const originalY = 450; // Original player Y position
@@ -327,14 +330,14 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.knockdownTimer--;
             
             if (player.knockdownTimer <= 0) {
-                if (player.knockdownCount >= 3) {
-                    // TKO - player can't get up after 3 knockdowns
-                    loseFight();
+                if (player.knockdownCount > 3) {
+                    // TKO - player can't get up after more than 3 knockdowns
+                    gameTKO = true;
+                    gameRunning = false;
                     return;
                 } else {
-                    // Time ran out, player loses
-                    loseFight();
-                    return;
+                    // Time ran out but player can still try to get up, just reset timer
+                    player.knockdownTimer = 600; // Give another chance
                 }
             }
             return; // Don't process other player actions while knocked down
@@ -691,6 +694,21 @@ async function createPunchOutGame(settings, callbacks = null) {
                     player.knockedDown = true;
                     player.knockdownTimer = 600; // 10 seconds to get up
                     player.knockdownCount++;
+                    
+                    // Check for TKO immediately
+                    if (player.knockdownCount > 3) {
+                        gameTKO = true;
+                        gameRunning = false;
+                        
+                        // Restart after showing TKO
+                        setTimeout(() => {
+                            gameTKO = false;
+                            resetFight();
+                        }, 3000);
+                        
+                        return;
+                    }
+                    
                     player.health = 1; // Keep at 1 so player doesn't die immediately
                     player.y = 650; // Move Mac below the screen
                     player.getUpProgress = 0; // Start at bottom
@@ -823,14 +841,35 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Draw opponent first (behind player)
         drawOpponent();
         
-        // Draw player
-        drawPlayer();
+        // Draw player (skip if TKO)
+        if (!gameTKO) {
+            drawPlayer();
+        }
         
         // Draw hit effects
         drawHitEffects();
         
-        // Draw UI
-        drawUI();
+        // Draw UI (skip if TKO)
+        if (!gameTKO) {
+            drawUI();
+        }
+        
+        // Draw TKO overlay
+        if (gameTKO) {
+            // Darken the screen
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw TKO text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '72px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('TKO', canvas.width/2, canvas.height/2 - 40);
+            
+            // Draw Game Over text
+            ctx.font = '36px Arial';
+            ctx.fillText('Game Over', canvas.width/2, canvas.height/2 + 40);
+        }
         
         ctx.restore();
     }
@@ -1698,6 +1737,10 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Stars
         ctx.fillText(`Stars: ${'★'.repeat(player.stars)}`, canvas.width - 150, 30);
+        
+        // Knockdown counter
+        ctx.fillStyle = player.knockdownCount >= 2 ? '#FF0000' : '#FFFFFF';
+        ctx.fillText(`Knockdowns: ${player.knockdownCount}/3`, canvas.width - 150, 55);
         
         // Controls
         ctx.font = '14px Arial';
