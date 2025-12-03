@@ -113,7 +113,10 @@ async function createPunchOutGame(settings, callbacks = null) {
             speed: 0.5, // Slower movement
             patterns: ["jab", "jab", "jab", "jab", "jab", "uppercut"], // Only 1 in 6 attacks is uppercut
             tells: ["blink"],
-            bodyShape: "thin"
+            bodyShape: "thin",
+            blockChance: 0.1, // Very poor blocking
+            attackFrequency: 0.3, // Attacks less often
+            reactionTime: 180 // Slow reactions (3 seconds)
         },
         { 
             name: "Von Kaiser", 
@@ -121,15 +124,22 @@ async function createPunchOutGame(settings, callbacks = null) {
             speed: 0.4, // Slower due to weight
             patterns: ["jab", "jab", "uppercut", "jab"], 
             tells: ["step_back"],
-            bodyShape: "fat"
+            bodyShape: "fat",
+            blockChance: 0.35, // Better blocking
+            attackFrequency: 0.5, // Moderate attack rate
+            reactionTime: 120 // Faster reactions (2 seconds)
         },
         { 
             name: "Piston Honda", 
             health: 100, 
             speed: 0.7, // Fast and strong
-            patterns: ["jab", "uppercut", "jab", "uppercut"], 
+            patterns: ["uppercut", "jab", "uppercut", "uppercut", "jab", "uppercut"], // More uppercuts
             tells: ["crouch"],
-            bodyShape: "tough"
+            bodyShape: "tough",
+            blockChance: 0.8, // Much better blocking (was 0.6)
+            attackFrequency: 0.8, // Very aggressive
+            reactionTime: 60, // Very fast reactions (1 second)
+            punchDamage: 25 // Hits much harder (default is 15)
         }
     ];
     
@@ -170,6 +180,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         blockPatterns: fighters[currentFighter].blockPatterns || ["none"],
         currentBlockPattern: 0,
         blockPatternTimer: 0,
+        attackFrequency: fighters[currentFighter].attackFrequency || 0.5,
+        reactionTime: fighters[currentFighter].reactionTime || 120,
         danceTimer: 0,
         danceDirection: 1, // 1 for right, -1 for left
         stunned: false,
@@ -613,26 +625,36 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             }
             
-            // AI pattern behavior
+            // AI pattern behavior - enhanced with difficulty
             opponent.patternTimer++;
             
-            // Show tell before attacking
-            if (opponent.patternTimer > 120 && opponent.patternTimer < 150) {
+            // Smarter attack timing based on player state and difficulty
+            const shouldAttack = Math.random() < opponent.attackFrequency;
+            const playerVulnerable = !player.blocking && !player.dodging && player.punchCooldown <= 0;
+            
+            // Show tell before attacking (varies by reaction time)
+            const tellStartTime = opponent.reactionTime;
+            const tellDuration = Math.max(30, opponent.reactionTime / 4); // Tell duration based on reaction time
+            
+            if (opponent.patternTimer > tellStartTime && opponent.patternTimer < tellStartTime + tellDuration) {
                 opponent.tellTimer++;
             }
             
-            // Execute attack (delayed for easier difficulty)
-            if (opponent.patternTimer > 200) {
-                if (!opponent.attacking) {
+            // Execute attack (timing based on difficulty)
+            const attackTime = tellStartTime + tellDuration + 30; // Small delay after tell
+            if (opponent.patternTimer > attackTime && shouldAttack) {
+                if (!opponent.attacking && playerVulnerable) {
                     const pattern = opponent.patterns[opponent.currentPattern];
                     executeOpponentAttack(pattern);
                     opponent.attacking = true;
                 }
             }
             
-            // Reset pattern - longer duration for uppercuts and overall slower
+            // Reset pattern - timing varies by difficulty
             const pattern = opponent.patterns[opponent.currentPattern];
-            const resetTime = pattern === 'uppercut' ? 360 : 300; // Much longer for easier difficulty
+            const baseResetTime = pattern === 'uppercut' ? 240 : 180;
+            const resetTime = baseResetTime + (300 - opponent.reactionTime); // Faster fighters reset quicker
+            
             if (opponent.patternTimer > resetTime) {
                 opponent.patternTimer = 0;
                 opponent.attacking = false;
@@ -655,34 +677,29 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Quick straight punch - left hand
                 opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
-                    player.health -= 15;
+                    player.health -= opponent.punchDamage || 15;
                 }
                 break;
             case 'uppercut':
                 // Powerful uppercut - always use dominant hand (right)
                 opponent.attackHand = 'right';
                 console.log('Uppercut with dominant hand:', opponent.attackHand);
-                // Damage is handled in collision detection for uppercuts
+                if (!player.blocking) {
+                    player.health -= (opponent.punchDamage || 15) + 10; // Uppercut does +10 damage
+                }
                 break;
             case 'hook':
                 // Side punch - right hand
                 opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
-                    player.health -= 20;
-                }
-                break;
-            case 'uppercut':
-                // Powerful upward punch - right hand
-                opponent.attackHand = 'right';
-                if (!player.blocking) {
-                    player.health -= 25;
+                    player.health -= (opponent.punchDamage || 15) + 5; // Hook does +5 damage
                 }
                 break;
             case 'rush':
                 // Multiple quick punches - alternating hands
                 opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
-                    player.health -= 10;
+                    player.health -= Math.max(10, (opponent.punchDamage || 15) - 5); // Rush does -5 damage but min 10
                 }
                 break;
         }
@@ -2273,6 +2290,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         currentFighter = Math.min(currentFighter, fighters.length - 1);
         const fighter = fighters[currentFighter];
         
+        // Reset all opponent properties
         opponent.health = fighter.health;
         opponent.maxHealth = fighter.health;
         opponent.name = fighter.name;
@@ -2280,6 +2298,32 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.speed = fighter.speed;
         opponent.patterns = fighter.patterns;
         opponent.tells = fighter.tells;
+        opponent.blockChance = fighter.blockChance || 0.3;
+        opponent.attackFrequency = fighter.attackFrequency || 0.5;
+        opponent.reactionTime = fighter.reactionTime || 120;
+        opponent.punchDamage = fighter.punchDamage || 15;
+        
+        // Reset opponent state completely
+        opponent.x = 400;
+        opponent.y = 200;
+        opponent.knockedDown = false;
+        opponent.knockdownTimer = 0;
+        opponent.knockdownCount = 0;
+        opponent.gettingUp = false;
+        opponent.getUpTimer = 0;
+        opponent.stunned = false;
+        opponent.stunnedTimer = 0;
+        opponent.attacking = false;
+        opponent.attackType = null;
+        opponent.attackHand = null;
+        opponent.blocking = false;
+        opponent.blockType = null;
+        opponent.patternTimer = 0;
+        opponent.tellTimer = 0;
+        opponent.currentPattern = 0;
+        opponent.walkingToPosition = true;
+        opponent.danceTimer = 0;
+        opponent.danceDirection = 1;
         
         resetFight();
     }
@@ -2612,6 +2656,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         const fighterData = fighters[currentFighter];
         opponent.name = fighterData.name;
         opponent.bodyShape = fighterData.bodyShape || "tough";
+        opponent.blockChance = fighterData.blockChance || 0.3;
+        opponent.attackFrequency = fighterData.attackFrequency || 0.5;
+        opponent.reactionTime = fighterData.reactionTime || 120;
         opponent.x = 400;
         opponent.y = 200;
         opponent.width = fighterData.width || 80;
@@ -2655,6 +2702,14 @@ async function createPunchOutGame(settings, callbacks = null) {
         player.blocking = false;
         player.dodging = null;
         player.punching = false;
+        player.knockedDown = false;
+        player.knockdownTimer = 0;
+        player.knockdownCount = 0;
+        player.gettingUp = false;
+        player.getUpTimer = 0;
+        player.buttonMashCount = 0;
+        player.getUpProgress = 0;
+        player.y = 450; // Reset position
         
         opponent.currentPattern = 0;
         opponent.patternTimer = 0;
