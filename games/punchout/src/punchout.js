@@ -74,6 +74,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         attacking: false,
         attackType: null,
         attackHand: null,
+        blocking: false,
+        blockType: null, // 'high' or 'low'
+        blockChance: Math.min(0.2 + currentFighter * 0.15, 0.8), // Progressive blocking skill
         stunned: false,
         stunnedTimer: 0,
         knockedDown: false,
@@ -286,6 +289,25 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Only do AI behavior if not in special states
         if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp) {
+            // Check if player is punching and decide whether to block
+            if (player.punching && !opponent.blocking && !opponent.attacking) {
+                if (Math.random() < opponent.blockChance) {
+                    opponent.blocking = true;
+                    // Block high or low based on player's punch type
+                    if (player.punchType && player.punchType.includes('high')) {
+                        opponent.blockType = 'high';
+                    } else {
+                        opponent.blockType = 'low';
+                    }
+                }
+            }
+            
+            // End blocking after punch animation
+            if (opponent.blocking && !player.punching) {
+                opponent.blocking = false;
+                opponent.blockType = null;
+            }
+            
             // AI pattern behavior
             opponent.patternTimer++;
             
@@ -355,7 +377,19 @@ async function createPunchOutGame(settings, callbacks = null) {
                 let damage = 0;
                 let hitSuccess = true;
                 
-                // TODO: Add opponent blocking/dodging logic here when implemented
+                // Check if opponent blocks the punch
+                if (opponent.blocking) {
+                    const punchHeight = player.punchType && player.punchType.includes('high') ? 'high' : 'low';
+                    if (opponent.blockType === punchHeight) {
+                        // Successful block
+                        hitSuccess = false;
+                        showHitEffect(opponent.x, opponent.y - 40, "BLOCKED!", '#FFFF00');
+                        // End the punch early
+                        player.punching = false;
+                        player.punchType = null;
+                        player.animationFrame = 0;
+                    }
+                }
                 
                 if (hitSuccess) {
                     switch(player.punchType) {
@@ -684,15 +718,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.shadowBlur = 0;
         }
         
-        // Draw hit detection area (debug visualization)
-        if (player.punching) {
-            ctx.strokeStyle = 'rgba(255,255,0,0.5)';
-            ctx.lineWidth = 2;
-            const hitboxX = playerCenterX + (player.punchType === 'left' ? -80 : 60);
-            const hitboxY = playerCenterY - 30;
-            ctx.strokeRect(hitboxX, hitboxY, 40, 40);
-        }
-        
         ctx.restore();
     }
     
@@ -839,9 +864,23 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             ctx.shadowBlur = 0;
         } else {
-            // Normal glove position - both hands at ready
-            ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
-            ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            // Normal glove position or blocking
+            if (opponent.blocking) {
+                // Blocking stance - gloves positioned defensively
+                if (opponent.blockType === 'high') {
+                    // High block - gloves up near head
+                    ctx.fillRect(opponentCenterX - 25, opponentCenterY - 90, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 5, opponentCenterY - 90, opponentGloveSize, opponentGloveSize);
+                } else {
+                    // Low block - gloves down near body
+                    ctx.fillRect(opponentCenterX - 25, opponentCenterY - 20, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 5, opponentCenterY - 20, opponentGloveSize, opponentGloveSize);
+                }
+            } else {
+                // Normal glove position - both hands at ready
+                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+            }
         }
         
         // Draw tell indicator - much more visible
@@ -868,12 +907,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             ctx.shadowBlur = 0;
         }
-        
-        // Draw opponent hitbox
-        ctx.strokeStyle = 'rgba(0,255,0,0.3)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(opponentCenterX - 40, opponentCenterY - 60, 80, 80);
-        }
+        } // Close the else if (!opponent.knockedDown) block
         
         ctx.restore();
     }
