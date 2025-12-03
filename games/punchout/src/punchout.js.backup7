@@ -26,9 +26,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     let gameWon = false;
     let gameTKO = false;
     let gameOver = false;
-    let levelComplete = false;
-    let showingTraining = false;
-    let trainingStartTime = 0;
     let victoryType = null; // 'KO', 'TKO', or null
     let gameStarted = false;
     let currentRound = 1;
@@ -160,20 +157,9 @@ async function createPunchOutGame(settings, callbacks = null) {
     function handleKeyDown(e) {
         keys[e.code] = true;
         
-        // Debug logging
-        console.log('Key pressed:', e.code, 'levelComplete:', levelComplete, 'gameOver:', gameOver);
-        
         // Handle restart on game over
         if (gameOver && e.code === 'KeyR') {
-            console.log('Restarting game...');
             restartGame();
-            return;
-        }
-        
-        // Handle level completion
-        if (levelComplete && e.code === 'Space') {
-            console.log('Starting training animation...');
-            startTrainingAnimation();
             return;
         }
         
@@ -741,15 +727,17 @@ async function createPunchOutGame(settings, callbacks = null) {
                             gameWon = true;
                             victoryType = 'TKO';
                             
-                            // Check if there are more fighters
-                            if (currentFighter < fighters.length - 1) {
-                                levelComplete = true;
-                            } else {
-                                // Won all fights - complete game
-                                if (callbacks && callbacks.onGameComplete) {
-                                    callbacks.onGameComplete('punchout', { completed: true });
+                            // Continue to next fighter after delay
+                            setTimeout(() => {
+                                if (currentFighter < fighters.length - 1) {
+                                    currentFighter++;
+                                    resetForNextFighter();
+                                } else {
+                                    if (callbacks && callbacks.onGameComplete) {
+                                        callbacks.onGameComplete('punchout', { completed: true });
+                                    }
                                 }
-                            }
+                            }, 4000);
                             
                             // showHitEffect(opponent.x, opponent.y - 100, "FAST TKO!", '#FFD700');
                         } else {
@@ -869,8 +857,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function render() {
-        console.log('render called - showingTraining:', showingTraining, 'gameRunning:', gameRunning);
-        
         ctx.save();
         
         // Apply screen shake
@@ -1100,13 +1086,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 36px "Courier New", monospace';
             ctx.fillText('You Win!', canvas.width/2, canvas.height/2 + 40);
-            
-            // Show level completion message if applicable
-            if (levelComplete) {
-                ctx.fillStyle = '#FFFF00';
-                ctx.font = 'bold 24px "Courier New", monospace';
-                ctx.fillText('Press Spacebar to Face the Next Fighter', canvas.width/2, canvas.height/2 + 100);
-            }
         }
         
         // Draw game over overlay
@@ -1125,12 +1104,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = '#FFFFFF';
             ctx.font = 'bold 24px "Courier New", monospace';
             ctx.fillText('Press R to Restart Game', canvas.width/2, canvas.height/2 + 40);
-        }
-        
-        // Draw training animation
-        if (showingTraining) {
-            console.log('About to call drawTrainingAnimation');
-            drawTrainingAnimation();
         }
         
         ctx.restore();
@@ -2092,7 +2065,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function gameLoop() {
-        if (gameRunning || showingTraining) {
+        if (gameRunning) {
             update();
             render();
             requestAnimationFrame(gameLoop);
@@ -2104,19 +2077,18 @@ async function createPunchOutGame(settings, callbacks = null) {
         gameWon = true;
         victoryType = 'KO'; // Regular knockout
         
-        console.log('winFight called - currentFighter:', currentFighter, 'fighters.length:', fighters.length);
-        
-        // Check if there are more fighters
-        if (currentFighter < fighters.length - 1) {
-            levelComplete = true;
-            console.log('Level complete set to true');
-        } else {
-            // Won all fights - complete game
-            console.log('All fights won - completing game');
-            if (callbacks && callbacks.onGameComplete) {
-                callbacks.onGameComplete('punchout', { completed: true });
+        setTimeout(() => {
+            if (currentFighter < fighters.length - 1) {
+                // Next fighter
+                currentFighter++;
+                resetForNextFighter();
+            } else {
+                // Won all fights
+                if (callbacks && callbacks.onGameComplete) {
+                    callbacks.onGameComplete('punchout', { completed: true });
+                }
             }
-        }
+        }, 2000);
     }
     
     function loseFight() {
@@ -2151,293 +2123,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         resetFight();
     }
     
-    function startTrainingAnimation() {
-        console.log('startTrainingAnimation called');
-        levelComplete = false;
-        showingTraining = true;
-        trainingStartTime = Date.now();
-        gameRunning = true; // Keep game loop running during training
-        
-        console.log('Training state set - showingTraining:', showingTraining, 'trainingStartTime:', trainingStartTime);
-        
-        // Restart the game loop since it may have stopped
-        gameLoop();
-        
-        // Auto-advance after 10 seconds
-        const timeoutId = setTimeout(() => {
-            console.log('Training timeout reached after 10 seconds, ending animation');
-            endTrainingAnimation();
-        }, 10000);
-        
-        console.log('Training timeout set with ID:', timeoutId);
-    }
-    
-    function endTrainingAnimation() {
-        console.log('endTrainingAnimation called');
-        showingTraining = false;
-        currentFighter++;
-        console.log('Moving to next fighter:', currentFighter);
-        resetForNextFighter();
-    }
-    
-    function drawTrainingAnimation() {
-        console.log('drawTrainingAnimation called');
-        
-        // Fill entire screen with sky blue background
-        ctx.fillStyle = '#87CEEB';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Calculate animation progress (0 to 1 over 10 seconds)
-        const elapsed = (Date.now() - trainingStartTime) / 1000;
-        const progress = elapsed / 10;
-        
-        // Draw moving clouds (slowest)
-        drawClouds(progress);
-        
-        // Draw distant city skyline (barely moving)
-        drawCitySkyline(progress);
-        
-        // Draw water below skyline (slow movement)
-        drawWater(progress);
-        
-        // Draw grass foreground (medium movement)
-        drawGrass(progress);
-        
-        // Draw moving road (fastest movement)
-        drawMovingRoad(progress);
-        
-        // Draw trainer on bike
-        drawTrainerOnBike(progress);
-        
-        // Draw Little Mac running behind
-        drawRunningMac(progress);
-        
-        // Draw "TRAINING MONTAGE" text
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 48px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeText('TRAINING MONTAGE', canvas.width/2, 100);
-        ctx.fillText('TRAINING MONTAGE', canvas.width/2, 100);
-    }
-    
-    function drawClouds(progress) {
-        ctx.fillStyle = '#FFFFFF';
-        const cloudSpeed = 10; // Very slow
-        
-        // Draw several clouds that move slowly
-        for (let i = 0; i < 5; i++) {
-            const x = (i * 200 - progress * cloudSpeed) % (canvas.width + 100);
-            const y = 50 + i * 15;
-            
-            // Simple cloud shape
-            ctx.beginPath();
-            ctx.arc(x, y, 25, 0, Math.PI * 2);
-            ctx.arc(x + 20, y, 30, 0, Math.PI * 2);
-            ctx.arc(x + 40, y, 25, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-    
-    function drawCitySkyline(progress) {
-        const skylineSpeed = 50; // Increased from 5 to make movement visible
-        const baseY = canvas.height - 250;
-        
-        // Draw multiple layers of skyscrapers with different shades
-        const layers = [
-            { buildings: 25, maxHeight: 120, color: '#CCCCCC', offset: 0 }, // Back layer - lightest
-            { buildings: 20, maxHeight: 140, color: '#AAAAAA', offset: 50 }, // Middle layer
-            { buildings: 15, maxHeight: 160, color: '#888888', offset: 100 }, // Front layer - darkest
-        ];
-        
-        layers.forEach((layer, layerIndex) => {
-            for (let i = 0; i < layer.buildings; i++) {
-                // Use building index to create consistent but more random values
-                const seed = (i * 17 + layerIndex * 31) % 97; // Better pseudo-random
-                const x = (i * 60 + layer.offset - progress * skylineSpeed) % (canvas.width + 300) - 150;
-                const height = 80 + (seed * 7 + (seed * seed) % 23) % layer.maxHeight; // More random height
-                const width = 40 + (seed % 23) * 1.3; // Consistent width based on seed
-                
-                // Vary the shade within the layer consistently
-                const shade = ((seed % 40) - 20);
-                const r = parseInt(layer.color.substr(1, 2), 16) + shade;
-                const g = parseInt(layer.color.substr(3, 2), 16) + shade;
-                const b = parseInt(layer.color.substr(5, 2), 16) + shade;
-                
-                ctx.fillStyle = `rgb(${Math.max(0, Math.min(255, r))}, ${Math.max(0, Math.min(255, g))}, ${Math.max(0, Math.min(255, b))})`;
-                ctx.fillRect(x, baseY - height, width, height);
-                
-                // Add simple windows consistently - fix alignment
-                ctx.fillStyle = '#FFFF88';
-                const windowRows = Math.floor(height / 15);
-                const windowCols = Math.floor(width / 8);
-                
-                for (let row = 0; row < windowRows; row++) {
-                    for (let col = 0; col < windowCols; col++) {
-                        if ((seed + row * 7 + col * 3) % 10 > 6) { // Consistent lit windows
-                            ctx.fillRect(x + col * 8 + 2, baseY - height + row * 15 + 2, 4, 8);
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    function drawWater(progress) {
-        const waterSpeed = 30; // Slow movement
-        const waterY = canvas.height - 250;
-        const waterHeight = 50;
-        
-        // Draw water base
-        ctx.fillStyle = '#4682B4';
-        ctx.fillRect(0, waterY, canvas.width, waterHeight);
-        
-        // Draw water waves
-        ctx.strokeStyle = '#87CEEB';
-        ctx.lineWidth = 2;
-        
-        for (let i = 0; i < 10; i++) {
-            const x = (i * 80 - progress * waterSpeed) % (canvas.width + 80);
-            ctx.beginPath();
-            ctx.moveTo(x, waterY + 10);
-            ctx.quadraticCurveTo(x + 20, waterY + 5, x + 40, waterY + 10);
-            ctx.quadraticCurveTo(x + 60, waterY + 15, x + 80, waterY + 10);
-            ctx.stroke();
-        }
-    }
-    
-    function drawGrass(progress) {
-        const grassSpeed = 4000; // Adjusted to 4000
-        const grassY = canvas.height - 200;
-        const grassHeight = 100;
-        
-        // Draw grass base
-        ctx.fillStyle = '#228B22';
-        ctx.fillRect(0, grassY, canvas.width, grassHeight);
-        
-        // Add grass texture with different shades
-        ctx.fillStyle = '#32CD32';
-        for (let i = 0; i < 300; i++) { // Increased from 100 to 300
-            const x = (i * 8 - progress * grassSpeed) % (canvas.width + 8);
-            const y = grassY + (i % 7) * 14;
-            ctx.fillRect(x, y, 4, 8);
-        }
-        
-        // Draw grass blades
-        ctx.strokeStyle = '#90EE90';
-        ctx.lineWidth = 2;
-        
-        for (let i = 0; i < 200; i++) { // Increased from 50 to 200
-            const x = (i * 16 - progress * grassSpeed) % (canvas.width + 16);
-            const height = 10 + (i % 15);
-            ctx.beginPath();
-            ctx.moveTo(x, grassY + grassHeight);
-            ctx.lineTo(x + (i % 4) - 2, grassY + grassHeight - height);
-            ctx.stroke();
-        }
-    }
-    
-    function drawMovingRoad(progress) {
-        const roadSpeed = 4000; // Adjusted to 4000
-        const roadY = canvas.height - 100;
-        
-        // Draw road base
-        ctx.fillStyle = '#696969';
-        ctx.fillRect(0, roadY, canvas.width, 100);
-        
-        // Draw road center lines
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 4;
-        
-        for (let i = 0; i < 15; i++) {
-            const x = (i * 60 - (progress * roadSpeed) % 60) % canvas.width;
-            ctx.beginPath();
-            ctx.moveTo(x, roadY + 50);
-            ctx.lineTo(x + 30, roadY + 50);
-            ctx.stroke();
-        }
-    }
-    
-    function drawTrainerOnBike(progress) {
-        const x = 200;
-        const y = canvas.height - 120; // Moved to road level
-        
-        // Bike wheels (animated)
-        const wheelRotation = progress * 20;
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        
-        // Back wheel
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Front wheel
-        ctx.beginPath();
-        ctx.arc(x + 60, y, 20, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Bike frame
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + 30, y - 30);
-        ctx.lineTo(x + 60, y);
-        ctx.lineTo(x + 30, y - 10);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        
-        // Trainer (simple figure)
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x + 25, y - 50, 10, 30); // Body
-        ctx.fillStyle = '#FFDBAC';
-        ctx.beginPath();
-        ctx.arc(x + 30, y - 60, 8, 0, Math.PI * 2); // Head
-        ctx.fill();
-    }
-    
-    function drawRunningMac(progress) {
-        const x = 100;
-        const y = canvas.height - 100; // Moved to road level
-        
-        // Running animation (simple bob)
-        const bobOffset = Math.sin(progress * 30) * 5;
-        const legAnimation = Math.sin(progress * 40) * 8; // Leg animation
-        
-        // Little Mac in pink jumpsuit - bigger size
-        ctx.fillStyle = '#FF69B4'; // Pink jumpsuit
-        ctx.fillRect(x, y - 50 + bobOffset, 12, 35); // Bigger body
-        ctx.fillRect(x - 2, y - 55 + bobOffset, 16, 10); // Pink shorts/pants
-        
-        // Legs with running animation - pink hoodie sleeves
-        ctx.fillStyle = '#FF69B4'; // Pink hoodie color for legs
-        // Left leg
-        ctx.fillRect(x + 2, y - 15 + bobOffset, 4, 15 + Math.abs(legAnimation));
-        // Right leg  
-        ctx.fillRect(x + 8, y - 15 + bobOffset, 4, 15 + Math.abs(-legAnimation));
-        
-        // Pink hoodie that encircles entire head (like Kenny)
-        ctx.fillStyle = '#FF69B4'; // Pink hoodie
-        ctx.beginPath();
-        ctx.arc(x + 6, y - 65 + bobOffset, 10, 0, Math.PI * 2); // Full circle hood
-        ctx.fill();
-        
-        // Face opening in the hood
-        ctx.fillStyle = '#FFDBAC';
-        ctx.beginPath();
-        ctx.arc(x + 6, y - 65 + bobOffset, 6, 0, Math.PI * 2); // Face visible through hood opening
-        ctx.fill();
-        
-        // Arms (animated) - pink hoodie sleeves
-        ctx.strokeStyle = '#FF69B4'; // Pink hoodie color for arms
-        ctx.lineWidth = 4;
-        const armSwing = Math.sin(progress * 30) * 12;
-        ctx.beginPath();
-        ctx.moveTo(x + 6, y - 45 + bobOffset);
-        ctx.lineTo(x + 6 + armSwing, y - 30 + bobOffset);
-        ctx.stroke();
-    }
-    
     function restartGame() {
         // Reset to very beginning
         currentFighter = 0;
@@ -2450,8 +2135,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         gameWon = false;
         gameTKO = false;
         gameOver = false;
-        levelComplete = false;
-        showingTraining = false;
         victoryType = null;
         gameStarted = true;
         
@@ -2511,8 +2194,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         gameWon = false;
         gameTKO = false;
         gameOver = false;
-        levelComplete = false;
-        showingTraining = false;
         victoryType = null;
         
         player.health = player.maxHealth;
