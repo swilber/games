@@ -432,13 +432,11 @@ async function createTetrisGame(settings, callbacks = null) {
                 currentPiece.y++;
                 lockTimer = 0;
             } else {
-                lockTimer += deltaTime;
-                if (lockTimer >= (tetrisConfig.gameplay?.lockDelay || 500)) {
-                    placePiece(currentPiece);
-                    clearLines();
-                    spawnNewPiece();
-                    lockTimer = 0;
-                }
+                // Piece can't fall further - place it immediately
+                placePiece(currentPiece);
+                clearLines();
+                spawnNewPiece();
+                lockTimer = 0;
             }
             dropTimer = 0;
         }
