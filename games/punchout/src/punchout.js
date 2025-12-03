@@ -1093,6 +1093,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Draw player shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
         ctx.ellipse(playerCenterX, player.y + 10, 35, 15, 0, 0, 2 * Math.PI);
         ctx.fill();
         
@@ -1238,6 +1239,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Draw opponent shadow
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
         ctx.ellipse(opponentCenterX, opponentCenterY + 80, 45, 20, 0, 0, 2 * Math.PI);
         ctx.fill();
         
@@ -1742,33 +1744,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 const rightGloveX = opponentCenterX + 35; // Angled back in toward body
                 const rightGloveY = opponentCenterY - 15;
                 
-                // Black outlines for the arms
-                ctx.strokeStyle = '#000000';
-                // Left arm outlines - thicker upper arm
-                ctx.lineWidth = 12; // Thicker outline for upper arm
-                ctx.beginPath();
-                ctx.moveTo(leftShoulderX, leftShoulderY);
-                ctx.lineTo(leftElbowX, leftElbowY);
-                ctx.stroke();
-                ctx.lineWidth = 8; // Thinner outline for lower arm
-                ctx.beginPath();
-                ctx.moveTo(leftElbowX, leftElbowY);
-                ctx.lineTo(leftGloveX, leftGloveY);
-                ctx.stroke();
-                
-                // Right arm outlines - thicker upper arm
-                ctx.lineWidth = 12; // Thicker outline for upper arm
-                ctx.beginPath();
-                ctx.moveTo(rightShoulderX, rightShoulderY);
-                ctx.lineTo(rightElbowX, rightElbowY);
-                ctx.stroke();
-                ctx.lineWidth = 8; // Thinner outline for lower arm
-                ctx.beginPath();
-                ctx.moveTo(rightElbowX, rightElbowY);
-                ctx.lineTo(rightGloveX, rightGloveY);
-                ctx.stroke();
-                
-                // Redraw arms on top of outlines with muscle definition
+                // Draw arms with muscle definition (no thick black outlines)
                 ctx.strokeStyle = armColor;
                 // Left arm - thicker upper arm
                 ctx.lineWidth = 10; // Muscular upper arm
@@ -1801,30 +1777,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             }
         }
         
-        // Draw tell indicator - much more visible
-        if (opponent.tellTimer > 0) {
-            const tellIntensity = Math.sin(opponent.tellTimer * 0.5);
-            ctx.fillStyle = `rgba(255, 0, 0, ${0.5 + tellIntensity * 0.5})`;
-            ctx.shadowColor = '#FF0000';
-            ctx.shadowBlur = 20;
-            
-            // Large warning indicator
-            ctx.fillRect(opponentCenterX - 15, opponentCenterY - 140, 30, 30);
-            
-            // Warning text
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('!', opponentCenterX - 5, opponentCenterY - 115);
-            
-            // Pulsing circle around opponent
-            ctx.strokeStyle = `rgba(255, 0, 0, ${tellIntensity})`;
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.arc(opponentCenterX, opponentCenterY - 30, 80 + tellIntensity * 20, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            ctx.shadowBlur = 0;
-        }
+        // Tell indicator system removed - will be fixed later
+        
         } // Close the else if (!opponent.knockedDown) block
         
         ctx.restore();
