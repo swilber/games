@@ -212,13 +212,26 @@ async function createPunchOutGame(settings, callbacks = null) {
         const dy = targetY - shoulderY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // Clamp distance to prevent overextension
-        const maxReach = upperArmLength + lowerArmLength - 5;
+        // Clamp distance to prevent overextension - arms maintain fixed lengths
+        const maxReach = upperArmLength + lowerArmLength;
         const clampedDistance = Math.min(distance, maxReach);
         
+        // If target is too far, move it closer to maintain arm lengths
+        let adjustedTargetX = targetX;
+        let adjustedTargetY = targetY;
+        if (distance > maxReach) {
+            const ratio = maxReach / distance;
+            adjustedTargetX = shoulderX + dx * ratio;
+            adjustedTargetY = shoulderY + dy * ratio;
+        }
+        
         // Calculate elbow position using law of cosines
-        const cosAngle = (upperArmLength * upperArmLength + clampedDistance * clampedDistance - lowerArmLength * lowerArmLength) / (2 * upperArmLength * clampedDistance);
-        const angle1 = Math.atan2(dy, dx);
+        const adjustedDx = adjustedTargetX - shoulderX;
+        const adjustedDy = adjustedTargetY - shoulderY;
+        const adjustedDistance = Math.sqrt(adjustedDx * adjustedDx + adjustedDy * adjustedDy);
+        
+        const cosAngle = (upperArmLength * upperArmLength + adjustedDistance * adjustedDistance - lowerArmLength * lowerArmLength) / (2 * upperArmLength * adjustedDistance);
+        const angle1 = Math.atan2(adjustedDy, adjustedDx);
         const angle2 = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
         
         // Elbow position (bend outward for natural look)
@@ -226,7 +239,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         const elbowX = shoulderX + Math.cos(elbowAngle) * upperArmLength;
         const elbowY = shoulderY + Math.sin(elbowAngle) * upperArmLength;
         
-        return { elbowX, elbowY };
+        return { elbowX, elbowY, targetX: adjustedTargetX, targetY: adjustedTargetY };
     }
     
     function updatePlayer() {
@@ -770,8 +783,16 @@ async function createPunchOutGame(settings, callbacks = null) {
     function drawOpponent() {
         ctx.save();
         
+        // Calculate stepping during attacks
+        let stepOffset = 0;
+        if (opponent.attacking) {
+            const attackFrame = opponent.patternTimer - 120;
+            const attackProgress = Math.sin(attackFrame * 0.3);
+            stepOffset = Math.abs(attackProgress) * 20; // Step forward during punch
+        }
+        
         const opponentCenterX = opponent.x;
-        const opponentCenterY = opponent.y;
+        const opponentCenterY = opponent.y + stepOffset; // Step forward (down toward Mac)
         
         // Debug logging
         if (opponent.knockedDown || opponent.gettingUp) {
@@ -928,28 +949,33 @@ async function createPunchOutGame(settings, callbacks = null) {
         const opponentGloveSize = 25;
         
         if (opponent.attacking) {
-            // Animated attack with inverse kinematics
+            // Animated attack with inverse kinematics and stepping
             ctx.shadowColor = '#FF0000';
             ctx.shadowBlur = 15;
             ctx.lineCap = 'round';
             
             const attackFrame = opponent.patternTimer - 120;
-            const attackExtend = Math.sin(attackFrame * 0.3) * 120; // How far toward player
+            const attackProgress = Math.sin(attackFrame * 0.3);
+            const attackExtend = attackProgress * 60; // Reduced extension
             
-            // Shoulder positions
+            // Step forward during punch, step back after
+            const stepDistance = Math.abs(attackProgress) * 15;
+            const currentOpponentY = opponentCenterY; // Already adjusted in drawOpponent function
+            
+            // Shoulder positions (adjusted for stepping)
             const leftShoulderX = opponentCenterX - 35;
-            const leftShoulderY = opponentCenterY - 50;
+            const leftShoulderY = currentOpponentY - 50;
             const rightShoulderX = opponentCenterX + 35;
-            const rightShoulderY = opponentCenterY - 50;
+            const rightShoulderY = currentOpponentY - 50;
             
             // Different animations based on attack pattern
             const pattern = opponent.patterns[opponent.currentPattern];
             
             if (pattern === 'jab') {
                 if (opponent.attackHand === 'left') {
-                    // Left jab - calculate IK for punching arm
-                    const targetX = opponentCenterX - 20 + attackExtend * 0.8;
-                    const targetY = opponentCenterY + 20 + attackExtend;
+                    // Left jab - punch downward toward Little Mac
+                    const targetX = opponentCenterX - 10;
+                    const targetY = currentOpponentY + 40 + attackExtend; // Downward toward Mac
                     const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX, targetY);
                     
                     // Draw punching arm with IK
@@ -962,7 +988,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.lineWidth = 8;
                     ctx.beginPath();
                     ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
-                    ctx.lineTo(targetX, targetY);
+                    ctx.lineTo(leftIK.targetX, leftIK.targetY);
                     ctx.stroke();
                     
                     ctx.strokeStyle = armColor;
@@ -974,14 +1000,14 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.lineWidth = 6;
                     ctx.beginPath();
                     ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
-                    ctx.lineTo(targetX, targetY);
+                    ctx.lineTo(leftIK.targetX, leftIK.targetY);
                     ctx.stroke();
                     
                     // Right arm in guard position
                     const rightElbowX = opponentCenterX + 50;
-                    const rightElbowY = opponentCenterY - 30;
+                    const rightElbowY = currentOpponentY - 30;
                     const rightGloveX = opponentCenterX + 35;
-                    const rightGloveY = opponentCenterY - 15;
+                    const rightGloveY = currentOpponentY - 15;
                     
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 12;
@@ -1009,19 +1035,19 @@ async function createPunchOutGame(settings, callbacks = null) {
                     
                     // Gloves
                     ctx.fillStyle = '#000000';
-                    ctx.fillRect(targetX - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(leftIK.targetX - opponentGloveSize/2, leftIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                     ctx.fillRect(rightGloveX - opponentGloveSize/2, rightGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 } else {
-                    // Right jab - similar IK calculation for right arm
-                    const targetX = opponentCenterX + 20 + attackExtend * 0.8;
-                    const targetY = opponentCenterY + 20 + attackExtend;
+                    // Right jab - punch downward toward Little Mac
+                    const targetX = opponentCenterX + 10;
+                    const targetY = currentOpponentY + 40 + attackExtend; // Downward toward Mac
                     const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX, targetY);
                     
                     // Left arm in guard position
                     const leftElbowX = opponentCenterX - 50;
-                    const leftElbowY = opponentCenterY - 30;
+                    const leftElbowY = currentOpponentY - 30;
                     const leftGloveX = opponentCenterX - 35;
-                    const leftGloveY = opponentCenterY - 15;
+                    const leftGloveY = currentOpponentY - 15;
                     
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 12;
@@ -1057,7 +1083,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.lineWidth = 8;
                     ctx.beginPath();
                     ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
-                    ctx.lineTo(targetX, targetY);
+                    ctx.lineTo(rightIK.targetX, rightIK.targetY);
                     ctx.stroke();
                     
                     ctx.strokeStyle = armColor;
@@ -1069,20 +1095,20 @@ async function createPunchOutGame(settings, callbacks = null) {
                     ctx.lineWidth = 6;
                     ctx.beginPath();
                     ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
-                    ctx.lineTo(targetX, targetY);
+                    ctx.lineTo(rightIK.targetX, rightIK.targetY);
                     ctx.stroke();
                     
                     // Gloves
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(leftGloveX - opponentGloveSize/2, leftGloveY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(targetX - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(rightIK.targetX - opponentGloveSize/2, rightIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
                 }
             } else {
-                // Default punch animation with IK
-                const targetX = opponentCenterX + attackExtend * 0.5;
-                const targetY = opponentCenterY + 20 + attackExtend;
-                const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX - 20, targetY);
-                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX + 20, targetY);
+                // Default punch animation - punch downward toward Mac
+                const targetX = opponentCenterX;
+                const targetY = currentOpponentY + 50 + attackExtend; // Downward toward Mac
+                const leftIK = calculateArmIK(leftShoulderX, leftShoulderY, targetX - 15, targetY);
+                const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, targetX + 15, targetY);
                 
                 // Draw both arms with IK
                 ctx.strokeStyle = '#000000';
@@ -1096,9 +1122,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.lineWidth = 8;
                 ctx.beginPath();
                 ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
-                ctx.lineTo(targetX - 20, targetY);
+                ctx.lineTo(leftIK.targetX, leftIK.targetY);
                 ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
-                ctx.lineTo(targetX + 20, targetY);
+                ctx.lineTo(rightIK.targetX, rightIK.targetY);
                 ctx.stroke();
                 
                 ctx.strokeStyle = armColor;
@@ -1112,15 +1138,15 @@ async function createPunchOutGame(settings, callbacks = null) {
                 ctx.lineWidth = 6;
                 ctx.beginPath();
                 ctx.moveTo(leftIK.elbowX, leftIK.elbowY);
-                ctx.lineTo(targetX - 20, targetY);
+                ctx.lineTo(leftIK.targetX, leftIK.targetY);
                 ctx.moveTo(rightIK.elbowX, rightIK.elbowY);
-                ctx.lineTo(targetX + 20, targetY);
+                ctx.lineTo(rightIK.targetX, rightIK.targetY);
                 ctx.stroke();
                 
                 // Gloves
                 ctx.fillStyle = '#000000';
-                ctx.fillRect(targetX - 20 - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
-                ctx.fillRect(targetX + 20 - opponentGloveSize/2, targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(leftIK.targetX - opponentGloveSize/2, leftIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(rightIK.targetX - opponentGloveSize/2, rightIK.targetY - opponentGloveSize/2, opponentGloveSize, opponentGloveSize);
             }
             
             ctx.shadowBlur = 0;
