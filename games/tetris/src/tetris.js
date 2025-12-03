@@ -403,9 +403,8 @@ async function createTetrisGame(settings, callbacks = null) {
         ctx.fillText('← → Move', uiX, 480);
         ctx.fillText('↓ Soft Drop', uiX, 500);
         ctx.fillText('↑ Hard Drop', uiX, 520);
-        ctx.fillText('Z Rotate L', uiX, 540);
-        ctx.fillText('X Rotate R', uiX, 560);
-        ctx.fillText('C Hold', uiX, 580);
+        ctx.fillText('SPACE Rotate', uiX, 540);
+        ctx.fillText('C Hold', uiX, 560);
     }
     
     function render() {
@@ -525,15 +524,7 @@ async function createTetrisGame(settings, callbacks = null) {
                 }
                 break;
                 
-            case 'KeyZ':
-                // Rotate counter-clockwise
-                const rotatedCCW = rotatePiece(currentPiece, false);
-                if (isValidPosition(rotatedCCW)) {
-                    currentPiece.shape = rotatedCCW.shape;
-                }
-                break;
-                
-            case 'KeyX':
+            case 'Space':
                 // Rotate clockwise
                 const rotatedCW = rotatePiece(currentPiece, true);
                 if (isValidPosition(rotatedCW)) {
