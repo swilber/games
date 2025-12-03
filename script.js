@@ -943,17 +943,23 @@ function hideLevelUnlock() {
 }
 
 async function startLevel() {
+    console.log('DEBUG: startLevel called, currentLevel:', currentLevel);
     // Check if there's a pending answer before starting the level
     if (currentLevel > 0) {
+        console.log('DEBUG: currentLevel > 0, showing answer prompt');
         questionSystem.showAnswerPrompt((success) => {
+            console.log('DEBUG: answer prompt result:', success);
             if (success) {
+                console.log('DEBUG: answer correct, calling initializeLevel');
                 initializeLevel();
             } else {
+                console.log('DEBUG: answer incorrect, showing level selection');
                 // Return to level selection if answer is wrong or cancelled
                 showLevelSelection();
             }
         });
     } else {
+        console.log('DEBUG: currentLevel is 0, calling initializeLevel directly');
         initializeLevel();
     }
 }
@@ -1004,7 +1010,15 @@ async function createGameWithCallbacks(gameType, settings) {
         case 'spaceinvaders':
             return await createSpaceInvadersGame(settings, gameCallbacks);
         case 'punchout':
-            return await createPunchOutGame(settings, gameCallbacks);
+            console.log('DEBUG: About to call createPunchOutGame with settings:', settings);
+            try {
+                const result = await createPunchOutGame(settings, gameCallbacks);
+                console.log('DEBUG: createPunchOutGame returned:', result);
+                return result;
+            } catch (error) {
+                console.error('DEBUG: Error in createPunchOutGame:', error);
+                throw error;
+            }
         case 'maze3d':
             return await createMaze3DGame(settings, gameCallbacks);
         case 'flappy':
@@ -1031,8 +1045,11 @@ async function createGameLegacy(gameType, settings) {
 }
 
 async function initializeLevel() {
+    console.log('DEBUG: initializeLevel called, currentLevel:', currentLevel);
     const level = levels[currentLevel];
+    console.log('DEBUG: level data:', level);
     document.getElementById('level-title').textContent = level.title;
+    console.log('DEBUG: level title set to:', level.title);
     
     // Clean up previous game
     if (currentGameInstance && typeof currentGameInstance.cleanup === 'function') {
@@ -1077,9 +1094,14 @@ async function initializeLevel() {
         case 'maze3d':
         case 'flappy':
             // Modern games with callback support
-            console.log('Creating modern game:', level.type);
-            currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
-            console.log('Modern game created, has cleanup:', typeof currentGameInstance?.cleanup === 'function');
+            console.log('DEBUG: Creating modern game:', level.type);
+            console.log('DEBUG: About to get difficulty for:', level.type);
+            const difficulty = await getDifficulty(level.type);
+            console.log('DEBUG: Got difficulty:', difficulty);
+            console.log('DEBUG: About to call createGameWithCallbacks');
+            currentGameInstance = await createGameWithCallbacks(level.type, difficulty);
+            console.log('DEBUG: Modern game created, has cleanup:', typeof currentGameInstance?.cleanup === 'function');
+            console.log('DEBUG: currentGameInstance:', currentGameInstance);
             break;
     }
 }
