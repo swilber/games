@@ -1570,6 +1570,12 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Normal standing opponent (draw when not knocked down and not getting up)
         else if (!opponent.knockedDown) {
         let opponentColor = punchOutConfig.visual?.opponentColor || '#D2691E';
+        
+        // Set skin tone based on body shape
+        if (opponent.bodyShape === "thin") {
+            opponentColor = '#F5DEB3'; // White/pale skin tone for Glass Joe
+        }
+        
         if (opponent.stunned) {
             opponentColor = '#FFFF00'; // Yellow when stunned
             // Add dizzy stars
