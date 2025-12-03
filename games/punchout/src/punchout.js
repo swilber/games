@@ -441,8 +441,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             // Don't return here - let the function continue to normal AI behavior
         }
         
-        // Only do AI behavior if not in special states
-        if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp) {
+        // Only do AI behavior if not in special states AND player is not knocked down
+        if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp && !player.knockedDown) {
             // Handle opponent movement - walk toward fighting position
             if (opponent.walkingToPosition) {
                 const targetY = player.y - 160; // Stop 160 pixels above Mac (50 pixels further back)
