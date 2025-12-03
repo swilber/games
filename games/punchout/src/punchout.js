@@ -31,6 +31,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     let roundTime = punchOutConfig.gameplay?.roundTime || 180;
     let currentFighter = 0;
     let fightStartTime = Date.now(); // Track fight duration for TKO logic
+    let cameraFlashTimer = 0; // Timer for camera flashes
     
     // TKO configuration
     const tkoConfig = {
@@ -44,6 +45,31 @@ async function createPunchOutGame(settings, callbacks = null) {
     canvas.width = punchOutConfig.physics?.canvasWidth || 800;
     canvas.height = punchOutConfig.physics?.canvasHeight || 600;
     const ctx = canvas.getContext('2d');
+    
+    // Generate static audience positions once (after canvas is created)
+    const audience = [];
+    const ringTop = canvas.height * 0.3; // Ring starts at 30% from top
+    const maxAudienceY = ringTop - 60; // Stay behind the top rope
+    
+    // Generate faces with more density in back rows
+    for (let depth = 0; depth < 1; depth += 0.1) { // 10 depth layers
+        const y = 20 + (depth * (maxAudienceY - 20));
+        const size = 3 + depth * 15;
+        
+        // More faces in back rows (smaller faces need more density)
+        const facesInRow = Math.floor(60 + (1 - depth) * 40); // 60-100 faces per row
+        
+        for (let i = 0; i < facesInRow; i++) {
+            const expressions = ['happy', 'surprised', 'angry', 'open', 'excited'];
+            audience.push({
+                x: Math.random() * canvas.width,
+                y: y + (Math.random() - 0.5) * 15, // Add some vertical variation
+                size: size + (Math.random() - 0.5) * 3, // Add size variation
+                skinTone: `hsl(${25 + Math.random() * 35}, ${50 + Math.random() * 30}%, ${35 + Math.random() * 35}%)`,
+                expression: expressions[Math.floor(Math.random() * expressions.length)]
+            });
+        }
+    }
     
     // Game objects
     const player = {
@@ -232,6 +258,9 @@ async function createPunchOutGame(settings, callbacks = null) {
     
     function update() {
         if (!gameRunning) return;
+        
+        // Update camera flash timer
+        cameraFlashTimer++;
         
         // Update round timer
         roundTime -= 1/60;
@@ -893,6 +922,69 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.closePath();
         ctx.fill();
         
+        // Draw detailed audience with static positioning (before ropes)
+        for (let i = 0; i < audience.length; i++) {
+            const face = audience[i];
+            
+            // Face background with stored skin tone
+            ctx.fillStyle = face.skinTone;
+            ctx.beginPath();
+            ctx.arc(face.x, face.y, face.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Only draw facial features on larger faces (closer ones)
+            if (face.size > 8) {
+                ctx.fillStyle = '#000000';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+                
+                // Eyes based on expression
+                ctx.beginPath();
+                if (face.expression === 'surprised') {
+                    // Wide open eyes
+                    ctx.arc(face.x - face.size/3, face.y - face.size/4, face.size/4, 0, Math.PI * 2);
+                    ctx.arc(face.x + face.size/3, face.y - face.size/4, face.size/4, 0, Math.PI * 2);
+                } else if (face.expression === 'angry') {
+                    // Angled angry eyes
+                    ctx.moveTo(face.x - face.size/2, face.y - face.size/3);
+                    ctx.lineTo(face.x - face.size/6, face.y - face.size/6);
+                    ctx.moveTo(face.x + face.size/6, face.y - face.size/6);
+                    ctx.lineTo(face.x + face.size/2, face.y - face.size/3);
+                } else {
+                    // Normal eyes
+                    ctx.arc(face.x - face.size/3, face.y - face.size/4, Math.max(1, face.size/6), 0, Math.PI * 2);
+                    ctx.arc(face.x + face.size/3, face.y - face.size/4, Math.max(1, face.size/6), 0, Math.PI * 2);
+                }
+                ctx.fill();
+                ctx.stroke();
+                
+                // Mouth based on expression
+                ctx.beginPath();
+                switch(face.expression) {
+                    case 'happy':
+                    case 'excited':
+                        // Smile
+                        ctx.arc(face.x, face.y + face.size/3, face.size/4, 0, Math.PI);
+                        break;
+                    case 'surprised':
+                    case 'open':
+                        // Open mouth (circle)
+                        ctx.arc(face.x, face.y + face.size/3, face.size/6, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'angry':
+                        // Frown
+                        ctx.arc(face.x, face.y + face.size/2, face.size/4, Math.PI, Math.PI * 2);
+                        break;
+                    default:
+                        // Neutral
+                        ctx.moveTo(face.x - face.size/6, face.y + face.size/3);
+                        ctx.lineTo(face.x + face.size/6, face.y + face.size/3);
+                }
+                ctx.stroke();
+            }
+        }
+        
         // Draw ring ropes
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 3;
@@ -950,12 +1042,31 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillRect(frontRight - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
         ctx.strokeRect(frontRight - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
         
-        // Draw crowd silhouettes
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        for (let i = 0; i < 20; i++) {
-            const x = (canvas.width / 20) * i;
-            const height = 30 + Math.random() * 20;
-            ctx.fillRect(x, 80, canvas.width / 20, height);
+        
+        // Draw random camera flashes
+        const numFlashes = 8;
+        for (let i = 0; i < numFlashes; i++) {
+            // Random flash timing for each camera
+            const flashOffset = i * 37; // Different timing for each flash
+            const flashCycle = (cameraFlashTimer + flashOffset) % 120; // 2 second cycle
+            
+            if (flashCycle < 5) { // Flash for 5 frames
+                const x = Math.random() * canvas.width;
+                const y = 40 + Math.random() * 80;
+                const intensity = 1 - (flashCycle / 5); // Fade out
+                
+                // Bright white flash
+                ctx.fillStyle = `rgba(255, 255, 255, ${intensity})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 8 + intensity * 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Yellow glow around flash
+                ctx.fillStyle = `rgba(255, 255, 0, ${intensity * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(x, y, 12 + intensity * 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         
         // Draw opponent first (behind player)
