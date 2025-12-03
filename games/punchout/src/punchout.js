@@ -1,25 +1,16 @@
 async function createPunchOutGame(settings, callbacks = null) {
-    console.log('DEBUG: createPunchOutGame function called with settings:', settings);
-    console.log('DEBUG: callbacks provided:', callbacks);
-    console.log('DEBUG: typeof configManager:', typeof configManager);
-    
     const gameArea = document.getElementById('game-area');
-    console.log('DEBUG: gameArea found:', !!gameArea);
     
     // Load configuration
-    console.log('DEBUG: About to load configuration');
     let punchOutConfig = {};
     if (typeof configManager !== 'undefined') {
-        console.log('DEBUG: configManager found, loading punchout config');
         try {
             punchOutConfig = await configManager.loadConfig('punchout');
-            console.log('DEBUG: Config loaded successfully:', punchOutConfig);
         } catch (error) {
-            console.error('DEBUG: Error loading config:', error);
+            console.error('Error loading config:', error);
             throw error;
         }
     } else {
-        console.log('DEBUG: configManager not found, using default config');
         punchOutConfig = {
             gameplay: settings,
             physics: settings,
@@ -28,27 +19,21 @@ async function createPunchOutGame(settings, callbacks = null) {
                 { name: "Glass Joe", health: 60, speed: 0.8, patterns: ["jab"], tells: ["blink"] }
             ]
         };
-        console.log('DEBUG: Default config created:', punchOutConfig);
     }
     
     // Game state
-    console.log('DEBUG: Initializing game state');
     let gameRunning = false;
     let gameWon = false;
     let gameStarted = false;
     let currentRound = 1;
     let roundTime = punchOutConfig.gameplay?.roundTime || 180;
     let currentFighter = 0;
-    console.log('DEBUG: Game state initialized, roundTime:', roundTime);
     
     // Create canvas
-    console.log('DEBUG: Creating canvas');
     const canvas = document.createElement('canvas');
     canvas.width = punchOutConfig.physics?.canvasWidth || 800;
     canvas.height = punchOutConfig.physics?.canvasHeight || 600;
-    console.log('DEBUG: Canvas created, size:', canvas.width, 'x', canvas.height);
     const ctx = canvas.getContext('2d');
-    console.log('DEBUG: Canvas context obtained:', !!ctx);
     
     // Game objects
     const player = {
@@ -1771,26 +1756,15 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function startGame() {
-        console.log('DEBUG: startGame function called');
         gameRunning = true;
-        console.log('DEBUG: gameRunning set to true, starting gameLoop');
         gameLoop();
-        console.log('DEBUG: gameLoop started');
     }
     
     function gameLoop() {
-        console.log('DEBUG: gameLoop called, gameRunning:', gameRunning);
         if (gameRunning) {
-            try {
-                update();
-                render();
-                requestAnimationFrame(gameLoop);
-            } catch (error) {
-                console.error('DEBUG: Error in gameLoop:', error);
-                gameRunning = false;
-            }
-        } else {
-            console.log('DEBUG: gameLoop stopped, gameRunning is false');
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
         }
     }
     
@@ -1870,39 +1844,23 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     // Initialize game
-    console.log('DEBUG: Initializing punchout game...');
-    console.log('DEBUG: gameArea before clearing:', gameArea);
     gameArea.innerHTML = '';
     gameArea.appendChild(canvas);
-    console.log('DEBUG: Canvas added to game area');
     
     // Add event listeners
-    console.log('DEBUG: Adding event listeners');
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
-    console.log('DEBUG: Event listeners added');
     
     // Start the game
-    console.log('DEBUG: About to start game...');
-    try {
-        startGame();
-        console.log('DEBUG: Game started successfully');
-    } catch (error) {
-        console.error('DEBUG: Error starting game:', error);
-        throw error;
-    }
+    startGame();
     
     // Return game instance
-    console.log('DEBUG: About to return game instance');
-    const gameInstance = {
+    return {
         destroy: () => {
-            console.log('DEBUG: Game destroy called');
             gameRunning = false;
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('keyup', handleKeyUp);
             gameArea.innerHTML = '';
         }
     };
-    console.log('DEBUG: Returning game instance:', gameInstance);
-    return gameInstance;
 }
