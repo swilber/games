@@ -612,7 +612,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Low left punch - left hand forward, right hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
-                ctx.fillRect(playerCenterX + 10, playerCenterY - 35, 25, 6); // Right arm lower
+                ctx.fillRect(playerCenterX + 27, playerCenterY - 35, 8, 15); // Right arm below glove
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 60 - punchExtend, gloveSize, gloveSize);
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
@@ -620,14 +620,14 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // High left punch - left hand forward, right hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
                 ctx.fillRect(playerCenterX - 30, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
-                ctx.fillRect(playerCenterX + 10, playerCenterY - 35, 25, 6); // Right arm lower
+                ctx.fillRect(playerCenterX + 27, playerCenterY - 35, 8, 15); // Right arm below glove
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 35, playerCenterY - 70 - punchExtend, gloveSize, gloveSize);
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 40, gloveSize, gloveSize); // Right glove lower
             } else if (player.punchType === 'low-right') {
                 // Low right punch - right hand forward, left hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
-                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 25, 6); // Left arm lower
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 8, 15); // Left arm below glove
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 55 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 40, playerCenterY - 40, gloveSize, gloveSize); // Left glove lower
@@ -635,7 +635,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             } else if (player.punchType === 'high-right') {
                 // High right punch - right hand forward, left hand back and lower
                 ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
-                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 25, 6); // Left arm lower
+                ctx.fillRect(playerCenterX - 35, playerCenterY - 35, 8, 15); // Left arm below glove
                 ctx.fillRect(playerCenterX + 22, playerCenterY - 65 - punchExtend * 0.5, 8, 25 + punchExtend * 0.5);
                 ctx.fillStyle = '#FF0000';
                 ctx.fillRect(playerCenterX - 40, playerCenterY - 40, gloveSize, gloveSize); // Left glove lower
