@@ -1600,7 +1600,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (opponent.bodyShape === "thin") {
             opponentColor = '#F5DEB3'; // White/pale skin tone for Glass Joe
         } else if (opponent.bodyShape === "tough") {
-            opponentColor = '#8B4513'; // Darker skin tone for Steven Wilber
+            opponentColor = '#D2B48C'; // Medium skin tone for Steven Wilber
         }
         
         if (opponent.stunned) {
