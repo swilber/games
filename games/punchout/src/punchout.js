@@ -623,7 +623,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                     if (opponent.blockType === punchHeight) {
                         // Successful block
                         hitSuccess = false;
-                        showHitEffect(opponent.x, opponent.y - 40, "BLOCKED!", '#FFFF00');
+                        // showHitEffect(opponent.x, opponent.y - 40, "BLOCKED!", '#FFFF00');
                         // End the punch early
                         player.punching = false;
                         player.punchType = null;
@@ -638,9 +638,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
                                 damage = 12;
-                                showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
+                                // showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
                             } else {
-                                showHitEffect(opponent.x, opponent.y - 80, "LEFT BODY!", '#FFFFFF');
+                                // showHitEffect(opponent.x, opponent.y - 80, "LEFT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-left':
@@ -648,9 +648,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
                                 damage = 18;
-                                showHitEffect(opponent.x, opponent.y - 80, "HEAD COUNTER!", '#FFD700');
+                                // showHitEffect(opponent.x, opponent.y - 80, "HEAD COUNTER!", '#FFD700');
                             } else {
-                                showHitEffect(opponent.x, opponent.y - 80, "LEFT HEAD!", '#FFFFFF');
+                                // showHitEffect(opponent.x, opponent.y - 80, "LEFT HEAD!", '#FFFFFF');
                             }
                             break;
                         case 'low-right':
@@ -658,9 +658,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
                                 damage = 15;
-                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT COUNTER!", '#FFD700');
+                                // showHitEffect(opponent.x, opponent.y - 80, "RIGHT COUNTER!", '#FFD700');
                             } else {
-                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT BODY!", '#FFFFFF');
+                                // showHitEffect(opponent.x, opponent.y - 80, "RIGHT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-right':
@@ -668,9 +668,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
                                 damage = 22;
-                                showHitEffect(opponent.x, opponent.y - 80, "POWER COUNTER!", '#FFD700');
+                                // showHitEffect(opponent.x, opponent.y - 80, "POWER COUNTER!", '#FFD700');
                             } else {
-                                showHitEffect(opponent.x, opponent.y - 80, "RIGHT HEAD!", '#FF8800');
+                                // showHitEffect(opponent.x, opponent.y - 80, "RIGHT HEAD!", '#FF8800');
                             }
                             break;
                     }
@@ -704,7 +704,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                                 }
                             }, 4000);
                             
-                            showHitEffect(opponent.x, opponent.y - 100, "FAST TKO!", '#FFD700');
+                            // showHitEffect(opponent.x, opponent.y - 100, "FAST TKO!", '#FFD700');
                         } else {
                             // Normal knockdown - progressive recovery difficulty
                             const baseTime = tkoConfig.baseGetUpTime;
@@ -713,7 +713,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                             
                             // Move opponent to back of ring when knocked down
                             opponent.y = 150; // Back of the ring
-                            showHitEffect(opponent.x, opponent.y - 100, "KNOCKDOWN!", '#FF0000');
+                            // showHitEffect(opponent.x, opponent.y - 100, "KNOCKDOWN!", '#FF0000');
                         }
                     }
                     
