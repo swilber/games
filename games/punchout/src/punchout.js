@@ -844,65 +844,155 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillStyle = '#800080';
         ctx.fillRect(opponentCenterX - 40, opponentCenterY + 30, 80, 40);
         
-        // Opponent gloves - larger and more menacing
-        ctx.fillStyle = '#000000';
+        // Opponent arms and gloves
+        const armColor = opponentColor; // Same color as body
         const opponentGloveSize = 25;
         
         if (opponent.attacking) {
-            // Animated attack with impact effects - attacks go TOWARD player (downward)
+            // Animated attack with different punch types
             ctx.shadowColor = '#FF0000';
             ctx.shadowBlur = 15;
             
             const attackFrame = opponent.patternTimer - 120;
             const attackExtend = Math.sin(attackFrame * 0.3) * 120; // How far toward player
             
-            // Draw attacking hand(s) based on attack type
-            if (opponent.attackHand === 'left' || opponent.attackHand === 'both') {
-                // Left glove attacking
-                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
-            } else {
-                // Left glove in normal position
-                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
-            }
+            // Different animations based on attack pattern
+            const pattern = opponent.patterns[opponent.currentPattern];
             
-            if (opponent.attackHand === 'right' || opponent.attackHand === 'both') {
-                // Right glove attacking
-                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 10 + attackExtend, opponentGloveSize + 15, opponentGloveSize);
+            if (pattern === 'jab') {
+                // Quick jab - one hand forward
+                if (opponent.attackHand === 'left') {
+                    // Left jab - left arm extends forward
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
+                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15); // Right arm back
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                } else {
+                    // Right jab - right arm extends forward
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15); // Left arm back
+                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 17, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
+                }
+            } else if (pattern === 'uppercut') {
+                // Uppercut - arm comes up from below
+                if (opponent.attackHand === 'left') {
+                    // Left uppercut
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 30, opponentCenterY + 20 - attackExtend * 0.8, 8, 30);
+                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15); // Right arm back
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY + 15 - attackExtend, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                } else {
+                    // Right uppercut
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15); // Left arm back
+                    ctx.fillRect(opponentCenterX + 22, opponentCenterY + 20 - attackExtend * 0.8, 8, 30);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 17, opponentCenterY + 15 - attackExtend, opponentGloveSize, opponentGloveSize);
+                }
             } else {
-                // Right glove in normal position
-                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
-            }
-            
-            // Impact lines going toward player (downward) - only where punching
-            ctx.strokeStyle = '#FF0000';
-            ctx.lineWidth = 3;
-            for (let i = 0; i < 3; i++) {
-                const lineX = opponentCenterX + (Math.random() - 0.5) * 40;
-                const lineY = opponentCenterY + 40 + (attackExtend * 0.5) + (i * 15);
-                ctx.beginPath();
-                ctx.moveTo(lineX - 10, lineY);
-                ctx.lineTo(lineX + 10, lineY);
-                ctx.stroke();
+                // Default punch animation
+                if (opponent.attackHand === 'left' || opponent.attackHand === 'both') {
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
+                } else {
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX - 15, opponentCenterY - 10, 8, 15);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 20, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                }
+                
+                if (opponent.attackHand === 'right' || opponent.attackHand === 'both') {
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 20 + attackExtend * 0.5, 8, 30 + attackExtend * 0.5);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX + 17, opponentCenterY - 25 + attackExtend, opponentGloveSize, opponentGloveSize);
+                } else {
+                    ctx.fillStyle = armColor;
+                    ctx.fillRect(opponentCenterX + 15, opponentCenterY - 10, 8, 15);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 5, opponentGloveSize, opponentGloveSize);
+                }
             }
             
             ctx.shadowBlur = 0;
         } else {
-            // Normal glove position or blocking
+            // Normal stance or blocking - arms like Little Mac
             if (opponent.blocking) {
                 // Blocking stance - gloves positioned defensively
+                ctx.fillStyle = armColor;
                 if (opponent.blockType === 'high') {
-                    // High block - gloves up near head
-                    ctx.fillRect(opponentCenterX - 25, opponentCenterY - 90, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 5, opponentCenterY - 90, opponentGloveSize, opponentGloveSize);
+                    // High block - arms up near head
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 90, 25, 6); // Left arm
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 90, 25, 6); // Right arm
+                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 80, 8, 15); // Left forearm
+                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 80, 8, 15); // Right forearm
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 95, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 95, opponentGloveSize, opponentGloveSize);
                 } else {
-                    // Low block - gloves down near body
-                    ctx.fillRect(opponentCenterX - 25, opponentCenterY - 20, opponentGloveSize, opponentGloveSize);
-                    ctx.fillRect(opponentCenterX + 5, opponentCenterY - 20, opponentGloveSize, opponentGloveSize);
+                    // Low block - arms down near body
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 30, 25, 6); // Left arm
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 30, 25, 6); // Right arm
+                    ctx.fillRect(opponentCenterX - 30, opponentCenterY - 20, 8, 15); // Left forearm
+                    ctx.fillRect(opponentCenterX + 22, opponentCenterY - 20, 8, 15); // Right forearm
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(opponentCenterX - 35, opponentCenterY - 25, opponentGloveSize, opponentGloveSize);
+                    ctx.fillRect(opponentCenterX + 10, opponentCenterY - 25, opponentGloveSize, opponentGloveSize);
                 }
             } else {
-                // Normal glove position - both hands at ready
-                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
-                ctx.fillRect(opponentCenterX + 5, opponentCenterY + 5, opponentGloveSize, opponentGloveSize);
+                // Normal stance - anatomically correct arms
+                ctx.fillStyle = armColor;
+                
+                // Left arm system (shoulder -> elbow -> glove)
+                const leftShoulderX = opponentCenterX - 35;
+                const leftShoulderY = opponentCenterY - 50;
+                const leftElbowX = opponentCenterX - 45;
+                const leftElbowY = opponentCenterY - 30;
+                const leftGloveX = opponentCenterX - 35;
+                const leftGloveY = opponentCenterY - 25;
+                
+                // Left upper arm (shoulder to elbow)
+                ctx.fillRect(leftShoulderX, leftShoulderY, 8, 20);
+                // Left lower arm (elbow to glove)
+                ctx.fillRect(leftElbowX, leftElbowY, 8, 15);
+                
+                // Right arm system (shoulder -> elbow -> glove)
+                const rightShoulderX = opponentCenterX + 27;
+                const rightShoulderY = opponentCenterY - 50;
+                const rightElbowX = opponentCenterX + 37;
+                const rightElbowY = opponentCenterY - 30;
+                const rightGloveX = opponentCenterX + 10;
+                const rightGloveY = opponentCenterY - 25;
+                
+                // Right upper arm (shoulder to elbow)
+                ctx.fillRect(rightShoulderX, rightShoulderY, 8, 20);
+                // Right lower arm (elbow to glove)
+                ctx.fillRect(rightElbowX, rightElbowY, 8, 15);
+                
+                // Outline all arm segments
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+                // Left arm outlines
+                ctx.strokeRect(leftShoulderX, leftShoulderY, 8, 20); // Upper arm
+                ctx.strokeRect(leftElbowX, leftElbowY, 8, 15); // Lower arm
+                // Right arm outlines
+                ctx.strokeRect(rightShoulderX, rightShoulderY, 8, 20); // Upper arm
+                ctx.strokeRect(rightElbowX, rightElbowY, 8, 15); // Lower arm
+                
+                // Gloves
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(leftGloveX, leftGloveY, opponentGloveSize, opponentGloveSize);
+                ctx.fillRect(rightGloveX, rightGloveY, opponentGloveSize, opponentGloveSize);
             }
         }
         
