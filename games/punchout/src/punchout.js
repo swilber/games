@@ -676,9 +676,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.tellTimer = 0;
                 opponent.currentPattern = (opponent.currentPattern + 1) % opponent.patterns.length;
                 
-                // Steven Wilber vulnerability window - can be hit for 1 second after attacking
+                // Steven Wilber vulnerability window - can be hit for 0.5 seconds after attacking
                 if (opponent.name === "Steven Wilber") {
-                    opponent.vulnerableTimer = 60; // 1 second vulnerability window
+                    opponent.vulnerableTimer = 30; // 0.5 second vulnerability window
                 }
             } else if (opponent.patternTimer % 60 === 0) {
                 // Debug log every second to see timer progress
