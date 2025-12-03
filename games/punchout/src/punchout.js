@@ -845,7 +845,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         hitEffects.forEach(effect => {
             ctx.save();
             ctx.fillStyle = effect.color;
-            ctx.font = `bold ${16 * effect.scale}px Arial`;
+            ctx.font = `bold ${16 * effect.scale}px "Courier New", monospace`;
             ctx.textAlign = 'center';
             ctx.shadowColor = '#000000';
             ctx.shadowBlur = 5;
@@ -1076,13 +1076,13 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Draw victory text
             ctx.fillStyle = '#FFD700';
-            ctx.font = '72px Arial';
+            ctx.font = 'bold 72px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText(victoryType, canvas.width/2, canvas.height/2 - 40);
             
             // Draw "You Win!" text
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = '36px Arial';
+            ctx.font = 'bold 36px "Courier New", monospace';
             ctx.fillText('You Win!', canvas.width/2, canvas.height/2 + 40);
         }
         
@@ -1126,7 +1126,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Button mashing instruction
             ctx.fillStyle = '#FFFF00';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 24px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('MASH LEFT & RIGHT SHIFT!', 400, 300);
             
@@ -1147,7 +1147,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             const countdown = Math.ceil((600 - player.knockdownTimer) / 60) + 1;
             if (countdown <= 10) {
                 ctx.fillStyle = '#FF0000';
-                ctx.font = 'bold 48px Arial';
+                ctx.font = 'bold 48px "Courier New", monospace';
                 ctx.fillText(countdown.toString(), 400, 250);
             }
             
@@ -1172,7 +1172,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Getting up text
             ctx.fillStyle = '#FFFF00';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 24px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('GETTING UP...', player.x, player.y - 60);
             
@@ -1398,7 +1398,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 const countdown = Math.ceil((maxTime - opponent.knockdownTimer) / 60) + 1;
                 if (countdown <= 10) {
                     ctx.fillStyle = '#FF0000';
-                    ctx.font = 'bold 48px Arial';
+                    ctx.font = 'bold 48px "Courier New", monospace';
                     ctx.textAlign = 'center';
                     ctx.fillText(countdown.toString(), opponentCenterX, opponentCenterY - 30);
                 }
@@ -1425,7 +1425,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Getting up text
             ctx.fillStyle = '#FFFF00';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = 'bold 24px "Courier New", monospace';
             ctx.textAlign = 'center';
             ctx.fillText('GETTING UP...', opponentCenterX, opponentCenterY - 100);
         }
@@ -1908,56 +1908,88 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function drawUI() {
-        ctx.fillStyle = punchOutConfig.visual?.textColor || '#FFFFFF';
-        ctx.font = '20px Arial';
+        // Fighter game style UI layout
         
-        // Round info
-        ctx.fillText(`Round ${currentRound}`, 20, 30);
-        ctx.fillText(`Time: ${Math.ceil(roundTime)}`, 20, 55);
+        // Left side - Little Mac
+        drawFighterUI(20, 20, player, 'LITTLE MAC', true);
         
-        // Game timer
-        const gameTime = Math.floor((Date.now() - fightStartTime) / 1000);
-        const minutes = Math.floor(gameTime / 60);
-        const seconds = gameTime % 60;
-        ctx.fillText(`Fight: ${minutes}:${seconds.toString().padStart(2, '0')}`, 20, 80);
+        // Right side - Opponent
+        drawFighterUI(canvas.width - 320, 20, opponent, opponent.name.toUpperCase(), false);
+        
+        // Center - Round and time info
+        drawCenterUI();
+        
+        // Bottom - Controls
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '14px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('L-Shift: Left Punch  R-Shift: Right Punch  +↑: High Punch  ↓: Block  ←→: Dodge', canvas.width/2, canvas.height - 20);
+        ctx.textAlign = 'left';
+    }
+    
+    function drawFighterUI(x, y, fighter, name, isPlayer) {
+        // Background panel
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x, y, 300, 120);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, 300, 120);
         
         // Fighter name
-        ctx.fillText(opponent.name, canvas.width/2 - 60, 30);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 24px "Courier New", monospace';
+        ctx.textAlign = isPlayer ? 'left' : 'right';
+        const nameX = isPlayer ? x + 10 : x + 290;
+        ctx.fillText(name, nameX, y + 30);
         
-        // Health bars
-        drawHealthBar(20, 105, player.health, player.maxHealth, '#00FF00', 'Little Mac');
-        drawHealthBar(20, 145, opponent.health, opponent.maxHealth, '#FF0000', opponent.name);
+        // Health bar
+        const healthY = y + 50;
+        drawFighterHealthBar(x + 10, healthY, fighter.health, fighter.maxHealth, isPlayer);
         
-        // Stamina bar
-        drawStaminaBar(20, 185, player.stamina, player.maxStamina);
-        
-        // Stars
-        ctx.fillText(`Stars: ${'★'.repeat(player.stars)}`, canvas.width - 150, 30);
-        
-        // Knockdown counter
-        ctx.fillStyle = player.knockdownCount >= 2 ? '#FF0000' : '#FFFFFF';
-        ctx.fillText(`Knockdowns: ${player.knockdownCount}/3`, canvas.width - 150, 55);
-        
-        // Opponent knockdown info
-        if (opponent.knockdownCount > 0) {
-            ctx.fillStyle = opponent.knockdownCount >= 2 ? '#FF8800' : '#FFFFFF';
-            ctx.fillText(`${opponent.name} KDs: ${opponent.knockdownCount}`, canvas.width - 150, 80);
-        }
-        
-        // Controls
-        ctx.font = '14px Arial';
-        ctx.fillText('L-Shift: Left Punch  R-Shift: Right Punch  +↑: High Punch  ↓: Block  ←→: Dodge', 20, canvas.height - 20);
-        
-        // Win condition
-        if (gameWon) {
-            ctx.fillStyle = '#00FF00';
-            ctx.font = '48px Arial';
-            ctx.fillText('KNOCKOUT!', canvas.width/2 - 120, canvas.height/2);
+        if (isPlayer) {
+            // Stamina bar for player only
+            const staminaY = y + 90;
+            drawFighterStaminaBar(x + 10, staminaY, fighter.stamina, fighter.maxStamina);
+        } else {
+            // Opponent knockdown count
+            if (fighter.knockdownCount > 0) {
+                ctx.fillStyle = fighter.knockdownCount >= 2 ? '#FF8800' : '#FFFFFF';
+                ctx.font = '16px "Courier New", monospace';
+                ctx.textAlign = 'right';
+                ctx.fillText(`KNOCKDOWNS: ${fighter.knockdownCount}`, x + 290, y + 80);
+            }
         }
     }
     
-    function drawHealthBar(x, y, health, maxHealth, color, label) {
-        const width = 200;
+    function drawCenterUI() {
+        // Center background
+        const centerX = canvas.width/2 - 100;
+        const centerY = 20;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(centerX, centerY, 200, 80);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(centerX, centerY, 200, 80);
+        
+        // Round info
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`ROUND ${currentRound}`, canvas.width/2, centerY + 30);
+        
+        // Time
+        ctx.font = '16px "Courier New", monospace';
+        ctx.fillText(`TIME: ${Math.ceil(roundTime)}`, canvas.width/2, centerY + 50);
+        
+        // Fight duration
+        const gameTime = Math.floor((Date.now() - fightStartTime) / 1000);
+        const minutes = Math.floor(gameTime / 60);
+        const seconds = gameTime % 60;
+        ctx.fillText(`${minutes}:${seconds.toString().padStart(2, '0')}`, canvas.width/2, centerY + 70);
+    }
+    
+    function drawFighterHealthBar(x, y, health, maxHealth, isPlayer) {
+        const width = 280;
         const height = 20;
         
         // Background
@@ -1965,21 +1997,25 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillRect(x, y, width, height);
         
         // Health
-        ctx.fillStyle = color;
-        ctx.fillRect(x, y, (health / maxHealth) * width, height);
+        const healthPercent = health / maxHealth;
+        ctx.fillStyle = healthPercent > 0.6 ? '#00FF00' : healthPercent > 0.3 ? '#FFFF00' : '#FF0000';
+        ctx.fillRect(x, y, healthPercent * width, height);
         
         // Border
         ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
         ctx.strokeRect(x, y, width, height);
         
-        // Label
+        // Health text
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '12px Arial';
-        ctx.fillText(label, x, y - 5);
+        ctx.font = '14px "Courier New", monospace';
+        ctx.textAlign = isPlayer ? 'left' : 'right';
+        const textX = isPlayer ? x : x + width;
+        ctx.fillText('HEALTH', textX, y - 5);
     }
     
-    function drawStaminaBar(x, y, stamina, maxStamina) {
-        const width = 200;
+    function drawFighterStaminaBar(x, y, stamina, maxStamina) {
+        const width = 280;
         const height = 15;
         
         // Background
@@ -1987,17 +2023,20 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillRect(x, y, width, height);
         
         // Stamina
-        ctx.fillStyle = '#FFFF00';
-        ctx.fillRect(x, y, (stamina / maxStamina) * width, height);
+        const staminaPercent = stamina / maxStamina;
+        ctx.fillStyle = staminaPercent > 0.6 ? '#00FFFF' : staminaPercent > 0.3 ? '#FFFF00' : '#FF8800';
+        ctx.fillRect(x, y, staminaPercent * width, height);
         
         // Border
         ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
         ctx.strokeRect(x, y, width, height);
         
-        // Label
+        // Stamina text
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '12px Arial';
-        ctx.fillText('Stamina', x, y - 5);
+        ctx.font = '14px "Courier New", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('STAMINA', x, y - 5);
     }
     
     function startGame() {
