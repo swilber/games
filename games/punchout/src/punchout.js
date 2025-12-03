@@ -285,9 +285,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (opponent.knockdownCount >= 3 && opponent.knockedDown && opponent.knockdownTimer <= 0) {
             // TKO - opponent couldn't get up after 3 knockdowns
             winFight();
-        } else if (player.health <= 0) {
-            loseFight();
         }
+        // Removed player health check - Mac can always get back up when knocked down
     }
     
     // Animation keyframe system
@@ -378,15 +377,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.knockdownTimer--;
             
             if (player.knockdownTimer <= 0) {
-                if (player.knockdownCount > 3) {
-                    // TKO - player can't get up after more than 3 knockdowns
-                    gameTKO = true;
-                    gameRunning = false;
-                    return;
-                } else {
-                    // Time ran out but player can still try to get up, just reset timer
-                    player.knockdownTimer = 600; // Give another chance
-                }
+                // Time ran out but player can always try to get up, just reset timer
+                player.knockdownTimer = 600; // Give another chance
             }
             return; // Don't process other player actions while knocked down
         }
@@ -798,20 +790,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                     player.knockdownTimer = 600; // 10 seconds to get up
                     player.knockdownCount++;
                     
-                    // Check for TKO immediately
-                    if (player.knockdownCount > 3) {
-                        gameTKO = true;
-                        gameRunning = false;
-                        
-                        // Restart after showing TKO
-                        setTimeout(() => {
-                            gameTKO = false;
-                            resetFight();
-                        }, 3000);
-                        
-                        return;
-                    }
-                    
+                    // Player can always get back up - no TKO for Little Mac
                     player.health = 1; // Keep at 1 so player doesn't die immediately
                     player.y = 650; // Move Mac below the screen
                     player.getUpProgress = 0; // Start at bottom
