@@ -41,10 +41,9 @@
     {
       "name": "Glass Joe",
       "health": 60,
-      "speed": 0.8,
-      "patterns": ["uppercut", "uppercut", "jab", "uppercut"],
-      "tells": ["blink", "lean"],
-      "uppercutFrequency": 0.75
+      "speed": 0.5,
+      "patterns": ["jab", "jab", "jab", "jab", "jab", "uppercut"],
+      "tells": ["blink"]
     },
     {
       "name": "Von Kaiser",

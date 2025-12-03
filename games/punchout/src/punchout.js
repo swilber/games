@@ -25,10 +25,19 @@ async function createPunchOutGame(settings, callbacks = null) {
     let gameRunning = false;
     let gameWon = false;
     let gameTKO = false;
+    let victoryType = null; // 'KO', 'TKO', or null
     let gameStarted = false;
     let currentRound = 1;
     let roundTime = punchOutConfig.gameplay?.roundTime || 180;
     let currentFighter = 0;
+    let fightStartTime = Date.now(); // Track fight duration for TKO logic
+    
+    // TKO configuration
+    const tkoConfig = {
+        fastKnockoutTime: 30, // If knocked down within 30 seconds, instant TKO
+        baseGetUpTime: 180, // Base time to get up (3 seconds)
+        getUpTimeIncrease: 60 // Additional time penalty per knockdown (1 second)
+    };
     
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -70,10 +79,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         { 
             name: "Glass Joe", 
             health: 60, 
-            speed: 0.8, 
-            patterns: ["uppercut", "uppercut", "jab", "uppercut"], 
-            tells: ["blink"],
-            uppercutFrequency: 0.75 // 75% chance of uppercut attacks
+            speed: 0.5, // Slower movement
+            patterns: ["jab", "jab", "jab", "jab", "jab", "uppercut"], // Only 1 in 6 attacks is uppercut
+            tells: ["blink"]
         }
     ];
     
@@ -488,12 +496,12 @@ async function createPunchOutGame(settings, callbacks = null) {
             opponent.patternTimer++;
             
             // Show tell before attacking
-            if (opponent.patternTimer > 60 && opponent.patternTimer < 90) {
+            if (opponent.patternTimer > 120 && opponent.patternTimer < 150) {
                 opponent.tellTimer++;
             }
             
-            // Execute attack
-            if (opponent.patternTimer > 120) {
+            // Execute attack (delayed for easier difficulty)
+            if (opponent.patternTimer > 200) {
                 if (!opponent.attacking) {
                     const pattern = opponent.patterns[opponent.currentPattern];
                     executeOpponentAttack(pattern);
@@ -501,9 +509,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             }
             
-            // Reset pattern - longer duration for uppercuts
+            // Reset pattern - longer duration for uppercuts and overall slower
             const pattern = opponent.patterns[opponent.currentPattern];
-            const resetTime = pattern === 'uppercut' ? 240 : 180; // Longer for uppercuts
+            const resetTime = pattern === 'uppercut' ? 360 : 300; // Much longer for easier difficulty
             if (opponent.patternTimer > resetTime) {
                 opponent.patternTimer = 0;
                 opponent.attacking = false;
@@ -517,16 +525,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         console.log('Original pattern:', pattern);
         console.log('Current pattern index:', opponent.currentPattern);
         console.log('Available patterns:', opponent.patterns);
-        
-        // Check if we should override with uppercut based on frequency
-        const fighterData = fighters[currentFighter] || fighters[0];
-        console.log('Fighter data patterns:', fighterData.patterns);
-        console.log('Uppercut frequency:', fighterData.uppercutFrequency);
-        
-        if (fighterData.uppercutFrequency && Math.random() < fighterData.uppercutFrequency) {
-            pattern = 'uppercut';
-            console.log('Overriding with uppercut due to frequency');
-        }
         
         console.log('Final pattern:', pattern);
         
@@ -641,12 +639,40 @@ async function createPunchOutGame(settings, callbacks = null) {
                     // Check for knockdown
                     if (opponent.health <= 0 || (damage >= 25 && opponent.health <= 30)) {
                         opponent.knockedDown = true;
-                        opponent.knockdownTimer = 600; // 10 seconds
                         opponent.knockdownCount++;
                         opponent.health = Math.max(1, opponent.health);
-                        // Move opponent to back of ring when knocked down
-                        opponent.y = 150; // Back of the ring
-                        showHitEffect(opponent.x, opponent.y - 100, "KNOCKDOWN!", '#FF0000');
+                        
+                        // Check for fast knockout (instant TKO)
+                        const fightDuration = (Date.now() - fightStartTime) / 1000;
+                        if (fightDuration <= tkoConfig.fastKnockoutTime) {
+                            // Fast knockout - instant TKO
+                            gameRunning = false;
+                            gameWon = true;
+                            victoryType = 'TKO';
+                            
+                            // Continue to next fighter after delay
+                            setTimeout(() => {
+                                if (currentFighter < fighters.length - 1) {
+                                    currentFighter++;
+                                    resetForNextFighter();
+                                } else {
+                                    if (callbacks && callbacks.onGameComplete) {
+                                        callbacks.onGameComplete('punchout', { completed: true });
+                                    }
+                                }
+                            }, 4000);
+                            
+                            showHitEffect(opponent.x, opponent.y - 100, "FAST TKO!", '#FFD700');
+                        } else {
+                            // Normal knockdown - progressive recovery difficulty
+                            const baseTime = tkoConfig.baseGetUpTime;
+                            const penalty = (opponent.knockdownCount - 1) * tkoConfig.getUpTimeIncrease;
+                            opponent.knockdownTimer = baseTime + penalty;
+                            
+                            // Move opponent to back of ring when knocked down
+                            opponent.y = 150; // Back of the ring
+                            showHitEffect(opponent.x, opponent.y - 100, "KNOCKDOWN!", '#FF0000');
+                        }
                     }
                     
                     // Prevent multiple hits per punch
@@ -658,7 +684,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         }
         
         // Opponent hitting player - simple state check
-        if (opponent.attacking && opponent.patternTimer > 140) {
+        if (opponent.attacking && opponent.patternTimer > 220) {
             // Check if player is vulnerable (not blocking or dodging)
             let playerHit = true;
             const pattern = opponent.patterns[opponent.currentPattern];
@@ -841,34 +867,33 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Draw opponent first (behind player)
         drawOpponent();
         
-        // Draw player (skip if TKO)
-        if (!gameTKO) {
-            drawPlayer();
-        }
+        // Draw player
+        drawPlayer();
         
         // Draw hit effects
         drawHitEffects();
         
-        // Draw UI (skip if TKO)
-        if (!gameTKO) {
+        // Draw UI (skip if victory)
+        if (!gameWon) {
             drawUI();
         }
         
-        // Draw TKO overlay
-        if (gameTKO) {
-            // Darken the screen
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        // Draw victory overlay
+        if (gameWon && victoryType) {
+            // Darken the screen slightly
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw TKO text
-            ctx.fillStyle = '#FFFFFF';
+            // Draw victory text
+            ctx.fillStyle = '#FFD700';
             ctx.font = '72px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('TKO', canvas.width/2, canvas.height/2 - 40);
+            ctx.fillText(victoryType, canvas.width/2, canvas.height/2 - 40);
             
-            // Draw Game Over text
+            // Draw "You Win!" text
+            ctx.fillStyle = '#FFFFFF';
             ctx.font = '36px Arial';
-            ctx.fillText('Game Over', canvas.width/2, canvas.height/2 + 40);
+            ctx.fillText('You Win!', canvas.width/2, canvas.height/2 + 40);
         }
         
         ctx.restore();
@@ -990,11 +1015,23 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillStyle = '#0000FF';
         ctx.fillRect(playerCenterX - 25, playerCenterY + 20, 50, 30);
         
-        // Gloves - show different punch types
+        // Gloves - show different states
         ctx.fillStyle = '#FF0000';
         const gloveSize = 18;
         
-        if (player.punching) {
+        if (gameWon && victoryType) {
+            // Victory celebration - arms raised high above head
+            ctx.fillStyle = punchOutConfig.visual?.playerColor || '#FFE4B5';
+            // Left arm raised
+            ctx.fillRect(playerCenterX - 35, playerCenterY - 85, 8, 30);
+            // Right arm raised  
+            ctx.fillRect(playerCenterX + 27, playerCenterY - 85, 8, 30);
+            
+            // Gloves above head
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(playerCenterX - 40, playerCenterY - 90, gloveSize, gloveSize);
+            ctx.fillRect(playerCenterX + 22, playerCenterY - 90, gloveSize, gloveSize);
+        } else if (player.punching) {
             // Animated punch with proper arms - punches go FORWARD toward opponent from very top of torso
             ctx.shadowColor = '#FF0000';
             ctx.shadowBlur = 5;
@@ -1079,7 +1116,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         let stepOffset = 0;
         let duckOffset = 0;
         if (opponent.attacking) {
-            const attackFrame = opponent.patternTimer - 120;
+            const attackFrame = opponent.patternTimer - 200;
             const attackProgress = Math.sin(attackFrame * 0.3);
             stepOffset = Math.abs(attackProgress) * 20; // Step forward during punch
             
@@ -1285,7 +1322,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.shadowBlur = 15;
             ctx.lineCap = 'round';
             
-            const attackFrame = opponent.patternTimer - 120;
+            const attackFrame = opponent.patternTimer - 200;
             const attackProgress = Math.sin(attackFrame * 0.3);
             const attackExtend = attackProgress * 60; // Reduced extension
             
@@ -1725,15 +1762,21 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.fillText(`Round ${currentRound}`, 20, 30);
         ctx.fillText(`Time: ${Math.ceil(roundTime)}`, 20, 55);
         
+        // Game timer
+        const gameTime = Math.floor((Date.now() - fightStartTime) / 1000);
+        const minutes = Math.floor(gameTime / 60);
+        const seconds = gameTime % 60;
+        ctx.fillText(`Fight: ${minutes}:${seconds.toString().padStart(2, '0')}`, 20, 80);
+        
         // Fighter name
         ctx.fillText(opponent.name, canvas.width/2 - 60, 30);
         
         // Health bars
-        drawHealthBar(20, 80, player.health, player.maxHealth, '#00FF00', 'Little Mac');
-        drawHealthBar(20, 120, opponent.health, opponent.maxHealth, '#FF0000', opponent.name);
+        drawHealthBar(20, 105, player.health, player.maxHealth, '#00FF00', 'Little Mac');
+        drawHealthBar(20, 145, opponent.health, opponent.maxHealth, '#FF0000', opponent.name);
         
         // Stamina bar
-        drawStaminaBar(20, 160, player.stamina, player.maxStamina);
+        drawStaminaBar(20, 185, player.stamina, player.maxStamina);
         
         // Stars
         ctx.fillText(`Stars: ${'★'.repeat(player.stars)}`, canvas.width - 150, 30);
@@ -1741,6 +1784,12 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Knockdown counter
         ctx.fillStyle = player.knockdownCount >= 2 ? '#FF0000' : '#FFFFFF';
         ctx.fillText(`Knockdowns: ${player.knockdownCount}/3`, canvas.width - 150, 55);
+        
+        // Opponent knockdown info
+        if (opponent.knockdownCount > 0) {
+            ctx.fillStyle = opponent.knockdownCount >= 2 ? '#FF8800' : '#FFFFFF';
+            ctx.fillText(`${opponent.name} KDs: ${opponent.knockdownCount}`, canvas.width - 150, 80);
+        }
         
         // Controls
         ctx.font = '14px Arial';
@@ -1814,6 +1863,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     function winFight() {
         gameRunning = false;
         gameWon = true;
+        victoryType = 'KO'; // Regular knockout
         
         setTimeout(() => {
             if (currentFighter < fighters.length - 1) {
@@ -1868,6 +1918,12 @@ async function createPunchOutGame(settings, callbacks = null) {
     function resetFight() {
         currentRound = 1;
         roundTime = punchOutConfig.gameplay?.roundTime || 180;
+        fightStartTime = Date.now(); // Reset fight timer for TKO logic
+        
+        // Reset game states
+        gameWon = false;
+        gameTKO = false;
+        victoryType = null;
         
         player.health = player.maxHealth;
         player.stamina = player.maxStamina;
