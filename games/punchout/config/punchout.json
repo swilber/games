@@ -43,7 +43,9 @@
       "health": 60,
       "speed": 0.5,
       "patterns": ["jab", "jab", "jab", "jab", "jab", "uppercut"],
-      "tells": ["blink"]
+      "tells": ["blink"],
+      "blockChance": 0.05,
+      "blockPatterns": ["none", "none", "none", "torso", "head"]
     },
     {
       "name": "Von Kaiser",

@@ -107,7 +107,12 @@ async function createPunchOutGame(settings, callbacks = null) {
         attackHand: null,
         blocking: false,
         blockType: null, // 'high' or 'low'
-        blockChance: Math.min(0.2 + currentFighter * 0.15, 0.8), // Progressive blocking skill
+        blockChance: fighters[currentFighter].blockChance || Math.min(0.2 + currentFighter * 0.15, 0.8), // Use config or progressive blocking skill
+        blockPatterns: fighters[currentFighter].blockPatterns || ["none"],
+        currentBlockPattern: 0,
+        blockPatternTimer: 0,
+        danceTimer: 0,
+        danceDirection: 1, // 1 for right, -1 for left
         stunned: false,
         stunnedTimer: 0,
         knockedDown: false,
@@ -473,9 +478,43 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             }
             
-            // Check if player is punching and decide whether to block
-            if (player.punching && !opponent.blocking && !opponent.attacking) {
-                if (Math.random() < opponent.blockChance) {
+            // Dancing movement when not walking to position
+            if (!opponent.walkingToPosition && !opponent.attacking) {
+                opponent.danceTimer++;
+                
+                // Dance left and right
+                if (opponent.danceTimer % 120 === 0) { // Change direction every 2 seconds
+                    opponent.danceDirection *= -1;
+                }
+                
+                // Move side to side slightly
+                const danceAmount = Math.sin(opponent.danceTimer * 0.05) * opponent.danceDirection * 15;
+                opponent.x = 400 + danceAmount; // Center position + dance offset
+            }
+            
+            // Block pattern cycling
+            opponent.blockPatternTimer++;
+            if (opponent.blockPatternTimer > 180) { // Change block pattern every 3 seconds
+                opponent.currentBlockPattern = (opponent.currentBlockPattern + 1) % opponent.blockPatterns.length;
+                opponent.blockPatternTimer = 0;
+                
+                // Set current blocking state based on pattern
+                const currentPattern = opponent.blockPatterns[opponent.currentBlockPattern];
+                if (currentPattern === 'none') {
+                    opponent.blocking = false;
+                    opponent.blockType = null;
+                } else {
+                    opponent.blocking = true;
+                    opponent.blockType = currentPattern === 'head' ? 'high' : 'low';
+                }
+            }
+            
+            // Check if player is punching and decide whether to block (only if not already in pattern block)
+            if (player.punching && !opponent.attacking) {
+                const currentPattern = opponent.blockPatterns[opponent.currentBlockPattern];
+                
+                // Only do reactive blocking if current pattern is 'none' and random chance
+                if (currentPattern === 'none' && Math.random() < opponent.blockChance) {
                     opponent.blocking = true;
                     // Block high or low based on player's punch type
                     if (player.punchType && player.punchType.includes('high')) {
@@ -486,10 +525,13 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
             }
             
-            // End blocking after punch animation
-            if (opponent.blocking && !player.punching) {
-                opponent.blocking = false;
-                opponent.blockType = null;
+            // End reactive blocking after punch animation (but keep pattern blocking)
+            if (!player.punching) {
+                const currentPattern = opponent.blockPatterns[opponent.currentBlockPattern];
+                if (currentPattern === 'none') {
+                    opponent.blocking = false;
+                    opponent.blockType = null;
+                }
             }
             
             // AI pattern behavior
