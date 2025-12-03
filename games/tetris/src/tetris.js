@@ -325,23 +325,44 @@ async function createTetrisGame(settings, callbacks = null) {
     function drawUI() {
         const uiX = BOARD_WIDTH * BLOCK_SIZE + 20;
         
+        // Draw background panels for retro look
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(uiX - 10, 10, 140, 80); // Score panel
+        ctx.fillRect(uiX - 10, 100, 140, 80); // Lines panel
+        ctx.fillRect(uiX - 10, 190, 140, 80); // Level panel
+        ctx.fillRect(uiX - 10, 280, 140, 120); // Next piece panel
+        
+        // Draw panel borders
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(uiX - 10, 10, 140, 80); // Score border
+        ctx.strokeRect(uiX - 10, 100, 140, 80); // Lines border
+        ctx.strokeRect(uiX - 10, 190, 140, 80); // Level border
+        ctx.strokeRect(uiX - 10, 280, 140, 120); // Next piece border
+        
         ctx.fillStyle = tetrisConfig.visual?.textColor || '#ffffff';
         ctx.font = '20px "Courier New", monospace';
         
         // Score
         ctx.fillText('SCORE', uiX, 30);
+        ctx.fillStyle = '#00ff00';
         ctx.fillText(score.toString(), uiX, 55);
         
         // Lines
-        ctx.fillText('LINES', uiX, 90);
-        ctx.fillText(lines.toString(), uiX, 115);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('LINES', uiX, 120);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(lines.toString(), uiX, 145);
         
         // Level
-        ctx.fillText('LEVEL', uiX, 150);
-        ctx.fillText(level.toString(), uiX, 175);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('LEVEL', uiX, 210);
+        ctx.fillStyle = '#00ff00';
+        ctx.fillText(level.toString(), uiX, 235);
         
         // Next piece
-        ctx.fillText('NEXT', uiX, 210);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('NEXT', uiX, 300);
         if (nextPiece) {
             const nextTemplate = TETROMINOES[nextPiece];
             ctx.fillStyle = nextTemplate.color;
@@ -350,7 +371,15 @@ async function createTetrisGame(settings, callbacks = null) {
                     if (nextTemplate.shape[y][x]) {
                         ctx.fillRect(
                             uiX + x * 20, 
-                            230 + y * 20, 
+                            320 + y * 20, 
+                            18, 18
+                        );
+                        // Add block borders for retro look
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(
+                            uiX + x * 20, 
+                            320 + y * 20, 
                             18, 18
                         );
                     }
@@ -358,13 +387,20 @@ async function createTetrisGame(settings, callbacks = null) {
             }
         }
         
+        // Controls panel
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(uiX - 10, 420, 140, 100);
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(uiX - 10, 420, 140, 100);
+        
         // Controls
         ctx.font = '12px "Courier New", monospace';
         ctx.fillStyle = '#cccccc';
-        ctx.fillText('← → Move', uiX, 400);
-        ctx.fillText('↓ Soft Drop', uiX, 420);
-        ctx.fillText('↑ Hard Drop', uiX, 440);
-        ctx.fillText('SPACE Rotate', uiX, 460);
+        ctx.fillText('← → Move', uiX, 440);
+        ctx.fillText('↓ Soft Drop', uiX, 455);
+        ctx.fillText('↑ Hard Drop', uiX, 470);
+        ctx.fillText('SPACE Rotate', uiX, 485);
     }
     
     function render() {
