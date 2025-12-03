@@ -259,8 +259,8 @@ async function createTetrisGame(settings, callbacks = null) {
     
     function getDropSpeed() {
         const baseSpeed = tetrisConfig.gameplay?.dropSpeed || 800;
-        // Use level 10 speed for testing (level 10 would be: 800 - (10-1) * 50 = 350)
-        return 350;
+        // Use twice as fast as level 10 speed for testing (350ms / 2 = 175ms)
+        return 175;
     }
     
     function drawBlock(x, y, color, alpha = 1) {
