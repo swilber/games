@@ -1,6 +1,6 @@
 {
   "gameSettings": {
-    "totalLevels": 14,
+    "totalLevels": 15,
     "startUnlocked": 1,
     "difficulty": 5,
     "showMinimap": true,
@@ -91,6 +91,12 @@
       "order": 14,
       "enabled": true,
       "type": "punchout"
+    },
+    {
+      "id": 15,
+      "order": 15,
+      "enabled": true,
+      "type": "tetris"
     }
   ]
 }

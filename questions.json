@@ -140,6 +140,17 @@
       "answer": "abc",
       "unlockQuestion": "What do you use to defend against the invaders?",
       "unlockAnswer": "abc"
+    },
+    {
+      "id": 15,
+      "order": 15,
+      "title": "Challenge 15: Tetris",
+      "description": "Classic falling block puzzle game",
+      "type": "tetris",
+      "question": "What happens when you complete a horizontal line in Tetris?",
+      "answer": "abc",
+      "unlockQuestion": "What key do you press for a star punch?",
+      "unlockAnswer": "abc"
     }
   ]
 }

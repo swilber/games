@@ -1,0 +1,37 @@
+{
+  "name": "Tetris",
+  "description": "Classic falling block puzzle game",
+  "difficulty": {
+    "dropSpeed": {
+      "base": 800,
+      "multiplier": -50,
+      "min": 100,
+      "max": 1000,
+      "formula": "base + difficulty * multiplier"
+    },
+    "linesPerLevel": {
+      "value": 10,
+      "static": true
+    }
+  },
+  "gameplay": {
+    "dropSpeed": 800,
+    "linesPerLevel": 10,
+    "softDropSpeed": 50,
+    "lockDelay": 500
+  },
+  "physics": {
+    "canvasWidth": 480,
+    "canvasHeight": 640,
+    "boardWidth": 10,
+    "boardHeight": 20,
+    "blockSize": 32
+  },
+  "visual": {
+    "backgroundColor": "#000000",
+    "borderColor": "#ffffff",
+    "gridColor": "#333333",
+    "textColor": "#ffffff",
+    "ghostColor": "#666666"
+  }
+}
