@@ -106,42 +106,15 @@ async function createPunchOutGame(settings, callbacks = null) {
         flashTimer: 0 // Timer for pink flash when hit
     };
     
-    const baseFighters = [
+    const fighters = punchOutConfig.fighters || [
         { 
             name: "Glass Joe", 
             health: 60, 
             speed: 0.5, // Slower movement
             patterns: ["jab", "jab", "jab", "jab", "jab", "uppercut"], // Only 1 in 6 attacks is uppercut
-            tells: ["blink"],
-            bodyShape: "thin"
-        },
-        { 
-            name: "Von Kaiser", 
-            health: 80, 
-            speed: 0.4, // Slower due to weight
-            patterns: ["jab", "jab", "uppercut", "jab"], 
-            tells: ["step_back"],
-            bodyShape: "fat"
-        },
-        { 
-            name: "Piston Honda", 
-            health: 100, 
-            speed: 0.7, // Fast and strong
-            patterns: ["jab", "uppercut", "jab", "uppercut"], 
-            tells: ["crouch"],
-            bodyShape: "tough"
+            tells: ["blink"]
         }
     ];
-    
-    // Merge config fighters with base fighters, ensuring bodyShape is preserved
-    const fighters = (punchOutConfig.fighters || baseFighters).map((fighter, index) => ({
-        ...baseFighters[index],
-        ...fighter,
-        bodyShape: fighter.bodyShape || baseFighters[index]?.bodyShape || "tough"
-    }));
-    
-    console.log('Current fighter:', currentFighter, 'Fighter data:', fighters[currentFighter]);
-    console.log('Fighter bodyShape:', fighters[currentFighter].bodyShape);
     
     const opponent = {
         x: punchOutConfig.physics?.opponentX || 400,
@@ -154,7 +127,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         health: fighters[currentFighter].health,
         maxHealth: fighters[currentFighter].health,
         name: fighters[currentFighter].name,
-        bodyShape: fighters[currentFighter].bodyShape || "tough",
         speed: fighters[currentFighter].speed,
         patterns: fighters[currentFighter].patterns,
         tells: fighters[currentFighter].tells,
@@ -181,8 +153,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         getUpTimer: 0,
         animationFrame: 0
     };
-    
-    console.log('Opponent initialized with bodyShape:', opponent.bodyShape);
     
     // Input handling
     const keys = {};
@@ -1381,67 +1351,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.restore();
     }
     
-    function drawOpponentBody(centerX, centerY, bodyShape) {
-        console.log('Drawing body shape:', bodyShape);
-        
-        switch(bodyShape) {
-            case "thin":
-                console.log('Drawing thin body');
-                // Thin body - narrow trapezoid
-                ctx.beginPath();
-                ctx.moveTo(centerX - 25, centerY - 60); // Narrow shoulders
-                ctx.lineTo(centerX + 25, centerY - 60);
-                ctx.lineTo(centerX + 20, centerY + 20); // Very narrow waist
-                ctx.lineTo(centerX - 20, centerY + 20);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Thin chest line
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - 50);
-                ctx.lineTo(centerX, centerY - 10);
-                ctx.stroke();
-                break;
-                
-            case "fat":
-                console.log('Drawing fat body');
-                // Fat body - draw basic torso first, belly will be drawn after shorts
-                ctx.beginPath();
-                ctx.moveTo(centerX - 35, centerY - 60); // Shoulders
-                ctx.lineTo(centerX + 35, centerY - 60);
-                ctx.lineTo(centerX + 25, centerY + 20); // Waist
-                ctx.lineTo(centerX - 25, centerY + 20);
-                ctx.closePath();
-                ctx.fill();
-                
-                // No chest definition for fat body
-                break;
-                
-            case "tough":
-            default:
-                console.log('Drawing tough body');
-                // Tough body - wide trapezoid (original)
-                ctx.beginPath();
-                ctx.moveTo(centerX - 45, centerY - 60); // Wide shoulders
-                ctx.lineTo(centerX + 45, centerY - 60);
-                ctx.lineTo(centerX + 30, centerY + 20); // Narrow waist
-                ctx.lineTo(centerX - 30, centerY + 20);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Chest definition
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY - 50);
-                ctx.lineTo(centerX, centerY - 10);
-                ctx.stroke();
-                break;
-        }
-    }
-    
     function drawOpponent() {
         ctx.save();
         
@@ -1582,9 +1491,25 @@ async function createPunchOutGame(settings, callbacks = null) {
             }
         }
         
-        // Draw opponent body based on body shape
+        // Draw opponent body - more human proportions
         ctx.fillStyle = opponentColor;
-        drawOpponentBody(opponentCenterX, opponentCenterY, opponent.bodyShape);
+        
+        // Trapezoidal torso (wider at shoulders, narrower at waist)
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX - 45, opponentCenterY - 60); // Top left (wide shoulders)
+        ctx.lineTo(opponentCenterX + 45, opponentCenterY - 60); // Top right (wide shoulders)
+        ctx.lineTo(opponentCenterX + 30, opponentCenterY + 20); // Bottom right (narrow waist)
+        ctx.lineTo(opponentCenterX - 30, opponentCenterY + 20); // Bottom left (narrow waist)
+        ctx.closePath();
+        ctx.fill();
+        
+        // Chest definition
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(opponentCenterX, opponentCenterY - 50);
+        ctx.lineTo(opponentCenterX, opponentCenterY - 10);
+        ctx.stroke();
         
         // Smaller, more realistic head
         ctx.fillStyle = opponentColor;
@@ -1631,48 +1556,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.arc(opponentCenterX, opponentCenterY - 68, 8, Math.PI * 0.2, Math.PI * 0.8);
         ctx.stroke();
         
-        // Shorts - size based on body shape
+        // Shorts
         ctx.fillStyle = '#800080';
-        switch(opponent.bodyShape) {
-            case "thin":
-                ctx.fillRect(opponentCenterX - 25, opponentCenterY + 30, 50, 40); // Narrow shorts
-                break;
-            case "fat":
-                ctx.fillRect(opponentCenterX - 50, opponentCenterY + 20, 100, 50); // Wide shorts
-                break;
-            case "tough":
-            default:
-                ctx.fillRect(opponentCenterX - 40, opponentCenterY + 30, 80, 40); // Normal shorts
-                break;
-        }
-        
-        // Draw fat belly details after shorts (so belly appears in front)
-        if (opponent.bodyShape === "fat") {
-            ctx.fillStyle = opponentColor;
-            
-            // Large belly that overlaps shorts
-            ctx.beginPath();
-            ctx.ellipse(opponentCenterX, opponentCenterY - 5, 65, 55, 0, 0, 2 * Math.PI);
-            ctx.fill();
-            
-            // Man boob crease arcs - bottom corners
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            // Left man boob arc - bottom left corner
-            ctx.beginPath();
-            ctx.arc(opponentCenterX - 25, opponentCenterY - 35, 12, Math.PI * 0.3, Math.PI * 0.7);
-            ctx.stroke();
-            // Right man boob arc - bottom right corner
-            ctx.beginPath();
-            ctx.arc(opponentCenterX + 25, opponentCenterY - 35, 12, Math.PI * 0.3, Math.PI * 0.7);
-            ctx.stroke();
-            
-            // Belly button - lower on the belly
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.ellipse(opponentCenterX, opponentCenterY + 10, 3, 2, 0, 0, 2 * Math.PI);
-            ctx.fill();
-        }
+        ctx.fillRect(opponentCenterX - 40, opponentCenterY + 30, 80, 40);
         
         // Opponent arms and gloves
         const armColor = opponentColor; // Same color as body
@@ -2258,7 +2144,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.health = fighter.health;
         opponent.maxHealth = fighter.health;
         opponent.name = fighter.name;
-        opponent.bodyShape = fighter.bodyShape || "tough";
         opponent.speed = fighter.speed;
         opponent.patterns = fighter.patterns;
         opponent.tells = fighter.tells;
@@ -2593,7 +2478,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Reset opponent to first fighter
         const fighterData = fighters[currentFighter];
         opponent.name = fighterData.name;
-        opponent.bodyShape = fighterData.bodyShape || "tough";
         opponent.x = 400;
         opponent.y = 200;
         opponent.width = fighterData.width || 80;
