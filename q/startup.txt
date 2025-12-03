@@ -1,0 +1,36 @@
+# Q Startup Instructions
+Last Updated: 2025-12-03T10:53:32.213-07:00
+
+## HOW TO START A NEW Q SESSION
+Use this exact prompt:
+```
+Please read and follow the instructions in /Users/P2176038/Desktop/greg/q/startup.txt and all related files in the /q directory before proceeding with any work.
+```
+
+## IMPORTANT: Q FILE MANAGEMENT
+**All files in the /q directory are updatable by Q as needed.**
+
+Q should:
+- Update files with new learnings and patterns discovered during work
+- Remove outdated information that is no longer relevant
+- Decide what information is useful now vs. useful for all time
+- Keep files current and practical for future sessions
+- Add new files if needed for better organization
+
+## QUICK START
+1. Read all files in this /q directory before starting work
+2. Follow coding_standards.txt for all development work
+3. Check project_state.txt for current status
+4. Reference architecture.txt for system understanding
+5. Update relevant files as work progresses
+
+## FILE STRUCTURE
+- startup.txt (this file) - Main entry point and session instructions
+- coding_standards.txt - Development workflow and standards
+- project_state.txt - Current project status and recent changes
+- architecture.txt - System design and file structure
+- common_issues.txt - Known problems and solutions
+- recent_patterns.txt - Newly discovered patterns and learnings
+
+## CORE PRINCIPLE
+Always update these files as new information is discovered to maintain continuity across Q sessions. Keep information relevant and actionable.

@@ -1,0 +1,40 @@
+# Coding Standards & Workflow
+Last Updated: 2025-12-03T10:53:32.213-07:00
+
+## Q FILE MAINTENANCE
+- **Update these /q files regularly** as new patterns emerge
+- **Remove outdated information** that no longer applies
+- **Prioritize actionable information** over historical details
+- **Add new files** if better organization is needed
+- **Keep information current** and relevant to ongoing work
+
+## BACKUP PROTOCOL
+1. Always create backups before making changes
+2. Use naming convention: .backup, .backup2, .backup3
+3. Store backups in same directory as original file
+4. Delete backup files before pushing to git
+
+## DEVELOPMENT WORKFLOW
+1. Make incremental changes (one small change at a time)
+2. Test after each change
+3. Check syntax after each modification
+4. Commit working states frequently
+5. Use meaningful commit messages
+
+## ERROR HANDLING
+1. Add minimal debug statements only when debugging
+2. Use backups to troubleshoot and revert if needed
+3. Remove all debug statements before final commit
+4. Check for syntax errors: unmatched braces, duplicate functions
+
+## TESTING PROTOCOL
+1. Provide exact testing steps to user
+2. Wait for user confirmation before proceeding
+3. Fix issues immediately when reported
+4. Test in browser console for JavaScript errors
+
+## CODE QUALITY
+- Write minimal code that directly addresses requirements
+- Avoid verbose implementations
+- Follow existing code patterns in the project
+- Maintain consistent indentation and formatting

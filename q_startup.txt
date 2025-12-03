@@ -1,0 +1,2 @@
+This file has been moved to /q directory. 
+Please use /q/startup.txt as the main entry point.

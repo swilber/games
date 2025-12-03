@@ -1,0 +1,28 @@
+# Recent Patterns & Learnings
+Last Updated: 2025-12-03T10:49:58.092-07:00
+
+## DEBUGGING PATTERNS
+- **Comprehensive debug logging**: Add debug statements at function entry, key decision points, and return statements
+- **Error catching**: Wrap suspicious code in try-catch during debugging
+- **Systematic approach**: Start from game loading chain and work inward
+
+## SYNTAX ERROR PATTERNS
+- **Duplicate functions**: Check for copy-paste errors creating duplicate function definitions
+- **Incomplete functions**: Verify all functions have proper opening/closing braces
+- **Try-catch mismatches**: Ensure every try has corresponding catch or finally
+
+## PUNCH OUT SPECIFIC LEARNINGS
+- Had duplicate drawPlayer() functions causing syntax errors
+- Extra closing braces at end of file prevented loading
+- Try block without catch caused "Missing catch or finally" error
+- Function must return game instance with destroy() method
+
+## FILE ORGANIZATION
+- Keep backup files during development for quick rollback
+- Use node -c filename.js to verify syntax before testing
+- Remove all debug statements before committing to keep code clean
+
+## TESTING APPROACH
+- Test in browser console for immediate feedback
+- Check Network tab for file loading issues
+- Use browser debugger to step through problematic code
