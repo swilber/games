@@ -137,7 +137,7 @@
       "description": "Boxing game inspired by Mike Tyson's Punch-Out!!",
       "type": "punchout",
       "question": "What key do you press for a star punch?",
-      "answer": "c",
+      "answer": "abc",
       "unlockQuestion": "What do you use to defend against the invaders?",
       "unlockAnswer": "abc"
     },
@@ -148,7 +148,7 @@
       "description": "Classic arcade space shooter - destroy alien formations",
       "type": "galaga",
       "question": "What key do you press to shoot in Galaga?",
-      "answer": "space",
+      "answer": "abc",
       "unlockQuestion": "What key do you press for a star punch?",
       "unlockAnswer": "c"
     }
