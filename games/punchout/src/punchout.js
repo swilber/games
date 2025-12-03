@@ -860,43 +860,88 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fill();
         }
         
-        // Draw ring with better perspective
-        const ringGradient = ctx.createLinearGradient(0, canvas.height - 100, 0, canvas.height);
-        ringGradient.addColorStop(0, '#8B4513');
-        ringGradient.addColorStop(1, '#654321');
-        ctx.fillStyle = ringGradient;
-        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        // Draw ring with original Punch-Out perspective (light blue, 70% of screen)
+        const ringTop = canvas.height * 0.3; // Ring starts at 30% from top
+        const ringBottom = canvas.height; // Ring goes to bottom
         
-        // Draw ring canvas pattern
-        ctx.fillStyle = '#A0522D';
-        for (let x = 0; x < canvas.width; x += 40) {
-            for (let y = canvas.height - 50; y < canvas.height; y += 40) {
-                if ((x + y) % 80 === 0) {
-                    ctx.fillRect(x, y, 20, 20);
-                }
-            }
-        }
+        // Create perspective trapezoid for the ring floor
+        ctx.fillStyle = '#87CEEB'; // Light blue like original
+        ctx.beginPath();
         
-        // Draw ropes with better 3D effect
+        // Front edge (bottom) - wider than screen
+        const frontWidth = canvas.width * 1.2;
+        const frontLeft = (canvas.width - frontWidth) / 2;
+        const frontRight = frontLeft + frontWidth;
+        
+        // Back edge (top) - narrower for perspective
+        const backWidth = canvas.width * 0.6;
+        const backLeft = (canvas.width - backWidth) / 2;
+        const backRight = backLeft + backWidth;
+        
+        // Draw trapezoid ring floor
+        ctx.moveTo(frontLeft, ringBottom);
+        ctx.lineTo(frontRight, ringBottom);
+        ctx.lineTo(backRight, ringTop);
+        ctx.lineTo(backLeft, ringTop);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw ring ropes
         ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 6;
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 3;
+        ctx.lineWidth = 3;
         
-        for (let i = 1; i <= 3; i++) {
-            const y = canvas.height - 50 - (i * 100);
+        // Back ropes (3 horizontal lines above the ring)
+        for (let i = 0; i < 3; i++) {
+            const ropeY = ringTop - 60 + (i * 20); // Above the ring mat
             ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
+            ctx.moveTo(backLeft, ropeY);
+            ctx.lineTo(backRight, ropeY);
             ctx.stroke();
-            
-            // Rope posts
-            ctx.fillStyle = '#666666';
-            ctx.fillRect(-5, y - 10, 10, 20);
-            ctx.fillRect(canvas.width - 5, y - 10, 10, 20);
         }
         
-        ctx.shadowBlur = 0;
+        // Left side ropes (3 lines with perspective, matching back rope heights)
+        for (let i = 0; i < 3; i++) {
+            const ropeTopY = ringTop - 60 + (i * 20); // Same height as back ropes
+            const ropeBotY = ringBottom - 100 + (i * 20); // Front height with perspective
+            ctx.beginPath();
+            ctx.moveTo(backLeft, ropeTopY);
+            ctx.lineTo(frontLeft, ropeBotY);
+            ctx.stroke();
+        }
+        
+        // Right side ropes (3 lines with perspective, matching back rope heights)
+        for (let i = 0; i < 3; i++) {
+            const ropeTopY = ringTop - 60 + (i * 20); // Same height as back ropes
+            const ropeBotY = ringBottom - 100 + (i * 20); // Front height with perspective
+            ctx.beginPath();
+            ctx.moveTo(backRight, ropeTopY);
+            ctx.lineTo(frontRight, ropeBotY);
+            ctx.stroke();
+        }
+        
+        // Draw corner posts (thick bars where ropes connect)
+        ctx.fillStyle = '#666666';
+        ctx.strokeStyle = '#444444';
+        ctx.lineWidth = 2;
+        
+        // Back left corner post
+        const postWidth = 8;
+        const postHeight = 80;
+        ctx.fillRect(backLeft - postWidth/2, ringTop - 70, postWidth, postHeight);
+        ctx.strokeRect(backLeft - postWidth/2, ringTop - 70, postWidth, postHeight);
+        
+        // Back right corner post
+        ctx.fillRect(backRight - postWidth/2, ringTop - 70, postWidth, postHeight);
+        ctx.strokeRect(backRight - postWidth/2, ringTop - 70, postWidth, postHeight);
+        
+        // Front left corner post (with perspective - taller)
+        const frontPostHeight = 120;
+        ctx.fillRect(frontLeft - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
+        ctx.strokeRect(frontLeft - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
+        
+        // Front right corner post (with perspective - taller)
+        ctx.fillRect(frontRight - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
+        ctx.strokeRect(frontRight - postWidth/2, ringBottom - 110, postWidth, frontPostHeight);
         
         // Draw crowd silhouettes
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
