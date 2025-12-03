@@ -331,6 +331,7 @@ async function createTetrisGame(settings, callbacks = null) {
         ctx.fillRect(uiX - 10, 100, 140, 80); // Lines panel
         ctx.fillRect(uiX - 10, 190, 140, 80); // Level panel
         ctx.fillRect(uiX - 10, 280, 140, 120); // Next piece panel
+        ctx.fillRect(uiX - 10, 410, 140, 80); // Progress panel
         
         // Draw panel borders
         ctx.strokeStyle = '#00ff00';
@@ -339,6 +340,7 @@ async function createTetrisGame(settings, callbacks = null) {
         ctx.strokeRect(uiX - 10, 100, 140, 80); // Lines border
         ctx.strokeRect(uiX - 10, 190, 140, 80); // Level border
         ctx.strokeRect(uiX - 10, 280, 140, 120); // Next piece border
+        ctx.strokeRect(uiX - 10, 410, 140, 80); // Progress border
         
         ctx.fillStyle = tetrisConfig.visual?.textColor || '#ffffff';
         ctx.font = '20px "Courier New", monospace';
@@ -387,20 +389,46 @@ async function createTetrisGame(settings, callbacks = null) {
             }
         }
         
+        // Progress information
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px "Courier New", monospace';
+        ctx.fillText('PROGRESS', uiX, 430);
+        
+        const linesPerLevel = tetrisConfig.gameplay?.linesPerLevel || 10;
+        const currentLevelLines = lines % linesPerLevel;
+        const targetLevel = 10; // Win condition level
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.font = '12px "Courier New", monospace';
+        ctx.fillText(`Level ${level}/${targetLevel}`, uiX, 450);
+        ctx.fillText(`Lines: ${currentLevelLines}/${linesPerLevel}`, uiX, 465);
+        
+        // Progress bar
+        const barWidth = 100;
+        const barHeight = 8;
+        const progress = currentLevelLines / linesPerLevel;
+        
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(uiX, 470, barWidth, barHeight);
+        
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(uiX, 470, barWidth * progress, barHeight);
+        
         // Controls panel
         ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(uiX - 10, 420, 140, 100);
+        ctx.fillRect(uiX - 10, 500, 140, 80);
         ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 2;
-        ctx.strokeRect(uiX - 10, 420, 140, 100);
+        ctx.strokeRect(uiX - 10, 500, 140, 80);
         
         // Controls
         ctx.font = '12px "Courier New", monospace';
         ctx.fillStyle = '#cccccc';
-        ctx.fillText('← → Move', uiX, 440);
-        ctx.fillText('↓ Soft Drop', uiX, 455);
-        ctx.fillText('↑ Hard Drop', uiX, 470);
-        ctx.fillText('SPACE Rotate', uiX, 485);
+        ctx.fillText('← → Move', uiX, 520);
+        ctx.fillText('↓ Soft Drop', uiX, 535);
+        ctx.fillText('↑ Hard Drop', uiX, 550);
+        ctx.fillText('SPACE Rotate', uiX, 565);
     }
     
     function render() {
