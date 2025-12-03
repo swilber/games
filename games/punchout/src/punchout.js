@@ -632,16 +632,16 @@ async function createPunchOutGame(settings, callbacks = null) {
             const shouldAttack = Math.random() < opponent.attackFrequency;
             const playerVulnerable = !player.blocking && !player.dodging && player.punchCooldown <= 0;
             
-            // Show tell before attacking (varies by reaction time)
-            const tellStartTime = opponent.reactionTime;
-            const tellDuration = Math.max(30, opponent.reactionTime / 4); // Tell duration based on reaction time
+            // Show tell before attacking (shorter timing)
+            const tellStartTime = 30;
+            const tellDuration = 20;
             
             if (opponent.patternTimer > tellStartTime && opponent.patternTimer < tellStartTime + tellDuration) {
                 opponent.tellTimer++;
             }
             
-            // Execute attack (timing based on difficulty)
-            const attackTime = tellStartTime + tellDuration + 30; // Small delay after tell
+            // Execute attack (happens before reset)
+            const attackTime = 60; // Attack at 1 second, well before reset
             if (opponent.patternTimer > attackTime && shouldAttack) {
                 if (!opponent.attacking && playerVulnerable) {
                     const pattern = opponent.patterns[opponent.currentPattern];
@@ -652,14 +652,18 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Reset pattern - timing varies by difficulty
             const pattern = opponent.patterns[opponent.currentPattern];
-            const baseResetTime = pattern === 'uppercut' ? 240 : 180;
-            const resetTime = baseResetTime + (300 - opponent.reactionTime); // Faster fighters reset quicker
+            const baseResetTime = pattern === 'uppercut' ? 120 : 90; // Much shorter reset times
+            const resetTime = baseResetTime + Math.max(0, (180 - opponent.reactionTime) / 2); // Faster fighters reset quicker
             
             if (opponent.patternTimer > resetTime) {
+                console.log('Cycling pattern from', opponent.currentPattern, 'to', (opponent.currentPattern + 1) % opponent.patterns.length);
                 opponent.patternTimer = 0;
                 opponent.attacking = false;
                 opponent.tellTimer = 0;
                 opponent.currentPattern = (opponent.currentPattern + 1) % opponent.patterns.length;
+            } else if (opponent.patternTimer % 60 === 0) {
+                // Debug log every second to see timer progress
+                console.log('Pattern timer:', opponent.patternTimer, 'Reset time:', resetTime, 'Pattern:', pattern);
             }
         }
     }
@@ -668,12 +672,14 @@ async function createPunchOutGame(settings, callbacks = null) {
         console.log('Original pattern:', pattern);
         console.log('Current pattern index:', opponent.currentPattern);
         console.log('Available patterns:', opponent.patterns);
+        console.log('About to execute pattern:', pattern);
         
         console.log('Final pattern:', pattern);
         
         // Set which hand to use for this attack
         switch(pattern) {
             case 'jab':
+                console.log('Executing JAB attack');
                 // Quick straight punch - left hand
                 opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
@@ -681,6 +687,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'uppercut':
+                console.log('Executing UPPERCUT attack');
                 // Powerful uppercut - always use dominant hand (right)
                 opponent.attackHand = 'right';
                 console.log('Uppercut with dominant hand:', opponent.attackHand);
@@ -689,6 +696,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'hook':
+                console.log('Executing HOOK attack');
                 // Side punch - right hand
                 opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
@@ -696,13 +704,20 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'rush':
+                console.log('Executing RUSH attack');
                 // Multiple quick punches - alternating hands
                 opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
                     player.health -= Math.max(10, (opponent.punchDamage || 15) - 5); // Rush does -5 damage but min 10
                 }
                 break;
+            default:
+                console.log('UNKNOWN PATTERN:', pattern, 'defaulting to jab');
+                opponent.attackHand = 'left';
+                break;
         }
+        
+        console.log('Attack hand set to:', opponent.attackHand);
     }
     
     function checkCollisions() {
@@ -916,8 +931,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function render() {
-        console.log('render called - showingTraining:', showingTraining, 'gameRunning:', gameRunning);
-        
         ctx.save();
         
         // Apply screen shake
@@ -1399,11 +1412,8 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function drawOpponentBody(centerX, centerY, bodyShape) {
-        console.log('Drawing body shape:', bodyShape);
-        
         switch(bodyShape) {
             case "thin":
-                console.log('Drawing thin body');
                 // Thin body - narrow trapezoid
                 ctx.beginPath();
                 ctx.moveTo(centerX - 25, centerY - 60); // Narrow shoulders
@@ -1423,7 +1433,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 break;
                 
             case "fat":
-                console.log('Drawing fat body');
                 // Fat body - draw basic torso first, belly will be drawn after shorts
                 ctx.beginPath();
                 ctx.moveTo(centerX - 35, centerY - 60); // Shoulders
@@ -1438,7 +1447,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 
             case "tough":
             default:
-                console.log('Drawing tough body');
                 // Tough body - much larger wide trapezoid
                 ctx.beginPath();
                 ctx.moveTo(centerX - 65, centerY - 80); // Much wider shoulders
@@ -1735,7 +1743,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             
             // Different animations based on attack pattern
             const pattern = opponent.patterns[opponent.currentPattern];
-            console.log('Drawing attack pattern:', pattern, 'with hand:', opponent.attackHand);
             
             if (pattern === 'jab') {
                 if (opponent.attackHand === 'left') {
