@@ -259,11 +259,11 @@ async function createTetrisGame(settings, callbacks = null) {
     
     function getDropSpeed() {
         const level1Speed = 800; // Slow start
-        const level10Speed = 175; // Fast end
+        const level5Speed = 175; // Fast end at level 5
         
-        // Linear interpolation between level 1 and level 10
-        const progress = (level - 1) / 9; // 0 to 1 over 9 level increments
-        return Math.round(level1Speed - (level1Speed - level10Speed) * progress);
+        // Linear interpolation between level 1 and level 5
+        const progress = (level - 1) / 4; // 0 to 1 over 4 level increments
+        return Math.round(level1Speed - (level1Speed - level5Speed) * progress);
     }
     
     function drawBlock(x, y, color, alpha = 1) {
@@ -400,7 +400,7 @@ async function createTetrisGame(settings, callbacks = null) {
         
         const linesPerLevel = tetrisConfig.gameplay?.linesPerLevel || 10;
         const currentLevelLines = lines % linesPerLevel;
-        const targetLevel = 10; // Win condition level
+        const targetLevel = 5; // Win condition level
         
         ctx.fillStyle = '#00ff00';
         ctx.font = '12px "Courier New", monospace';
@@ -594,8 +594,8 @@ async function createTetrisGame(settings, callbacks = null) {
         update(deltaTime);
         render();
         
-        // Check win condition (reach level 10)
-        if (level >= 10) {
+        // Check win condition (reach level 5)
+        if (level >= 5) {
             gameWon = true;
             gameRunning = false;
             
