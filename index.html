@@ -34,35 +34,56 @@
         <div id="config-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Game Configuration</h3>
+                    <h3>Configuration</h3>
                     <button class="close-btn" onclick="closeConfigModal()">&times;</button>
                 </div>
-                <div class="config-selector">
-                    <label for="game-select">Configure Game:</label>
-                    <select id="game-select" onchange="showConfigTab(this.value)">
-                        <option value="mario">Mario</option>
-                        <option value="snake">Snake</option>
-                        <option value="pacman">Pac-Man</option>
-                        <option value="memory">Memory</option>
-                        <option value="breakout">Breakout</option>
-                        <option value="asteroids">Asteroids</option>
-                        <option value="spaceinvaders">Space Invaders</option>
-                        <option value="punchout">Punch-Out!!</option>
-                        <option value="flappy">Flappy Bird</option>
-                        <option value="frogger">Frogger</option>
-                        <option value="maze3d">3D Maze</option>
-                        <option value="donkeykong">Donkey Kong</option>
-                        <option value="fake">Fake Game</option>
-                        <option value="tetris">Tetris</option>
-                    </select>
+                <div class="config-tabs">
+                    <button class="tab-btn active" onclick="showConfigType('system')">System</button>
+                    <button class="tab-btn" onclick="showConfigType('game')">Game</button>
                 </div>
-                <div id="config-content">
-                    <!-- Configuration forms will be generated here -->
+                <div id="system-config" class="config-section">
+                    <h4>System Configuration</h4>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="show-game-names" onchange="toggleGameNames()">
+                            Show game names on level buttons
+                        </label>
+                    </div>
+                    <div class="config-group">
+                        <button onclick="resetLevelProgress()">
+                            Reset Level Completion Progress
+                        </button>
+                    </div>
+                </div>
+                <div id="game-config" class="config-section hidden">
+                    <div class="config-selector">
+                        <label for="game-select">Configure Game:</label>
+                        <select id="game-select" onchange="showConfigTab(this.value)">
+                            <option value="mario">Mario</option>
+                            <option value="snake">Snake</option>
+                            <option value="pacman">Pac-Man</option>
+                            <option value="memory">Memory</option>
+                            <option value="breakout">Breakout</option>
+                            <option value="asteroids">Asteroids</option>
+                            <option value="spaceinvaders">Space Invaders</option>
+                            <option value="punchout">Punch-Out!!</option>
+                            <option value="flappy">Flappy Bird</option>
+                            <option value="frogger">Frogger</option>
+                            <option value="maze3d">3D Maze</option>
+                            <option value="donkeykong">Donkey Kong</option>
+                            <option value="fake">Fake Game</option>
+                            <option value="tetris">Tetris</option>
+                        </select>
+                    </div>
+                    <div id="config-content">
+                        <!-- Configuration forms will be generated here -->
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="resetCurrentConfig()">Reset to Defaults</button>
-                    <button id="save-config-btn" onclick="saveCurrentConfig()" disabled>Save Changes</button>
-                    <button onclick="resetProgress()" style="background: #ff4444; color: white;">Reset Progress</button>
+                    <div id="game-config-buttons" class="hidden">
+                        <button onclick="resetCurrentConfig()">Reset to Defaults</button>
+                        <button id="save-config-btn" onclick="saveCurrentConfig()" disabled>Save Changes</button>
+                    </div>
                     <button onclick="closeConfigModal()">Close</button>
                 </div>
             </div>

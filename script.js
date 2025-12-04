@@ -132,14 +132,106 @@ let currentConfigTab = 'mario';
 let currentGameConfig = {};
 let originalConfig = {}; // Track original config for change detection
 
+// System Configuration Functions
+function showConfigType(type) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Show/hide sections
+    document.getElementById('system-config').classList.toggle('hidden', type !== 'system');
+    document.getElementById('game-config').classList.toggle('hidden', type !== 'game');
+    
+    // Show/hide game config buttons
+    document.getElementById('game-config-buttons').classList.toggle('hidden', type !== 'game');
+    
+    // Load system config state if showing system tab
+    if (type === 'system') {
+        loadSystemConfig();
+    } else if (type === 'game') {
+        // Load default game config if switching to game tab
+        showConfigTab('mario');
+    }
+}
+
+function loadSystemConfig() {
+    // Load show game names setting
+    const showGameNames = localStorage.getItem('showGameNames') !== 'false';
+    document.getElementById('show-game-names').checked = showGameNames;
+    
+    // Update reset button color based on progress data
+    updateResetButtonState();
+}
+
+function updateResetButtonState() {
+    const resetButton = document.querySelector('button[onclick="resetLevelProgress()"]');
+    if (!resetButton) return;
+    
+    // Check if there's any progress data to clear
+    let hasProgressData = false;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('level_') || key.startsWith('progress_') || key === 'currentLevel' || key === 'arcadeChallengesProgress') {
+            hasProgressData = true;
+            break;
+        }
+    }
+    
+    if (hasProgressData) {
+        resetButton.style.background = '#ff4444';
+        resetButton.style.color = 'white';
+        resetButton.disabled = false;
+    } else {
+        resetButton.style.background = '#666';
+        resetButton.style.color = '#999';
+        resetButton.disabled = true;
+    }
+}
+
+function toggleGameNames() {
+    const showNames = document.getElementById('show-game-names').checked;
+    localStorage.setItem('showGameNames', showNames);
+    
+    // Update level buttons immediately
+    showLevelSelect();
+}
+
+function resetLevelProgress() {
+    // Clear all progress-related localStorage
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('level_') || key.startsWith('progress_') || key === 'currentLevel' || key === 'arcadeChallengesProgress') {
+            keysToRemove.push(key);
+        }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // Reset progress tracker
+    if (window.ProgressTracker) {
+        window.ProgressTracker.currentLevel = 1;
+        window.ProgressTracker.completedLevels = new Set();
+        // Force save the reset state
+        window.ProgressTracker.saveProgress();
+    }
+    
+    // Refresh the level selection display
+    showLevelSelect();
+    
+    // Update button state
+    updateResetButtonState();
+}
 // Configuration Modal Functions
 async function openConfigModal() {
     document.getElementById('config-modal').classList.remove('hidden');
-    await showConfigTab('mario');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    showConfigType('system');
 }
 
 function closeConfigModal() {
     document.getElementById('config-modal').classList.add('hidden');
+    document.body.style.overflow = ''; // Restore scrolling
 }
 
 async function showConfigTab(gameType) {
@@ -597,11 +689,6 @@ function saveCurrentConfig() {
     updateSaveButtonState();
 }
 
-function resetProgress() {
-    localStorage.removeItem('arcadeChallengesProgress');
-    location.reload();
-}
-
 // Show debug controls if debug mode is enabled
 function initializeDebugMode() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -886,9 +973,8 @@ function showLevelSelect() {
     const levelButtons = document.getElementById('level-buttons');
     levelButtons.innerHTML = '';
     
-    // Check if gameTitle query parameter is true
-    const urlParams = new URLSearchParams(window.location.search);
-    const showGameTitles = urlParams.get('gameTitle') === 'true';
+    // Check localStorage setting for showing game names
+    const showGameTitles = localStorage.getItem('showGameNames') !== 'false';
     
     levels.forEach((level, index) => {
         const button = document.createElement('button');
