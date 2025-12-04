@@ -2,7 +2,7 @@
   "levels": [
     {
       "id": 1,
-      "title": "Level 1: Memory Game",
+      "title": "Challenge 1: Memory Game",
       "description": "Remember the sequence and repeat it back",
       "type": "memory",
       "question": "What do you need to do in the memory game?",
@@ -12,7 +12,7 @@
     },
     {
       "id": 2,
-      "title": "Level 2: Snake",
+      "title": "Challenge 2: Snake",
       "description": "Control the snake to eat food and grow longer",
       "type": "snake",
       "question": "What happens when the snake eats food?",
@@ -22,7 +22,7 @@
     },
     {
       "id": 3,
-      "title": "Level 3: Quiz",
+      "title": "Challenge 3: Quiz",
       "description": "Answer questions correctly within the time limit",
       "type": "quiz",
       "question": "What is the main challenge in the quiz game?",
@@ -32,7 +32,7 @@
     },
     {
       "id": 4,
-      "title": "Level 4: Flappy Bird",
+      "title": "Challenge 4: Flappy Bird",
       "description": "Navigate through pipes by flapping your wings",
       "type": "flappy",
       "question": "How do you control the bird in Flappy Bird?",
@@ -42,7 +42,7 @@
     },
     {
       "id": 5,
-      "title": "Level 5: Frogger",
+      "title": "Challenge 5: Frogger",
       "description": "Help the frog cross the road and river safely",
       "type": "frogger",
       "question": "What must the frog avoid in Frogger?",
@@ -52,7 +52,7 @@
     },
     {
       "id": 6,
-      "title": "Level 6: 3D Maze",
+      "title": "Challenge 6: 3D Maze",
       "description": "Navigate through a 3D maze to find the exit",
       "type": "maze3d",
       "question": "What is the goal in the 3D maze?",
@@ -62,7 +62,7 @@
     },
     {
       "id": 7,
-      "title": "Level 7: Mario Bros",
+      "title": "Challenge 7: Mario Bros",
       "description": "Jump on enemies and collect coins in this platformer",
       "type": "mario",
       "question": "How do you defeat enemies in Mario?",
@@ -72,7 +72,7 @@
     },
     {
       "id": 8,
-      "title": "Level 8: Donkey Kong",
+      "title": "Challenge 8: Donkey Kong",
       "description": "Climb ladders and avoid barrels to reach the top",
       "type": "donkeykong",
       "question": "What does Donkey Kong throw at you?",
@@ -82,7 +82,7 @@
     },
     {
       "id": 9,
-      "title": "Level 9: Pac-Man",
+      "title": "Challenge 9: Pac-Man",
       "description": "Eat dots while avoiding ghosts in the maze",
       "type": "pacman",
       "question": "What do you eat in Pac-Man?",
@@ -92,7 +92,7 @@
     },
     {
       "id": 10,
-      "title": "Level 10: Fake Game",
+      "title": "Challenge 10: Fake Game",
       "description": "Move the blue square to the gold square",
       "type": "fake",
       "question": "What is the objective of the fake game?",
@@ -102,7 +102,7 @@
     },
     {
       "id": 11,
-      "title": "Level 11: Breakout",
+      "title": "Challenge 11: Breakout",
       "description": "Use paddle to bounce ball and break all bricks",
       "type": "breakout",
       "question": "What do you use to control the ball in Breakout?",
@@ -112,7 +112,7 @@
     },
     {
       "id": 12,
-      "title": "Level 12: Asteroids",
+      "title": "Challenge 12: Asteroids",
       "description": "Destroy asteroids and UFOs in space while avoiding collisions",
       "type": "asteroids",
       "question": "What happens when you shoot a large asteroid?",
@@ -122,7 +122,7 @@
     },
     {
       "id": 13,
-      "title": "Level 13: Space Invaders",
+      "title": "Challenge 13: Space Invaders",
       "description": "Defend Earth from waves of alien invaders",
       "type": "spaceinvaders",
       "question": "What do you use to defend against the invaders?",
