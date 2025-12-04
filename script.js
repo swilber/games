@@ -408,6 +408,7 @@ function generateTetrisConfigForm(config, container) {
 function generatePunchoutConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'opponents', title: 'Opponent Health Settings' },
         { key: 'physics', title: 'Physics Settings' },
         { key: 'visual', title: 'Visual Settings' }
     ];

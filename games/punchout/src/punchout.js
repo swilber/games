@@ -109,7 +109,7 @@ async function createPunchOutGame(settings, callbacks = null) {
     const baseFighters = [
         { 
             name: "Glass Joe", 
-            health: 60, 
+            health: punchOutConfig.opponents?.glassJoeHealth || 60, 
             speed: 0.5, // Slower movement
             patterns: ["jab", "jab", "jab", "jab", "jab", "uppercut"], // Only 1 in 6 attacks is uppercut
             tells: ["blink"],
@@ -120,7 +120,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         },
         { 
             name: "Von Kaiser", 
-            health: 80, 
+            health: punchOutConfig.opponents?.vonKaiserHealth || 80, 
             speed: 0.4, // Slower due to weight
             patterns: ["jab", "jab", "uppercut", "jab"], 
             tells: ["step_back"],
@@ -131,7 +131,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         },
         { 
             name: "Steven Wilber", 
-            health: 100, 
+            health: punchOutConfig.opponents?.stevenWilberHealth || 100, 
             speed: 0.7, // Fast and strong
             patterns: ["uppercut", "jab", "uppercut", "uppercut", "jab", "uppercut"], // More uppercuts
             tells: ["crouch"],
@@ -764,40 +764,40 @@ async function createPunchOutGame(settings, callbacks = null) {
                 if (hitSuccess) {
                     switch(player.punchType) {
                         case 'low-left':
-                            damage = 8; // Lower damage for body shots
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.53); // Lower damage for body shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = 12;
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.8);
                                 // showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "LEFT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-left':
-                            damage = 12; // Medium damage for head shots
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.8); // Medium damage for head shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = 18;
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 1.2);
                                 // showHitEffect(opponent.x, opponent.y - 80, "HEAD COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "LEFT HEAD!", '#FFFFFF');
                             }
                             break;
                         case 'low-right':
-                            damage = 10; // Right hand hits harder
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.67); // Right hand hits harder
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = 15;
+                                damage = punchOutConfig.gameplay?.playerDamage || 15;
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-right':
-                            damage = 15; // High damage for right head shots
+                            damage = punchOutConfig.gameplay?.playerDamage || 15; // High damage for right head shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = 22;
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 1.47);
                                 // showHitEffect(opponent.x, opponent.y - 80, "POWER COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT HEAD!", '#FF8800');

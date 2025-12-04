@@ -20,7 +20,13 @@
     "roundTime": 180,
     "playerHealth": 100,
     "stamina": 100,
-    "maxStars": 3
+    "maxStars": 3,
+    "playerDamage": 15
+  },
+  "opponents": {
+    "glassJoeHealth": 60,
+    "vonKaiserHealth": 80,
+    "stevenWilberHealth": 100
   },
   "physics": {
     "canvasWidth": 800,
