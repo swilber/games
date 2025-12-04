@@ -445,7 +445,8 @@ async function createTetrisGame(settings, callbacks = null) {
         
         // Draw ghost piece
         if (ghostPiece && currentPiece) {
-            drawPiece(ghostPiece, 0, 0, 0.3);
+            const ghostAlpha = tetrisConfig.visual?.ghostTransparency || 0.3;
+            drawPiece(ghostPiece, 0, 0, ghostAlpha);
         }
         
         // Draw current piece

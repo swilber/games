@@ -31,6 +31,7 @@
     "backgroundColor": "#000000",
     "borderColor": "#ffffff",
     "gridColor": "#333333",
-    "textColor": "#ffffff"
+    "textColor": "#ffffff",
+    "ghostTransparency": 0.3
   }
 }
