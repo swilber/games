@@ -30,16 +30,20 @@ Track recent commands and context to recover from context window overflows.
 - **Last changes**: Fixed opponent attack timing - attacks execute at 60 frames before pattern reset
 
 ## RECENT COMMANDS (Last 10)
-1. `git push` - Pushed opponent attack timing fix (commit 98c0e91)
-2. Fixed opponent attack timing - attacks now execute at 60 frames before pattern reset
-3. Debugged pattern cycling issue where opponents weren't punching
-4. `node -c punchout.js` - Verified syntax after attack timing fix
-5. Analyzed attack timing calculation vs pattern reset timing conflict
-6. `node -c punchout.js` - Verified syntax after level completion system
-7. Implemented complete training animation with moving background
-8. Added level completion logic with Enter key progression
-9. `cp punchout.js punchout.js.backup7` - Created backup before level system
-10. `git push` - Pushed game over functionality and knockdown fix
+1. Updated Punch-Out!! config with opponent health and player damage settings
+2. Added generatePunchoutConfigForm function to fix blank configuration
+3. Updated all game titles to consistent "Challenge X:" format
+4. Added Tetris to Game Configuration menu dropdown
+5. Removed hold functionality from Tetris for simplified gameplay
+6. Updated Tetris to retro Courier New font and polished UI panels
+7. Changed Tetris to 5-level system with linear speed progression
+8. Added flashing animation for cleared lines in Tetris
+9. Fixed Tetris piece placement to immediately spawn next piece
+10. Added complete authentic Tetris game as level 15
+
+## IMPORTANT WORKFLOW CHANGE
+- **DO NOT automatically push to git** - wait for explicit user instructions
+- Only commit/push when user specifically requests it
 
 ## ACTIVE CONTEXT
 - **Working directory**: /Users/P2176038/Desktop/greg

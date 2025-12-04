@@ -23,11 +23,12 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 - Remove old entries when they become irrelevant
 - Focus on actionable information for continuity
 
-## BACKUP PROTOCOL
-1. Always create backups before making changes
-2. Use naming convention: .backup, .backup2, .backup3
-3. Store backups in same directory as original file
-4. Delete backup files before pushing to git
+## GIT WORKFLOW
+- **NEVER automatically push changes** - wait for explicit user instructions
+- Only commit and push when user says "push changes", "commit and push", or similar
+- Always create backups before making changes
+- Use meaningful commit messages
+- Test syntax before committing
 
 ## DEVELOPMENT WORKFLOW
 1. Make incremental changes (one small change at a time)
