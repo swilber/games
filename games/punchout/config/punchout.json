@@ -21,7 +21,7 @@
     "playerHealth": 100,
     "stamina": 100,
     "maxStars": 3,
-    "playerDamage": 15
+    "playerDamage": 4
   },
   "opponents": {
     "glassJoeHealth": 60,

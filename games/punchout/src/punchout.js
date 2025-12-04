@@ -200,6 +200,23 @@ async function createPunchOutGame(settings, callbacks = null) {
     
     console.log('Opponent initialized with bodyShape:', opponent.bodyShape);
     
+    // Helper function to handle player damage and knockdown
+    function damagePlayer(damage) {
+        player.health -= damage;
+        player.health = Math.max(0, player.health);
+        
+        // Check for knockdown
+        if (player.health <= 0 && !player.knockedDown) {
+            player.knockedDown = true;
+            player.knockdownTimer = 600; // 10 seconds to get up
+            player.knockdownCount++;
+            player.health = 1; // Keep at 1 so player doesn't die immediately
+            player.y = 650; // Move Mac below the screen
+            player.getUpProgress = 0; // Start at bottom
+            showHitEffect(player.x, player.y - 50, "KNOCKDOWN!", '#FF0000');
+        }
+    }
+    
     // Input handling
     const keys = {};
     
@@ -702,7 +719,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Quick straight punch - left hand
                 opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
-                    player.health -= opponent.punchDamage || 15;
+                    damagePlayer(opponent.punchDamage || 15);
                 }
                 break;
             case 'uppercut':
@@ -711,7 +728,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.attackHand = 'right';
                 console.log('Uppercut with dominant hand:', opponent.attackHand);
                 if (!player.blocking) {
-                    player.health -= (opponent.punchDamage || 15) + 10; // Uppercut does +10 damage
+                    damagePlayer((opponent.punchDamage || 15) + 10); // Uppercut does +10 damage
                 }
                 break;
             case 'hook':
@@ -719,7 +736,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Side punch - right hand
                 opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
-                    player.health -= (opponent.punchDamage || 15) + 5; // Hook does +5 damage
+                    damagePlayer((opponent.punchDamage || 15) + 5); // Hook does +5 damage
                 }
                 break;
             case 'rush':
@@ -727,7 +744,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Multiple quick punches - alternating hands
                 opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
-                    player.health -= Math.max(10, (opponent.punchDamage || 15) - 5); // Rush does -5 damage but min 10
+                    damagePlayer(Math.max(10, (opponent.punchDamage || 15) - 5)); // Rush does -5 damage but min 10
                 }
                 break;
             default:
@@ -764,40 +781,40 @@ async function createPunchOutGame(settings, callbacks = null) {
                 if (hitSuccess) {
                     switch(player.punchType) {
                         case 'low-left':
-                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.53); // Lower damage for body shots
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 0.53); // Lower damage for body shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.8);
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 0.8);
                                 // showHitEffect(opponent.x, opponent.y - 80, "COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "LEFT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-left':
-                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.8); // Medium damage for head shots
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 0.8); // Medium damage for head shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 1.2);
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 1.2);
                                 // showHitEffect(opponent.x, opponent.y - 80, "HEAD COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "LEFT HEAD!", '#FFFFFF');
                             }
                             break;
                         case 'low-right':
-                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 0.67); // Right hand hits harder
+                            damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 0.67); // Right hand hits harder
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = punchOutConfig.gameplay?.playerDamage || 15;
+                                damage = punchOutConfig.gameplay?.playerDamage || 4;
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT BODY!", '#FFFFFF');
                             }
                             break;
                         case 'high-right':
-                            damage = punchOutConfig.gameplay?.playerDamage || 15; // High damage for right head shots
+                            damage = punchOutConfig.gameplay?.playerDamage || 4; // High damage for right head shots
                             if (opponent.tellTimer > 0) {
                                 player.stars = Math.min(player.stars + 1, player.maxStars);
-                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 15) * 1.47);
+                                damage = Math.round((punchOutConfig.gameplay?.playerDamage || 4) * 1.47);
                                 // showHitEffect(opponent.x, opponent.y - 80, "POWER COUNTER!", '#FFD700');
                             } else {
                                 // showHitEffect(opponent.x, opponent.y - 80, "RIGHT HEAD!", '#FF8800');
@@ -866,7 +883,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                     showHitEffect(player.x, player.y - 50, "DODGED UPPERCUT!", '#00FFFF');
                 } else {
                     // Uppercut hits - massive damage
-                    player.health -= 25; // Heavy damage
+                    damagePlayer(25); // Heavy damage
                     showHitEffect(player.x, player.y - 50, "UPPERCUT!", '#FF0000');
                     // Screen shake for dramatic effect
                     ctx.save();
@@ -1194,11 +1211,11 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw "GAME OVER" text
+            // Draw "KNOCKED OUT!" text
             ctx.fillStyle = '#FF0000';
             ctx.font = 'bold 72px "Courier New", monospace';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 40);
+            ctx.fillText('KNOCKED OUT!', canvas.width/2, canvas.height/2 - 40);
             
             // Draw restart instruction
             ctx.fillStyle = '#FFFFFF';
