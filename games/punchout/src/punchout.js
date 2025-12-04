@@ -116,7 +116,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             bodyShape: "thin",
             blockChance: 0.1, // Very poor blocking
             attackFrequency: 0.3, // Attacks less often
-            reactionTime: 180 // Slow reactions (3 seconds)
+            reactionTime: 180, // Slow reactions (3 seconds)
+            punchDamage: punchOutConfig.opponents?.glassJoeDamage || 5
         },
         { 
             name: "Von Kaiser", 
@@ -127,7 +128,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             bodyShape: "fat",
             blockChance: 0.35, // Better blocking
             attackFrequency: 0.5, // Moderate attack rate
-            reactionTime: 120 // Faster reactions (2 seconds)
+            reactionTime: 120, // Faster reactions (2 seconds)
+            punchDamage: punchOutConfig.opponents?.vonKaiserDamage || 7
         },
         { 
             name: "Steven Wilber", 
@@ -139,7 +141,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             blockChance: 0.98, // Blocks almost everything normally
             attackFrequency: 0.8, // Very aggressive
             reactionTime: 60, // Very fast reactions (1 second)
-            punchDamage: 25 // Hits much harder (default is 15)
+            punchDamage: punchOutConfig.opponents?.stevenWilberDamage || 10
         }
     ];
     
@@ -719,7 +721,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Quick straight punch - left hand
                 opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
-                    damagePlayer(opponent.punchDamage || 15);
+                    const baseDamage = opponent.punchDamage || 5;
+                    const multiplier = punchOutConfig.opponents?.jabDamageMultiplier || 1.0;
+                    damagePlayer(Math.round(baseDamage * multiplier));
                 }
                 break;
             case 'uppercut':
@@ -728,7 +732,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.attackHand = 'right';
                 console.log('Uppercut with dominant hand:', opponent.attackHand);
                 if (!player.blocking) {
-                    damagePlayer((opponent.punchDamage || 15) + 10); // Uppercut does +10 damage
+                    const baseDamage = opponent.punchDamage || 5;
+                    const multiplier = punchOutConfig.opponents?.uppercutDamageMultiplier || 2.0;
+                    damagePlayer(Math.round(baseDamage * multiplier));
                 }
                 break;
             case 'hook':
@@ -736,7 +742,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Side punch - right hand
                 opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
-                    damagePlayer((opponent.punchDamage || 15) + 5); // Hook does +5 damage
+                    const baseDamage = opponent.punchDamage || 5;
+                    const multiplier = punchOutConfig.opponents?.hookDamageMultiplier || 1.5;
+                    damagePlayer(Math.round(baseDamage * multiplier));
                 }
                 break;
             case 'rush':
@@ -744,7 +752,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Multiple quick punches - alternating hands
                 opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
-                    damagePlayer(Math.max(10, (opponent.punchDamage || 15) - 5)); // Rush does -5 damage but min 10
+                    const baseDamage = opponent.punchDamage || 5;
+                    const multiplier = punchOutConfig.opponents?.rushDamageMultiplier || 0.8;
+                    damagePlayer(Math.round(baseDamage * multiplier));
                 }
                 break;
             default:
@@ -883,7 +893,9 @@ async function createPunchOutGame(settings, callbacks = null) {
                     showHitEffect(player.x, player.y - 50, "DODGED UPPERCUT!", '#00FFFF');
                 } else {
                     // Uppercut hits - massive damage
-                    damagePlayer(25); // Heavy damage
+                    const baseDamage = opponent.punchDamage || 5;
+                    const multiplier = punchOutConfig.opponents?.uppercutDamageMultiplier || 2.0;
+                    damagePlayer(Math.round(baseDamage * multiplier * 2)); // Special uppercut does double damage
                     showHitEffect(player.x, player.y - 50, "UPPERCUT!", '#FF0000');
                     // Screen shake for dramatic effect
                     ctx.save();

@@ -26,7 +26,14 @@
   "opponents": {
     "glassJoeHealth": 60,
     "vonKaiserHealth": 80,
-    "stevenWilberHealth": 100
+    "stevenWilberHealth": 100,
+    "glassJoeDamage": 5,
+    "vonKaiserDamage": 7,
+    "stevenWilberDamage": 10,
+    "jabDamage": 1.0,
+    "uppercutDamageMultiplier": 2.0,
+    "hookDamageMultiplier": 1.5,
+    "rushDamageMultiplier": 0.8
   },
   "physics": {
     "canvasWidth": 800,

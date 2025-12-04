@@ -5,18 +5,17 @@ Last Updated: 2025-12-03T13:43:26.870-07:00
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Punch Out opponent AI attack execution
+- **Working on**: Punch-Out!! game improvements and bug fixes
 - **Latest changes**: 
-  - **FIXED**: Opponent attack timing issue - opponents now punch properly
-  - Attack timing changed from reactionTime-based calculation to fixed 60 frames
-  - Resolved conflict where attacks (180+ frames) happened after pattern reset (90-120 frames)
-  - Pattern cycling works correctly, attacks execute before reset
+  - **FIXED**: Mac's health going below zero which broke knockdown system
+  - **REFACTORED**: Created damagePlayer() helper function to eliminate code duplication
+  - **IMPROVED**: Changed "GAME OVER" to "KNOCKED OUT!" for better boxing theme
+  - **BALANCED**: Reduced default player damage from 15 to 4 for longer, more strategic fights
+  - **CONFIGURED**: Added individual opponent health settings and player damage configuration
 - **Previous changes**: 
-  - Implemented complete level progression system
-  - Victory screen now shows "Press Enter to Face the Next Fighter"
-  - Added 10-second training animation with trainer on bike and Little Mac running
-  - Animated background with moving clouds, city skyline, and scrolling ground
-  - Proper level completion flow: Victory → Enter → Training → Next Fighter
+  - Added complete authentic Tetris game as level 15 with proper mechanics
+  - Fixed opponent attack timing issues in Punch-Out!!
+  - Updated Steven Wilber character with beard, hair, and enhanced blocking system
 - **Key improvements**:
   - Complete level progression system with proper game flow
   - Animated training sequence between fights (10 seconds)
@@ -30,16 +29,16 @@ Track recent commands and context to recover from context window overflows.
 - **Last changes**: Fixed opponent attack timing - attacks execute at 60 frames before pattern reset
 
 ## RECENT COMMANDS (Last 10)
-1. Updated Punch-Out!! config with opponent health and player damage settings
-2. Added generatePunchoutConfigForm function to fix blank configuration
-3. Updated all game titles to consistent "Challenge X:" format
-4. Added Tetris to Game Configuration menu dropdown
-5. Removed hold functionality from Tetris for simplified gameplay
-6. Updated Tetris to retro Courier New font and polished UI panels
-7. Changed Tetris to 5-level system with linear speed progression
-8. Added flashing animation for cleared lines in Tetris
-9. Fixed Tetris piece placement to immediately spawn next piece
-10. Added complete authentic Tetris game as level 15
+1. `git push` - Pushed Punch-Out!! improvements (commit 12fc87e)
+2. Reduced default player damage from 15 to 4 for longer fights
+3. Changed "GAME OVER" to "KNOCKED OUT!" for boxing theme
+4. Refactored damage system with damagePlayer() helper function
+5. Fixed Mac's health going below zero breaking knockdown system
+6. Added opponent health and player damage configurations to Punch-Out!!
+7. Added generatePunchoutConfigForm function to fix blank configuration
+8. Updated all game titles to consistent "Challenge X:" format
+9. Added Tetris to Game Configuration menu dropdown
+10. Removed hold functionality from Tetris for simplified gameplay
 
 ## IMPORTANT WORKFLOW CHANGE
 - **DO NOT automatically push to git** - wait for explicit user instructions
