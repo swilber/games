@@ -101,8 +101,12 @@ let questionSystem = {
         console.log('User answer:', userAnswer);
         console.log('Match:', userAnswer === correctAnswer);
         
-        if (userAnswer === correctAnswer) {
-            // Correct answer - clear pending question and allow access
+        // Check for bypass setting - allow empty string if enabled
+        const bypassEnabled = localStorage.getItem('bypassQuestions') === 'true';
+        const isEmptyBypass = bypassEnabled && userAnswer === '';
+        
+        if (userAnswer === correctAnswer || isEmptyBypass) {
+            // Correct answer or valid bypass - clear pending question and allow access
             this.currentQuestion = null;
             this.expectedAnswer = null;
             this.closeAnswerModal(true, callback);

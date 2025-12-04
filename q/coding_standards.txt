@@ -1,5 +1,12 @@
 # Coding Standards & Workflow
-Last Updated: 2025-12-03T10:57:38.150-07:00
+Last Updated: 2025-12-04T15:31:00.000-07:00
+
+## CRITICAL: ALWAYS FOLLOW Q/* INSTRUCTIONS
+- **READ ALL q/* files** before starting any work
+- **UPDATE q/* files** when discovering new patterns or system requirements
+- **PROVIDE COMPREHENSIVE TESTING INSTRUCTIONS** for every feature
+- **FOLLOW session_log.txt maintenance** requirements strictly
+- **ASSESS code quality** and prompt for refactoring opportunities
 
 ## Q FILE MAINTENANCE
 - **Update these /q files regularly** as new patterns emerge
@@ -8,6 +15,13 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 - **Add new files** if better organization is needed
 - **Keep information current** and relevant to ongoing work
 - **Update session_log.txt** with recent commands and context after significant work
+
+## TESTING REQUIREMENTS
+- **ALWAYS provide step-by-step testing instructions** for new features
+- Include prerequisites, expected results, and edge cases
+- Test both positive and negative scenarios
+- Verify setting persistence and state management
+- Document any special access requirements (debug mode, etc.)
 
 ## CODE QUALITY MONITORING
 - **Check code_quality.txt regularly** for refactoring opportunities
@@ -22,6 +36,7 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 - Include enough context to recover from overflow
 - Remove old entries when they become irrelevant
 - Focus on actionable information for continuity
+- **ALWAYS include comprehensive testing instructions**
 
 ## GIT WORKFLOW
 - **NEVER automatically push changes** - wait for explicit user instructions
@@ -37,6 +52,8 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 4. Commit working states frequently
 5. Use meaningful commit messages
 6. **Assess code quality** after significant changes
+7. **Provide comprehensive testing instructions**
+8. **Update relevant q/* files** with new learnings
 
 ## ERROR HANDLING
 1. Add minimal debug statements only when debugging
@@ -49,6 +66,7 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 2. Wait for user confirmation before proceeding
 3. Fix issues immediately when reported
 4. Test in browser console for JavaScript errors
+5. **Include comprehensive test scenarios** in session_log.txt
 
 ## CODE QUALITY
 - Write minimal code that directly addresses requirements
@@ -56,3 +74,11 @@ Last Updated: 2025-12-03T10:57:38.150-07:00
 - Follow existing code patterns in the project
 - Maintain consistent indentation and formatting
 - **Proactively identify refactoring opportunities**
+
+## NEW PATTERN: SYSTEM CONFIGURATION
+- System config uses tabbed interface (System/Game)
+- All styling must match neon theme with glowing effects
+- Settings persist in localStorage
+- Debug features require "gubed" query parameter
+- Visual feedback for all user actions (button states, etc.)
+- Modal background scrolling prevention required

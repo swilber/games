@@ -159,8 +159,17 @@ function loadSystemConfig() {
     const showGameNames = localStorage.getItem('showGameNames') !== 'false';
     document.getElementById('show-game-names').checked = showGameNames;
     
+    // Load bypass questions setting
+    const bypassQuestions = localStorage.getItem('bypassQuestions') === 'true';
+    document.getElementById('bypass-questions').checked = bypassQuestions;
+    
     // Update reset button color based on progress data
     updateResetButtonState();
+}
+
+function toggleBypassQuestions() {
+    const bypass = document.getElementById('bypass-questions').checked;
+    localStorage.setItem('bypassQuestions', bypass);
 }
 
 function updateResetButtonState() {
@@ -692,7 +701,7 @@ function saveCurrentConfig() {
 // Show debug controls if debug mode is enabled
 function initializeDebugMode() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('debug') === 'true') {
+    if (urlParams.get('gubed') === 'true') {
         document.getElementById('debug-controls').classList.remove('hidden');
     }
 }
