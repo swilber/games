@@ -216,6 +216,9 @@ async function createPunchOutGame(settings, callbacks = null) {
             player.y = 650; // Move Mac below the screen
             player.getUpProgress = 0; // Start at bottom
             showHitEffect(player.x, player.y - 50, "KNOCKDOWN!", '#FF0000');
+        } else {
+            // Flash pink when hit but not knocked down
+            player.flashTimer = 20; // Flash pink for 20 frames
         }
     }
     
