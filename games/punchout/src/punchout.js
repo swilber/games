@@ -191,7 +191,10 @@ async function createPunchOutGame(settings, callbacks = null) {
         gettingUp: false,
         getUpTimer: 0,
         animationFrame: 0,
-        vulnerableTimer: 0 // For Steven Wilber's vulnerability window
+        vulnerableTimer: 0, // For Steven Wilber's vulnerability window
+        hitAnimation: null, // 'face-left', 'face-right', 'body'
+        hitAnimationTimer: 0,
+        hitAnimationDuration: 20 // frames
     };
     
     // Force update opponent name to ensure it reflects current fighter data
@@ -661,6 +664,14 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.vulnerableTimer--;
             }
             
+            // Hit animation timer countdown
+            if (opponent.hitAnimationTimer > 0) {
+                opponent.hitAnimationTimer--;
+                if (opponent.hitAnimationTimer <= 0) {
+                    opponent.hitAnimation = null;
+                }
+            }
+            
             // Smarter attack timing based on player state and difficulty
             const shouldAttack = Math.random() < opponent.attackFrequency;
             const playerVulnerable = !player.blocking && !player.dodging && player.punchCooldown <= 0;
@@ -834,6 +845,20 @@ async function createPunchOutGame(settings, callbacks = null) {
                     
                     opponent.health -= damage;
                     opponent.health = Math.max(0, opponent.health);
+                    
+                    // Trigger hit animation based on punch type
+                    if (player.punchType.includes('high')) {
+                        // Face hit - face turns opposite to punch direction
+                        if (player.punchType.includes('right')) {
+                            opponent.hitAnimation = 'face-left'; // Right punch makes face turn left
+                        } else {
+                            opponent.hitAnimation = 'face-right'; // Left punch makes face turn right
+                        }
+                    } else {
+                        // Body hit - show pain expression
+                        opponent.hitAnimation = 'body';
+                    }
+                    opponent.hitAnimationTimer = opponent.hitAnimationDuration;
                     
                     // Check for knockdown
                     if (opponent.health <= 0 || (damage >= 25 && opponent.health <= 30)) {
@@ -1682,9 +1707,35 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillRect(opponentCenterX - 20, opponentCenterY - 100, 40, 40);
         }
         
-        // Facial features - with tell animations (adjusted for body shape)
+        // Facial features - with tell animations and hit animations (adjusted for body shape)
         ctx.fillStyle = '#000000';
         const currentTell = opponent.tellTimer > 0 && opponent.tells ? opponent.tells[0] : null;
+        const hitAnim = opponent.hitAnimation;
+        
+        // Head turn perspective for face hits (Y-axis rotation simulation)
+        let headOffset = 0;
+        let perspectiveScale = 1;
+        let eyeDepthOffset = 0;
+        let noseOffset = 0;
+        let mouthOffset = 0;
+        
+        if (hitAnim === 'face-left') {
+            const progress = (opponent.hitAnimationTimer / opponent.hitAnimationDuration);
+            const turnAmount = Math.sin(progress * Math.PI) * 0.6; // 0 to 0.6 and back
+            headOffset = -turnAmount * 15;
+            perspectiveScale = 1 - turnAmount * 0.3; // Far side gets smaller
+            eyeDepthOffset = turnAmount * 8; // Far eye moves closer to near eye
+            noseOffset = turnAmount * 12; // Nose moves to side
+            mouthOffset = turnAmount * 10; // Mouth moves to side
+        } else if (hitAnim === 'face-right') {
+            const progress = (opponent.hitAnimationTimer / opponent.hitAnimationDuration);
+            const turnAmount = Math.sin(progress * Math.PI) * 0.6;
+            headOffset = turnAmount * 15;
+            perspectiveScale = 1 - turnAmount * 0.3;
+            eyeDepthOffset = -turnAmount * 8;
+            noseOffset = -turnAmount * 12;
+            mouthOffset = -turnAmount * 10;
+        }
         
         // Body shape adjustments for facial features
         let eyeY, eyebrowY, noseY, mouthY;
@@ -1708,35 +1759,57 @@ async function createPunchOutGame(settings, callbacks = null) {
             mouthY = opponentCenterY - 70;
         }
         
-        // Eyes - with blink animation for Glass Joe
+        // Eyes - with blink animation for Glass Joe and hit animations
         if (currentTell === 'blink' && Math.floor(opponent.tellTimer / 10) % 2 === 0) {
-            // Glass Joe blink - closed eyes
+            // Glass Joe blink - closed eyes with perspective
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(opponentCenterX - 18, eyeY);
-            ctx.lineTo(opponentCenterX - 5, eyeY);
-            ctx.moveTo(opponentCenterX + 5, eyeY);
-            ctx.lineTo(opponentCenterX + 18, eyeY);
+            // Near eye (normal size)
+            ctx.moveTo(opponentCenterX - 18 + headOffset, eyeY);
+            ctx.lineTo(opponentCenterX - 5 + headOffset, eyeY);
+            // Far eye (scaled and repositioned)
+            const farEyeX = opponentCenterX + 5 + headOffset + eyeDepthOffset;
+            const farEyeScale = perspectiveScale;
+            ctx.moveTo(farEyeX, eyeY);
+            ctx.lineTo(farEyeX + 13 * farEyeScale, eyeY);
             ctx.stroke();
-        } else {
-            // Normal angry eyes (angled downward)
+        } else if (hitAnim === 'body') {
+            // Body hit - smaller shocked eyes
             ctx.beginPath();
-            ctx.moveTo(opponentCenterX - 15, eyeY - 2);
-            ctx.lineTo(opponentCenterX - 8, eyeY + 2);
-            ctx.lineTo(opponentCenterX - 8, eyeY + 5);
-            ctx.lineTo(opponentCenterX - 15, eyeY + 1);
+            ctx.arc(opponentCenterX - 12 + headOffset, eyeY, 4, 0, Math.PI * 2);
+            ctx.arc(opponentCenterX + 12 + headOffset, eyeY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            // White highlights for shock
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(opponentCenterX - 10 + headOffset, eyeY - 1, 1, 0, Math.PI * 2);
+            ctx.arc(opponentCenterX + 14 + headOffset, eyeY - 1, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+        } else {
+            // Normal angry eyes with perspective
+            ctx.beginPath();
+            // Near eye (normal size)
+            ctx.moveTo(opponentCenterX - 15 + headOffset, eyeY - 2);
+            ctx.lineTo(opponentCenterX - 8 + headOffset, eyeY + 2);
+            ctx.lineTo(opponentCenterX - 8 + headOffset, eyeY + 5);
+            ctx.lineTo(opponentCenterX - 15 + headOffset, eyeY + 1);
             ctx.closePath();
             ctx.fill();
+            
+            // Far eye (scaled and repositioned)
+            const farEyeX = opponentCenterX + 8 + headOffset + eyeDepthOffset;
+            const farEyeScale = perspectiveScale;
             ctx.beginPath();
-            ctx.moveTo(opponentCenterX + 8, eyeY + 2);
-            ctx.lineTo(opponentCenterX + 15, eyeY - 2);
-            ctx.lineTo(opponentCenterX + 15, eyeY + 1);
-            ctx.lineTo(opponentCenterX + 8, eyeY + 5);
+            ctx.moveTo(farEyeX, eyeY + 2);
+            ctx.lineTo(farEyeX + 7 * farEyeScale, eyeY - 2);
+            ctx.lineTo(farEyeX + 7 * farEyeScale, eyeY + 1);
+            ctx.lineTo(farEyeX, eyeY + 5);
             ctx.closePath();
             ctx.fill();
         }
         
-        // Eyebrows - with animation for Von Kaiser
+        // Eyebrows - with animation for Von Kaiser and perspective
         ctx.lineWidth = 3;
         let eyebrowOffset = 0;
         if (currentTell === 'eyebrows') {
@@ -1746,41 +1819,81 @@ async function createPunchOutGame(settings, callbacks = null) {
         }
         
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX - 18, eyebrowY + eyebrowOffset);
-        ctx.lineTo(opponentCenterX - 5, eyebrowY - 5 + eyebrowOffset);
+        // Near eyebrow
+        ctx.moveTo(opponentCenterX - 18 + headOffset, eyebrowY + eyebrowOffset);
+        ctx.lineTo(opponentCenterX - 5 + headOffset, eyebrowY - 5 + eyebrowOffset);
         ctx.stroke();
+        // Far eyebrow (scaled and repositioned)
+        const farBrowX = opponentCenterX + 5 + headOffset + eyeDepthOffset;
+        const farBrowScale = perspectiveScale;
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX + 5, eyebrowY - 5 + eyebrowOffset);
-        ctx.lineTo(opponentCenterX + 18, eyebrowY + eyebrowOffset);
+        ctx.moveTo(farBrowX, eyebrowY - 5 + eyebrowOffset);
+        ctx.lineTo(farBrowX + 13 * farBrowScale, eyebrowY + eyebrowOffset);
         ctx.stroke();
         
-        // Nose
+        // Nose - side view when turning
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX, noseY);
-        ctx.lineTo(opponentCenterX - 3, noseY + 8);
-        ctx.lineTo(opponentCenterX + 3, noseY + 8);
+        if (Math.abs(noseOffset) > 5) {
+            // Side view nose - more prominent, pointing in turn direction
+            ctx.moveTo(opponentCenterX - noseOffset, noseY);
+            ctx.lineTo(opponentCenterX - noseOffset - 2, noseY + 6);
+            ctx.lineTo(opponentCenterX - noseOffset + 6, noseY + 8);
+            ctx.lineTo(opponentCenterX - noseOffset + 4, noseY + 2);
+        } else {
+            // Front view nose
+            ctx.moveTo(opponentCenterX + headOffset, noseY);
+            ctx.lineTo(opponentCenterX - 3 + headOffset, noseY + 8);
+            ctx.lineTo(opponentCenterX + 3 + headOffset, noseY + 8);
+        }
         ctx.closePath();
         ctx.fill();
         
-        // Mouth - with teeth animation for Steven Wilber
+        // Mouth - with teeth animation for Steven Wilber and hit animations
         if (currentTell === 'teeth') {
-            // Steven Wilber teeth animation
+            // Steven Wilber teeth animation with perspective
             ctx.fillStyle = '#000000';
-            ctx.fillRect(opponentCenterX - 12, mouthY, 24, 8);
+            const teethWidth = Math.abs(mouthOffset) > 5 ? 12 : 24; // Narrower when turning
+            ctx.fillRect(opponentCenterX - teethWidth/2 + headOffset + mouthOffset, mouthY, teethWidth, 8);
             
             // Draw teeth
             ctx.fillStyle = '#FFFFFF';
-            for (let i = 0; i < 6; i++) {
-                ctx.fillRect(opponentCenterX - 10 + i * 3, mouthY + 2, 2, 4);
-                ctx.fillRect(opponentCenterX - 10 + i * 3, mouthY + 6, 2, 2);
+            const teethCount = Math.abs(mouthOffset) > 5 ? 3 : 6;
+            for (let i = 0; i < teethCount; i++) {
+                ctx.fillRect(opponentCenterX - teethWidth/2 + 2 + i * 3 + headOffset + mouthOffset, mouthY + 2, 2, 4);
+                ctx.fillRect(opponentCenterX - teethWidth/2 + 2 + i * 3 + headOffset + mouthOffset, mouthY + 6, 2, 2);
             }
+        } else if (hitAnim === 'body') {
+            // Body hit - open mouth showing pain
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(opponentCenterX + headOffset, mouthY + 4, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
         } else {
-            // Normal scowling mouth
+            // Normal scowling mouth with perspective
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(opponentCenterX, mouthY + 2, 8, Math.PI * 0.2, Math.PI * 0.8);
+            if (Math.abs(mouthOffset) > 5) {
+                // Side view mouth - smaller arc
+                ctx.arc(opponentCenterX + headOffset + mouthOffset, mouthY + 2, 4, Math.PI * 0.1, Math.PI * 0.9);
+            } else {
+                // Front view mouth
+                ctx.arc(opponentCenterX + headOffset, mouthY + 2, 8, Math.PI * 0.2, Math.PI * 0.8);
+            }
             ctx.stroke();
+        }
+        
+        // Add spittle for face hits
+        if (hitAnim === 'face-left' || hitAnim === 'face-right') {
+            ctx.fillStyle = '#FFFFFF';
+            const spittleDirection = hitAnim === 'face-left' ? -1 : 1;
+            const spittleX = opponentCenterX + headOffset + spittleDirection * 25;
+            const spittleY = mouthY;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(spittleX + i * spittleDirection * 4, spittleY + i * 3, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         
         // Steven Wilber specific features (beard and hair)
@@ -2815,6 +2928,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.gettingUp = false;
         opponent.getUpTimer = 0;
         opponent.animationFrame = 0;
+        opponent.hitAnimation = null;
+        opponent.hitAnimationTimer = 0;
         
         // Start game loop
         gameLoop();
