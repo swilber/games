@@ -4,6 +4,14 @@ let questionSystem = {
     expectedAnswer: null,
     currentCallback: null,
     
+    // Show question directly with question text
+    showQuestionDirect(questionText) {
+        if (!questionText) return;
+        
+        this.currentQuestion = questionText;
+        this.displayQuestionModal(questionText);
+    },
+    
     // Show question at end of game with 8-bit style
     showQuestion(levelId) {
         const level = levels.find(l => l.id === levelId);

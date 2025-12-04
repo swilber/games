@@ -931,21 +931,57 @@ function getFallbackDifficulty(gameType, difficulty) {
     }
 }
 
+// Simple decryption function
+function simpleDecrypt(encrypted, key = 'arcade2025') {
+    try {
+        // Convert base64 to binary string
+        const decoded = atob(encrypted);
+        let result = '';
+        for (let i = 0; i < decoded.length; i++) {
+            const charCode = decoded.charCodeAt(i);
+            const keyChar = key.charCodeAt(i % key.length);
+            result += String.fromCharCode(charCode ^ keyChar);
+        }
+        return result;
+    } catch (error) {
+        console.error('Decryption error:', error);
+        throw error;
+    }
+}
+
 // Load configuration and questions
 Promise.all([
     fetch('config.json').then(response => response.json()),
-    fetch('questions.json').then(response => response.json())
+    fetch('questions.enc').then(response => response.text()).then(encrypted => {
+        try {
+            const decrypted = simpleDecrypt(encrypted.trim());
+            return JSON.parse(decrypted);
+        } catch (error) {
+            console.error('Failed to decrypt questions:', error);
+            console.log('Encrypted data length:', encrypted.length);
+            console.log('First 100 chars of decrypted:', simpleDecrypt(encrypted.trim()).substring(0, 100));
+            throw error;
+        }
+    })
 ])
 .then(([configData, questionsData]) => {
     config = configData;
     
-    // Merge config with questions, sort by order
+    // Create levels from ordered config games and questions
     levels = config.levels
         .filter(level => level.enabled)
         .sort((a, b) => a.order - b.order)
-        .map(configLevel => {
-            const questionData = questionsData.levels.find(q => q.id === configLevel.id);
-            return { ...configLevel, ...questionData };
+        .map((configLevel, index) => {
+            const questionData = questionsData.questions[index] || {};
+            const unlockAnswer = index > 0 ? questionsData.questions[index - 1]?.answer : null;
+            
+            return {
+                ...configLevel,
+                question: questionData.question,
+                answer: unlockAnswer, // Answer needed to unlock this level
+                showQuestion: questionData.question, // Question to show when this level is completed
+                title: `Challenge ${index + 1}: ${configLevel.type}`
+            };
         });
     
     console.log('Loaded levels:', levels);
@@ -1124,8 +1160,8 @@ async function createGameWithCallbacks(gameType, settings) {
             
             // Show this level's question for future reference
             const currentLevelData = levels[currentLevel];
-            if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
-                questionSystem.showQuestion(currentLevelData.id);
+            if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.showQuestion) {
+                questionSystem.showQuestionDirect(currentLevelData.showQuestion);
             }
             // Don't unlock next level or proceed automatically
             // Player will need to manually select next level and answer its question
@@ -1207,8 +1243,8 @@ async function initializeLevel() {
                     ProgressTracker.markCompleted(currentLevel);
                     
                     const currentLevelData = levels[currentLevel];
-                    if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.question) {
-                        questionSystem.showQuestion(currentLevelData.id);
+                    if (typeof questionSystem !== 'undefined' && currentLevelData && currentLevelData.showQuestion) {
+                        questionSystem.showQuestionDirect(currentLevelData.showQuestion);
                     }
                 }
             });
@@ -1262,8 +1298,8 @@ function showQuestion() {
     
     // Show question using the new 8-bit system
     const currentLevelData = levels[currentLevel];
-    if (currentLevelData && currentLevelData.question) {
-        questionSystem.showQuestion(currentLevelData.id);
+    if (currentLevelData && currentLevelData.showQuestion) {
+        questionSystem.showQuestionDirect(currentLevelData.showQuestion);
         
         // Don't unlock next level here - wait for correct answer
         // The level will be unlocked when the answer is provided correctly
