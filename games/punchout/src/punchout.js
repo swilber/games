@@ -124,7 +124,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             health: punchOutConfig.opponents?.vonKaiserHealth || 80, 
             speed: 0.4, // Slower due to weight
             patterns: ["jab", "jab", "uppercut", "jab"], 
-            tells: ["step_back"],
+            tells: ["eyebrows"],
             bodyShape: "fat",
             blockChance: 0.35, // Better blocking
             attackFrequency: 0.5, // Moderate attack rate
@@ -136,7 +136,7 @@ async function createPunchOutGame(settings, callbacks = null) {
             health: punchOutConfig.opponents?.stevenWilberHealth || 100, 
             speed: 0.7, // Fast and strong
             patterns: ["uppercut", "jab", "uppercut", "uppercut", "jab", "uppercut"], // More uppercuts
-            tells: ["crouch"],
+            tells: ["teeth"],
             bodyShape: "tough",
             blockChance: 0.98, // Blocks almost everything normally
             attackFrequency: 0.8, // Very aggressive
@@ -151,9 +151,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         ...fighter,
         bodyShape: fighter.bodyShape || baseFighters[index]?.bodyShape || "tough"
     }));
-    
-    console.log('Current fighter:', currentFighter, 'Fighter data:', fighters[currentFighter]);
-    console.log('Fighter bodyShape:', fighters[currentFighter].bodyShape);
     
     const opponent = {
         x: punchOutConfig.physics?.opponentX || 400,
@@ -1524,6 +1521,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Calculate stepping during attacks
         let stepOffset = 0;
         let duckOffset = 0;
+        
         if (opponent.attacking) {
             const attackFrame = opponent.patternTimer - 200;
             const attackProgress = Math.sin(attackFrame * 0.3);
@@ -1680,50 +1678,110 @@ async function createPunchOutGame(settings, callbacks = null) {
             // Much bigger head for Steven Wilber
             ctx.fillRect(opponentCenterX - 30, opponentCenterY - 120, 60, 60);
         } else {
-            // Normal head for other fighters
+            // Normal head for other fighters (Von Kaiser - fat)
             ctx.fillRect(opponentCenterX - 20, opponentCenterY - 100, 40, 40);
         }
         
-        // Facial features - more fearsome
+        // Facial features - with tell animations (adjusted for body shape)
         ctx.fillStyle = '#000000';
-        // Angry eyes (angled downward)
-        ctx.beginPath();
-        ctx.moveTo(opponentCenterX - 15, opponentCenterY - 92);
-        ctx.lineTo(opponentCenterX - 8, opponentCenterY - 88);
-        ctx.lineTo(opponentCenterX - 8, opponentCenterY - 85);
-        ctx.lineTo(opponentCenterX - 15, opponentCenterY - 89);
-        ctx.closePath();
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(opponentCenterX + 8, opponentCenterY - 88);
-        ctx.lineTo(opponentCenterX + 15, opponentCenterY - 92);
-        ctx.lineTo(opponentCenterX + 15, opponentCenterY - 89);
-        ctx.lineTo(opponentCenterX + 8, opponentCenterY - 85);
-        ctx.closePath();
-        ctx.fill();
-        // Angry eyebrows
+        const currentTell = opponent.tellTimer > 0 && opponent.tells ? opponent.tells[0] : null;
+        
+        // Body shape adjustments for facial features
+        let eyeY, eyebrowY, noseY, mouthY;
+        if (opponent.bodyShape === "thin") {
+            // Glass Joe - smaller head
+            eyeY = opponentCenterY - 90;
+            eyebrowY = opponentCenterY - 95;
+            noseY = opponentCenterY - 82;
+            mouthY = opponentCenterY - 70;
+        } else if (opponent.bodyShape === "tough") {
+            // Steven Wilber - bigger head, positioned higher, but features lower to avoid hair
+            eyeY = opponentCenterY - 95;
+            eyebrowY = opponentCenterY - 100;
+            noseY = opponentCenterY - 87;
+            mouthY = opponentCenterY - 75;
+        } else {
+            // Von Kaiser - normal head
+            eyeY = opponentCenterY - 90;
+            eyebrowY = opponentCenterY - 95;
+            noseY = opponentCenterY - 82;
+            mouthY = opponentCenterY - 70;
+        }
+        
+        // Eyes - with blink animation for Glass Joe
+        if (currentTell === 'blink' && Math.floor(opponent.tellTimer / 10) % 2 === 0) {
+            // Glass Joe blink - closed eyes
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(opponentCenterX - 18, eyeY);
+            ctx.lineTo(opponentCenterX - 5, eyeY);
+            ctx.moveTo(opponentCenterX + 5, eyeY);
+            ctx.lineTo(opponentCenterX + 18, eyeY);
+            ctx.stroke();
+        } else {
+            // Normal angry eyes (angled downward)
+            ctx.beginPath();
+            ctx.moveTo(opponentCenterX - 15, eyeY - 2);
+            ctx.lineTo(opponentCenterX - 8, eyeY + 2);
+            ctx.lineTo(opponentCenterX - 8, eyeY + 5);
+            ctx.lineTo(opponentCenterX - 15, eyeY + 1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(opponentCenterX + 8, eyeY + 2);
+            ctx.lineTo(opponentCenterX + 15, eyeY - 2);
+            ctx.lineTo(opponentCenterX + 15, eyeY + 1);
+            ctx.lineTo(opponentCenterX + 8, eyeY + 5);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Eyebrows - with animation for Von Kaiser
         ctx.lineWidth = 3;
+        let eyebrowOffset = 0;
+        if (currentTell === 'eyebrows') {
+            // Von Kaiser eyebrow animation
+            const cycle = (opponent.tellTimer * 0.6) % (Math.PI * 2);
+            eyebrowOffset = Math.sin(cycle) * -8; // Move up and down 8 pixels
+        }
+        
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX - 18, opponentCenterY - 95);
-        ctx.lineTo(opponentCenterX - 5, opponentCenterY - 90);
+        ctx.moveTo(opponentCenterX - 18, eyebrowY + eyebrowOffset);
+        ctx.lineTo(opponentCenterX - 5, eyebrowY - 5 + eyebrowOffset);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX + 5, opponentCenterY - 90);
-        ctx.lineTo(opponentCenterX + 18, opponentCenterY - 95);
+        ctx.moveTo(opponentCenterX + 5, eyebrowY - 5 + eyebrowOffset);
+        ctx.lineTo(opponentCenterX + 18, eyebrowY + eyebrowOffset);
         ctx.stroke();
-        // Larger, more aggressive nose
+        
+        // Nose
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.moveTo(opponentCenterX, opponentCenterY - 82);
-        ctx.lineTo(opponentCenterX - 3, opponentCenterY - 74);
-        ctx.lineTo(opponentCenterX + 3, opponentCenterY - 74);
+        ctx.moveTo(opponentCenterX, noseY);
+        ctx.lineTo(opponentCenterX - 3, noseY + 8);
+        ctx.lineTo(opponentCenterX + 3, noseY + 8);
         ctx.closePath();
         ctx.fill();
-        // Scowling mouth
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(opponentCenterX, opponentCenterY - 68, 8, Math.PI * 0.2, Math.PI * 0.8);
-        ctx.stroke();
+        
+        // Mouth - with teeth animation for Steven Wilber
+        if (currentTell === 'teeth') {
+            // Steven Wilber teeth animation
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(opponentCenterX - 12, mouthY, 24, 8);
+            
+            // Draw teeth
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 6; i++) {
+                ctx.fillRect(opponentCenterX - 10 + i * 3, mouthY + 2, 2, 4);
+                ctx.fillRect(opponentCenterX - 10 + i * 3, mouthY + 6, 2, 2);
+            }
+        } else {
+            // Normal scowling mouth
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(opponentCenterX, mouthY + 2, 8, Math.PI * 0.2, Math.PI * 0.8);
+            ctx.stroke();
+        }
         
         // Steven Wilber specific features (beard and hair)
         if (opponent.bodyShape === "tough") {
@@ -2733,6 +2791,11 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.blockChance = fighterData.blockChance || 0.3;
         opponent.attackFrequency = fighterData.attackFrequency || 0.5;
         opponent.reactionTime = fighterData.reactionTime || 120;
+        opponent.patterns = fighterData.patterns;
+        opponent.tells = fighterData.tells;
+        opponent.currentPattern = 0;
+        opponent.patternTimer = 0;
+        opponent.tellTimer = 0;
         opponent.x = 400;
         opponent.y = 200;
         opponent.width = fighterData.width || 80;

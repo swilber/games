@@ -65,14 +65,14 @@
       "health": 80,
       "speed": 1.0,
       "patterns": ["jab", "hook", "uppercut"],
-      "tells": ["step_back", "wind_up"]
+      "tells": ["eyebrows"]
     },
     {
       "name": "Steven Wilber",
       "health": 100,
       "speed": 1.2,
       "patterns": ["rush", "jab", "hook"],
-      "tells": ["bow", "stance"]
+      "tells": ["teeth"]
     }
   ]
 }
