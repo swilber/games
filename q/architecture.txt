@@ -1,18 +1,21 @@
 # System Architecture
-Last Updated: 2025-12-03T10:49:58.092-07:00
+Last Updated: 2025-12-04T16:55:00.000-07:00
 
 ## PROJECT OVERVIEW
-Arcade Games Collection with multiple game types, progress tracking, and question system for level progression.
+Arcade Games Collection with multiple game types, progress tracking, and encrypted question system for level progression.
 
 ## KEY FILES
 ```
 /
 ├── index.html (main UI)
-├── script.js (main game logic & level management)
+├── script.js (main game logic & level management with decryption)
 ├── style.css (styling)
 ├── question-system.js (level progression questions)
 ├── config.json (main configuration)
-├── questions.json (level questions data)
+├── questions.enc (encrypted questions data - committed to git)
+├── questions.json (temporary decrypted file - gitignored)
+├── encrypt-questions.js (encryption utility - gitignored)
+├── .gitignore (prevents accidental commit of decrypted files)
 ├── q/ (Q instruction files)
 └── games/
     ├── punchout/src/punchout.js
@@ -29,13 +32,33 @@ Arcade Games Collection with multiple game types, progress tracking, and questio
 - **Configuration**: Loaded via ConfigManager from JSON files
 - **Rendering**: Canvas-based for most games
 
+## QUESTION SYSTEM
+- **Ordered arrays**: questions[0], questions[1], etc. in questions.enc
+- **Game flow**: Game N requires answer[N-1] to unlock, shows question[N] when completed
+- **Level 1**: No unlock requirement (answer = null)
+- **Final level**: Shows congratulatory question but no next level to unlock
+- **Encryption**: questions.enc encrypted at rest, decrypted by browser at runtime
+- **Development**: Use encrypt-questions.js utility to update questions
+
 ## PROGRESS SYSTEM
 - Uses localStorage for persistence
 - ProgressTracker manages level completion
 - Question system controls level access
-- Levels unlock sequentially
+- Levels unlock sequentially based on correct answers
 
 ## CONFIGURATION SYSTEM
 - Main config.json for global settings
 - Individual game configs in games/[game]/config/[game].json
 - ConfigManager handles loading and caching
+- System config with tabbed interface (System/Game tabs)
+- Debug features accessible via "gubed" query parameter
+
+## ENCRYPTION SYSTEM
+- **Purpose**: Prevent casual browsing of questions in git repository
+- **Method**: XOR encryption with base64 encoding
+- **Key**: Hardcoded in script.js (basic obfuscation)
+- **Files**: 
+  - questions.enc (encrypted, committed to git)
+  - questions.json (decrypted, gitignored for editing)
+  - encrypt-questions.js (utility, gitignored)
+- **Workflow**: Edit questions.json → run encrypt-questions.js → commit questions.enc

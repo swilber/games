@@ -75,10 +75,26 @@ Last Updated: 2025-12-04T15:31:00.000-07:00
 - Maintain consistent indentation and formatting
 - **Proactively identify refactoring opportunities**
 
-## NEW PATTERN: SYSTEM CONFIGURATION
-- System config uses tabbed interface (System/Game)
-- All styling must match neon theme with glowing effects
-- Settings persist in localStorage
-- Debug features require "gubed" query parameter
-- Visual feedback for all user actions (button states, etc.)
-- Modal background scrolling prevention required
+## NEW PATTERN: QUESTION ENCRYPTION SYSTEM
+- Questions stored encrypted in questions.enc file (committed to git)
+- questions.json is temporary decrypted file for editing (gitignored)
+- encrypt-questions.js utility handles encryption/decryption (gitignored)
+- Browser decrypts questions.enc at runtime using simpleDecrypt()
+- Use ordered arrays: game N requires answer[N-1], shows question[N]
+- All questions must have unique numeric answers
+- Final question uses mathematical calculation with previous answers
+
+## ENCRYPTION WORKFLOW
+**To update questions:**
+1. Run `node encrypt-questions.js` to create questions.json
+2. Edit questions.json with new content
+3. Run `node encrypt-questions.js` again to update questions.enc
+4. Delete questions.json (automatically gitignored)
+5. Test game loads questions properly
+6. Commit and push questions.enc
+
+**Security considerations:**
+- Never commit questions.json to git
+- Encryption key is in code but provides basic obfuscation
+- Users browsing git only see encrypted questions.enc
+- Game decrypts seamlessly at runtime

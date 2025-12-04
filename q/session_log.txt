@@ -1,92 +1,97 @@
 # Q Session Log
-Last Updated: 2025-12-04T15:31:00.000-07:00
+Last Updated: 2025-12-04T16:55:00.000-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: System configuration enhancements and question bypass system
+- **Working on**: Question system refactor with encryption and difficult Bible trivia
 - **Latest changes**: 
-  - **ADDED**: System configuration with tabbed interface (System/Game tabs)
-  - **ADDED**: Question bypass system - allows empty string to bypass questions when enabled
-  - **FIXED**: Modal background scrolling issue
-  - **ENHANCED**: Neon-themed styling for all configuration elements
-  - **IMPROVED**: Smart reset button (red when data exists, gray when empty)
-  - **CHANGED**: Debug query parameter from "debug" to "gubed" for obfuscation
+  - **REFACTORED**: Question system to use ordered arrays instead of ID-based matching
+  - **ADDED**: 14 difficult Bible trivia questions requiring research and lookup
+  - **IMPLEMENTED**: Question encryption system to prevent casual browsing
+  - **CREATED**: Encryption/decryption utilities for development workflow
+  - **ENHANCED**: Final math question using clever sorted position calculations
 - **Previous changes**: 
-  - Added realistic hit animations for Punch-Out opponents with 3D Y-axis rotation
-  - Fixed tell system animations for all three opponents (Glass Joe blink, Von Kaiser eyebrows, Steven Wilber teeth)
-  - Complete level progression system with proper game flow
+  - Added system configuration with bypass questions feature
+  - Enhanced configuration UI with neon theming and tabbed interface
+  - Fixed tell system animations for all Punch-Out opponents
+  - Added realistic hit animations with 3D Y-axis rotation effects
 - **Key improvements**:
-  - Configuration modal now has proper tab system with System and Game sections
-  - System settings: toggle game names, reset progress, bypass questions
-  - All styling matches neon aesthetic with glowing effects
-  - Background scroll prevention when modal is open
-  - Visual feedback for reset button state
-- **Status**: System configuration fully functional with bypass questions feature
-- **Last changes**: Added bypass questions checkbox and modified question-system.js checkAnswer function
+  - Questions now use ordered arrays - game N uses answer[N-1] to unlock, shows question[N] when completed
+  - All 14 questions have unique numeric answers spanning Old and New Testament
+  - Questions encrypted in questions.enc file, decrypted at runtime
+  - Development workflow with encrypt-questions.js utility
+  - Level 1 has no unlock requirement, final level shows congratulatory question
+- **Status**: Question system fully refactored with encryption and difficult trivia
+- **Last changes**: Pushed encrypted question system with Bible trivia to git
+
+## ENCRYPTION WORKFLOW
+**To update questions:**
+1. Run `node encrypt-questions.js` to create questions.json from encrypted file
+2. Edit questions.json with new content
+3. Run `node encrypt-questions.js` again to update questions.enc
+4. Delete questions.json (it's in .gitignore)
+5. Commit and push questions.enc
+
+**Files:**
+- `questions.enc` - Encrypted questions file (committed to git)
+- `questions.json` - Temporary decrypted file for editing (gitignored)
+- `encrypt-questions.js` - Utility script for encryption/decryption (gitignored)
+- `.gitignore` - Prevents accidental commit of decrypted files
 
 ## RECENT COMMANDS (Last 10)
-1. Modified question-system.js checkAnswer function to allow empty string bypass
-2. Added toggleBypassQuestions() function to script.js
-3. Updated loadSystemConfig() to load bypass setting from localStorage
-4. Added bypass questions checkbox to system config HTML
-5. Changed debug query parameter from "debug" to "gubed"
-6. Fixed resetLevelProgress() to properly clear all localStorage data
-7. Updated tab styling with neon theme and glowing effects
-8. Fixed modal background scrolling by setting body overflow
-9. Added tabbed interface to configuration modal
-10. Enhanced system configuration with smart reset button
+1. `git push` - Pushed encrypted question system with Bible trivia
+2. Created questions.enc with browser-compatible base64 encoding
+3. Added encryption/decryption utilities with simpleEncrypt/simpleDecrypt functions
+4. Refactored script.js to load and decrypt questions at runtime
+5. Created 14 difficult Bible trivia questions with unique numeric answers
+6. Updated final math question to use sorted position calculations
+7. Refactored question loading to use ordered arrays instead of ID matching
+8. Added .gitignore to prevent accidental commit of decrypted files
+9. Fixed question/answer ambiguities and duplicate answers
+10. Enhanced questions with Bible verse references and full verse text
 
-## TESTING INSTRUCTIONS FOR BYPASS QUESTIONS FEATURE
+## TESTING INSTRUCTIONS FOR QUESTION SYSTEM
 **Prerequisites:**
-1. Access debug mode with `?gubed=true` in URL
-2. Click Configuration button (⚙️)
+1. Game should load normally with encrypted questions
+2. Questions should decrypt seamlessly at runtime
 
 **Test Steps:**
-1. **Enable Bypass Setting:**
-   - Open Configuration modal
-   - Ensure "System" tab is active
-   - Check "Allow empty string to bypass questions (debug)" checkbox
-   - Verify setting persists after closing/reopening modal
+1. **Basic Functionality:**
+   - Complete Level 1 - should show first question
+   - Try to access Level 2 - should require answer from Level 1's question
+   - Verify all 15 levels work with proper question/answer flow
 
-2. **Test Bypass Functionality:**
-   - Complete Level 1 (any game)
-   - Try to access Level 2 - should show question prompt
-   - Leave answer field completely empty
-   - Press Enter or click Submit
-   - Should bypass question and allow access to Level 2
+2. **Question Content:**
+   - All questions should be difficult Bible trivia requiring research
+   - Each question should have unique numeric answer
+   - Final question should use mathematical calculation with sorted positions
 
-3. **Test Normal Operation:**
-   - Uncheck bypass setting in System config
-   - Try to access a locked level
-   - Leave answer field empty and submit
-   - Should show "Incorrect answer! Try again." error
-   - Enter correct answer - should work normally
+3. **Encryption Security:**
+   - Browse git repository - should only see questions.enc (encrypted)
+   - questions.json should not be in git history
+   - Game should load questions normally despite encryption
 
-4. **Test Setting Persistence:**
-   - Enable bypass, refresh page with `?gubed=true`
-   - Open config - bypass should still be checked
-   - Disable bypass, refresh - should be unchecked
-
-**Expected Results:**
-- Empty string bypasses questions only when setting is enabled
-- Normal answer validation works when bypass is disabled
-- Setting persists across browser sessions
-- No bypass functionality available without debug mode
+4. **Development Workflow:**
+   - Run `node encrypt-questions.js` to create questions.json
+   - Edit questions.json
+   - Run script again to update questions.enc
+   - Verify changes appear in game
 
 ## IMPORTANT WORKFLOW CHANGE
 - **DO NOT automatically push to git** - wait for explicit user instructions
 - **ALWAYS provide comprehensive testing instructions** for new features
 - **UPDATE q/* files** when discovering new patterns or system requirements
 - **FOLLOW all instructions** in q/startup.txt and related files
+- **USE encryption workflow** when updating questions
 
 ## ACTIVE CONTEXT
 - **Working directory**: /Users/P2176038/Desktop/greg
 - **Current branch**: main
-- **Project**: Arcade games collection with enhanced system configuration
-- **Focus**: System configuration and debug features for development workflow
-- **Next**: Ready for testing bypass questions feature or additional enhancements
+- **Project**: Arcade games collection with encrypted Bible trivia question system
+- **Focus**: Difficult Bible trivia with encryption for security
+- **Next**: Ready for testing encrypted question system or additional enhancements
 
 ## RECOVERY INSTRUCTIONS
-If context overflows, user has implemented comprehensive system configuration with bypass questions feature for development workflow. System config includes game name toggle, progress reset with visual feedback, and question bypass system. All styling uses neon theme. Debug mode accessed via "gubed" query parameter. Test bypass feature thoroughly before considering complete.
+If context overflows, user has implemented comprehensive question system refactor with encryption. Questions use ordered arrays where game N requires answer[N-1] to unlock and shows question[N] when completed. All questions are difficult Bible trivia with unique numeric answers, encrypted in questions.enc file. Use encrypt-questions.js utility to update questions. System includes bypass feature for development and proper game/question flow management.
