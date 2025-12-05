@@ -21,12 +21,6 @@
       "type": "snake"
     },
     {
-      "id": 3,
-      "order": 3,
-      "enabled": true,
-      "type": "quiz"
-    },
-    {
       "id": 4,
       "order": 4,
       "enabled": true,
@@ -65,7 +59,7 @@
     {
       "id": 10,
       "order": 10,
-      "enabled": true,
+      "enabled": false,
       "type": "fake"
     },
     {

@@ -806,11 +806,6 @@ function getFallbackDifficulty(gameType, difficulty) {
                 requiredScore: Math.max(1, Math.min(10, Math.ceil(difficulty / 2))),
                 boardSize: 400
             };
-        case 'quiz':
-            return {
-                timeLimit: difficulty > 7 ? 30 - (difficulty - 7) * 5 : 0,
-                multipleChoice: true
-            };
         case 'flappy':
             return {
                 gameSpeed: Math.max(1.5, 1 + (difficulty * 0.2)),
@@ -1209,8 +1204,6 @@ async function createGameWithCallbacks(gameType, settings) {
 // Legacy game creation for backward compatibility
 async function createGameLegacy(gameType, settings) {
     switch(gameType) {
-        case 'quiz':
-            return createQuizGame(settings);
         case 'frogger':
             return createFroggerGame(settings);
         case 'maze3d':
@@ -1250,7 +1243,6 @@ async function initializeLevel() {
                 }
             });
             break;
-        case 'quiz':
         case 'frogger':
             // Legacy games without callback support
             currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
