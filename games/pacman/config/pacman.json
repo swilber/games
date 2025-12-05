@@ -41,7 +41,7 @@
   },
   "player": {
     "lives": 3,
-    "speed": 2
+    "speed": 0.66
   },
   "ghosts": {
     "speed": 1,

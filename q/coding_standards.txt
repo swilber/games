@@ -1,5 +1,16 @@
 # Coding Standards & Workflow
-Last Updated: 2025-12-04T15:31:00.000-07:00
+Last Updated: 2025-12-04T17:16:00.000-07:00
+
+## MANDATORY: END-OF-SESSION ACCOUNTABILITY
+**BEFORE responding "Changes pushed!" or completing any significant work:**
+1. **STOP** - Review what was learned/discovered during this session
+2. **UPDATE** relevant q/* files with new patterns, issues, or standards
+3. **ADD** any new problems/solutions to common_issues.txt
+4. **DOCUMENT** new coding patterns in coding_standards.txt
+5. **REFRESH** session_log.txt with recent commands and learnings
+6. **ONLY THEN** respond to user that work is complete
+
+**This step is NOT optional - it must happen after every significant change.**
 
 ## CRITICAL: ALWAYS FOLLOW Q/* INSTRUCTIONS
 - **READ ALL q/* files** before starting any work
@@ -75,7 +86,53 @@ Last Updated: 2025-12-04T15:31:00.000-07:00
 - Maintain consistent indentation and formatting
 - **Proactively identify refactoring opportunities**
 
-## NEW PATTERN: QUESTION ENCRYPTION SYSTEM
+## GAME MOVEMENT PATTERNS
+- **Grid-based Movement**: Use timer accumulation for speed control in discrete grid games
+- **Input Separation**: Keep input handling (direction changes) separate from movement execution
+- **Speed Control Pattern**: 
+  ```javascript
+  entity.moveTimer += config.moveSpeed;
+  if (entity.moveTimer >= 1) {
+      entity.moveTimer = 0;
+      // Execute movement
+  }
+  ```
+- **Fractional Speeds**: Values like 0.33 create slower movement (moves every ~3 frames)
+
+## GAME CONFIGURATION PATTERNS
+- **Dual Configuration**: Games may have both hardcoded fallbacks AND external config files
+- **Sync Requirement**: When updating game parameters, check both JS fallback values and JSON config files
+- **Speed Relationships**: Maintain proportional relationships when adjusting speeds (player vs enemies)
+- **Config Locations**: Check both `games/[name]/src/[name].js` and `games/[name]/config/[name].json`
+
+**Example dual config pattern:**
+```javascript
+// In JS file (fallback)
+pacmanConfig = { player: { moveSpeed: 0.66 } };
+
+// In JSON file (primary)
+"player": { "speed": 1.32 }
+```
+- **Asset paths**: Always use `./games/[gamename]/` prefix for all asset loading
+- **Canvas setup**: Set both canvas properties AND CSS styles to same dimensions
+- **Path testing**: Test both local development and GitHub Pages deployment
+- **Asset loading**: Use relative paths, never absolute paths starting with `/`
+- **Cache busting**: Add timestamp parameters for map/asset loading
+
+**Example asset loading pattern:**
+```javascript
+const response = await fetch(`./games/mario/maps/${mapFile}?v=${Date.now()}`);
+```
+
+**Example canvas setup pattern:**
+```javascript
+canvas.width = 600;
+canvas.height = 500;
+canvas.style.width = '600px';
+canvas.style.height = '500px';
+canvas.style.display = 'block';
+canvas.style.margin = '0 auto';
+```
 - Questions stored encrypted in questions.enc file (committed to git)
 - questions.json is temporary decrypted file for editing (gitignored)
 - encrypt-questions.js utility handles encryption/decryption (gitignored)
@@ -83,6 +140,16 @@ Last Updated: 2025-12-04T15:31:00.000-07:00
 - Use ordered arrays: game N requires answer[N-1], shows question[N]
 - All questions must have unique numeric answers
 - Final question uses mathematical calculation with previous answers
+
+## CONFIGURATION PROPERTY CONSISTENCY
+- **Property Names**: Game code must use exact property names from config files
+- **Common Issue**: Game code looking for `player.moveSpeed` when config has `player.speed`
+- **Solution Pattern**: Always verify property names match between:
+  - Game configuration JSON files (`games/[name]/config/[name].json`)
+  - Game code that reads configuration (`games/[name]/src/[name].js`)
+  - Fallback configuration objects in game code
+- **Testing**: Use configuration UI to verify changes take effect in gameplay
+- **Example Fix**: Pac-Man speed issue - changed `pacmanConfig.player.moveSpeed` to `pacmanConfig.player.speed`
 
 ## ENCRYPTION WORKFLOW
 **To update questions:**

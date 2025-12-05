@@ -51,5 +51,12 @@ Q should:
 - recent_patterns.txt - Newly discovered patterns and learnings
 - code_quality.txt - Code smell monitoring and refactoring guidance
 
-## CORE PRINCIPLE
+## MANDATORY WORKFLOW CHECKPOINT
+**After completing ANY significant work, Q MUST:**
+1. Review session learnings and update q/* files accordingly
+2. Document new patterns, issues, or solutions discovered
+3. Update session_log.txt with recent commands and context
+4. Only then declare work complete to user
+
+**This accountability step is REQUIRED - not optional.**
 Always update these files as new information is discovered to maintain continuity across Q sessions. Keep information relevant and actionable. Proactively maintain code quality.

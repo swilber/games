@@ -1,30 +1,32 @@
 # Q Session Log
-Last Updated: 2025-12-04T16:55:00.000-07:00
+Last Updated: 2025-12-05T08:34:00.000-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Question system refactor with encryption and difficult Bible trivia
+- **Working on**: Fixed Pac-Man speed configuration issue
 - **Latest changes**: 
+  - **IMPLEMENTED**: Ghost speed scaling with player speed while maintaining individual personalities
+  - **REVERTED**: Previous change that made ghosts exactly same speed as Pac-Man
+  - **FORMULA**: Ghost delay = `(config.ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
+  - **PERSONALITIES**: Vulnerable ghosts move at 0.5x speed, normal ghosts at 1.0x speed
+  - **SCALING**: When player speed changes, ghost speeds automatically scale proportionally
+  - **UPDATED**: Ghost speed to match Pac-Man speed for balanced gameplay
+  - **CHANGED**: Ghost movement from fixed delay system to same speed increment as Pac-Man
+- **Previous changes**: 
   - **REFACTORED**: Question system to use ordered arrays instead of ID-based matching
   - **ADDED**: 14 difficult Bible trivia questions requiring research and lookup
   - **IMPLEMENTED**: Question encryption system to prevent casual browsing
   - **CREATED**: Encryption/decryption utilities for development workflow
   - **ENHANCED**: Final math question using clever sorted position calculations
-- **Previous changes**: 
-  - Added system configuration with bypass questions feature
-  - Enhanced configuration UI with neon theming and tabbed interface
-  - Fixed tell system animations for all Punch-Out opponents
-  - Added realistic hit animations with 3D Y-axis rotation effects
 - **Key improvements**:
-  - Questions now use ordered arrays - game N uses answer[N-1] to unlock, shows question[N] when completed
+  - Pac-Man speed now properly responds to configuration changes via game settings UI
+  - Both fallback config and runtime config use consistent `player.speed` property
+  - Questions use ordered arrays - game N uses answer[N-1] to unlock, shows question[N] when completed
   - All 14 questions have unique numeric answers spanning Old and New Testament
   - Questions encrypted in questions.enc file, decrypted at runtime
-  - Development workflow with encrypt-questions.js utility
-  - Level 1 has no unlock requirement, final level shows congratulatory question
-- **Status**: Question system fully refactored with encryption and difficult trivia
-- **Last changes**: Pushed encrypted question system with Bible trivia to git
+- **Status**: Pac-Man speed configuration fixed and ready for testing
 
 ## ENCRYPTION WORKFLOW
 **To update questions:**
@@ -41,16 +43,69 @@ Track recent commands and context to recover from context window overflows.
 - `.gitignore` - Prevents accidental commit of decrypted files
 
 ## RECENT COMMANDS (Last 10)
-1. `git push` - Pushed encrypted question system with Bible trivia
-2. Created questions.enc with browser-compatible base64 encoding
-3. Added encryption/decryption utilities with simpleEncrypt/simpleDecrypt functions
-4. Refactored script.js to load and decrypt questions at runtime
-5. Created 14 difficult Bible trivia questions with unique numeric answers
-6. Updated final math question to use sorted position calculations
-7. Refactored question loading to use ordered arrays instead of ID matching
-8. Added .gitignore to prevent accidental commit of decrypted files
-9. Fixed question/answer ambiguities and duplicate answers
-10. Enhanced questions with Bible verse references and full verse text
+1. `node -c ./games/pacman/src/pacman.js` - Verified syntax after ghost speed scaling implementation
+2. Updated fallback config to use `ghosts.speed` instead of `normalSpeed/vulnerableSpeed`
+3. Implemented ghost speed scaling formula: `(ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
+4. Added vulnerable ghost speed multiplier (0.5x) vs normal ghosts (1.0x)
+5. Reverted ghost speed to delay-based system but with player speed scaling
+6. `node -c ./games/pacman/src/pacman.js` - Verified syntax after ghost speed change
+7. Updated ghost speed to match Pac-Man speed using `pacmanConfig.player.speed` increment
+8. Fixed syntax error by adding proper closing brace for ghost speed if statement
+9. Changed ghost movement from delay-based system to same timer system as Pac-Man
+10. `node -c ./games/pacman/src/pacman.js` - Verified syntax after speed configuration fix
+
+## TESTING INSTRUCTIONS FOR PAC-MAN SPEED FIX
+**Prerequisites:**
+1. Game should load normally with current configuration
+2. Configuration UI should be accessible via debug mode (add `?gubed` to URL)
+
+**Test Steps:**
+1. **Access Configuration:**
+   - Add `?gubed` to URL to enable debug mode
+   - Click ⚙️ Configuration button
+   - Switch to "Game" tab
+   - Select "Pac-Man" from dropdown
+
+2. **Test Speed Configuration:**
+   - Note current player speed value (should be 0.66)
+   - Change player speed to a different value (e.g., 0.2 for slower, 1.0 for faster)
+   - Click "Save Changes"
+   - Close configuration modal
+
+3. **Verify Speed Change:**
+   - Start Pac-Man game from level selection
+   - Use arrow keys to move Pac-Man
+   - Verify movement speed matches the configured value
+   - Lower values = slower movement, higher values = faster movement
+
+4. **Test Multiple Values:**
+   - Try speed values: 0.1 (very slow), 0.5 (medium), 1.5 (fast)
+   - Each change should be immediately noticeable in gameplay
+   - Movement should be smooth and responsive at all speeds
+
+5. **Reset Test:**
+   - Open configuration again
+   - Click "Reset to Defaults" 
+   - Verify speed returns to default value (0.66)
+   - Test that default speed works correctly
+
+**Expected Results:**
+- Configuration changes should immediately affect Pac-Man movement speed
+- No console errors when changing speed values
+- Game should remain playable at all reasonable speed values
+- Speed changes should persist until reset or changed again
+
+**Issue Resolution:**
+- **Problem**: Game was looking for `player.moveSpeed` but config had `player.speed`
+- **Solution**: Updated game code to use correct config property name
+- **Files Changed**: `./games/pacman/src/pacman.js` (lines 18 and 207)
+
+## NEW LEARNINGS - GITHUB PAGES DEPLOYMENT
+- **Path Resolution**: GitHub Pages requires `./games/` prefix for asset paths
+- **Canvas Scaling**: Must set both canvas properties AND CSS styles to prevent coordinate system issues
+- **Asset Loading**: Working pattern is `./games/[gamename]/[asset]?v=${Date.now()}`
+- **Testing Required**: Always test both local development AND GitHub Pages deployment
+- **Cross-Reference**: Compare working games (Mario) with broken games (Donkey Kong) to identify patterns
 
 ## TESTING INSTRUCTIONS FOR QUESTION SYSTEM
 **Prerequisites:**

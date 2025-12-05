@@ -15,8 +15,8 @@ async function createPacmanGame(settings, callbacks = null) {
         // Fallback to default values
         console.warn('Could not load Pac-Man config, using defaults');
         pacmanConfig = {
-            player: { lives: 3, moveSpeed: 1 },
-            ghosts: { normalSpeed: 2, vulnerableSpeed: 3, count: 4 },
+            player: { lives: 3, speed: 0.33 },
+            ghosts: { speed: 1, count: 4 },
             powerups: { powerPelletDuration: 8000, dotValue: 10, powerPelletValue: 50, ghostValue: 200 },
             gameplay: { gameSpeed: 150, levelsToWin: 3 }
         };
@@ -94,7 +94,7 @@ async function createPacmanGame(settings, callbacks = null) {
         levelsCompleted: 0,
         levelsToWin: settings.levelsToWin || 2,
         maze: null,
-        pacman: { x: 14, y: 21, direction: 0, nextDirection: 0 }, // 0=right, 1=down, 2=left, 3=up
+        pacman: { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 }, // 0=right, 1=down, 2=left, 3=up
         ghosts: [
             { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
             { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
@@ -172,7 +172,7 @@ async function createPacmanGame(settings, callbacks = null) {
     
     function initializeLevel() {
         game.maze = JSON.parse(JSON.stringify(mazeLayouts[game.currentMazeIndex]));
-        game.pacman = { x: 14, y: 21, direction: 0, nextDirection: 0 };
+        game.pacman = { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 };
         game.ghosts = [
             { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
             { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
@@ -203,28 +203,34 @@ async function createPacmanGame(settings, callbacks = null) {
         if (game.keys['ArrowLeft']) game.nextDirection = 2;
         if (game.keys['ArrowUp']) game.nextDirection = 3;
         
-        // Try to change direction
-        const [nextDx, nextDy] = directions[game.nextDirection];
-        if (canMove(game.pacman.x + nextDx, game.pacman.y + nextDy)) {
-            game.pacman.direction = game.nextDirection;
-        }
+        // Pac-Man speed control
+        game.pacman.moveTimer = (game.pacman.moveTimer || 0) + pacmanConfig.player.speed;
         
-        // Move Pac-Man
-        const [dx, dy] = directions[game.pacman.direction];
-        let newX = game.pacman.x + dx;
-        let newY = game.pacman.y + dy;
-        
-        // Handle screen wrapping
-        if (newX < 0) newX = 27;
-        if (newX > 27) newX = 0;
-        
-        if (canMove(newX, newY)) {
-            game.pacman.x = newX;
-            game.pacman.y = newY;
+        if (game.pacman.moveTimer >= 1) {
+            game.pacman.moveTimer = 0;
             
-            // Tunnel effect (wrap around)
-            if (game.pacman.x < 0) game.pacman.x = cols - 1;
-            if (game.pacman.x >= cols) game.pacman.x = 0;
+            // Try to change direction
+            const [nextDx, nextDy] = directions[game.nextDirection];
+            if (canMove(game.pacman.x + nextDx, game.pacman.y + nextDy)) {
+                game.pacman.direction = game.nextDirection;
+            }
+            
+            // Move Pac-Man
+            const [dx, dy] = directions[game.pacman.direction];
+            let newX = game.pacman.x + dx;
+            let newY = game.pacman.y + dy;
+            
+            // Handle screen wrapping
+            if (newX < 0) newX = 27;
+            if (newX > 27) newX = 0;
+            
+            if (canMove(newX, newY)) {
+                game.pacman.x = newX;
+                game.pacman.y = newY;
+                
+                // Tunnel effect (wrap around)
+                if (game.pacman.x < 0) game.pacman.x = cols - 1;
+                if (game.pacman.x >= cols) game.pacman.x = 0;
             
             // Eat dots
             const cell = game.maze[game.pacman.y][game.pacman.x];
@@ -257,6 +263,7 @@ async function createPacmanGame(settings, callbacks = null) {
                 });
             }
         }
+        } // Close movement timer block
         
         // Check win condition
         if (game.dotsRemaining === 0) {
@@ -309,12 +316,14 @@ async function createPacmanGame(settings, callbacks = null) {
                 return;
             }
             
-            // Ghost speed control - ghosts move slower than Pac-Man
+            // Ghost speed control - scaled with player speed but individual personalities
             ghost.moveTimer = (ghost.moveTimer || 0) + 1;
-            const moveDelay = ghost.vulnerable ? pacmanConfig.ghosts.vulnerableSpeed : pacmanConfig.ghosts.normalSpeed;
+            // Scale ghost speed with player speed: slower player = slower ghosts
+            const ghostSpeedMultiplier = ghost.vulnerable ? 0.5 : 1.0; // Vulnerable ghosts are slower
+            const scaledDelay = (pacmanConfig.ghosts.speed || 1) / (pacmanConfig.player.speed * ghostSpeedMultiplier);
             
-            if (ghost.moveTimer < moveDelay) return;
-            ghost.moveTimer = 0;
+            if (ghost.moveTimer < scaledDelay) return;
+                ghost.moveTimer = 0;
             
             // Simple AI - random movement with preference toward Pac-Man
             const possibleMoves = [];
