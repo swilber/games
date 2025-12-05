@@ -1118,7 +1118,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
     };
     
     async function loadLevel() {
-        const entities = await DKMapParser.loadMap(`games/donkeykong/maps/${levelConfig.file}`, levelConfig.theme);
+        const entities = await DKMapParser.loadMap(`./games/donkeykong/maps/${levelConfig.file}`, levelConfig.theme);
         
         entities.forEach(entity => {
             if (entity.type === 'platform') {
