@@ -2,7 +2,8 @@
   "name": "Pac-Man",
   "description": "Eat dots while avoiding ghosts in classic mazes",
   "gameplay": {
-    "gameSpeed": 100
+    "gameSpeed": 100,
+    "levelsToWin": 2
   },
   "difficulty": {
     "ghostSpeed": {

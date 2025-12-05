@@ -18,7 +18,7 @@ async function createPacmanGame(settings, callbacks = null) {
             player: { lives: 3, speed: 0.33 },
             ghosts: { speed: 1, count: 4 },
             powerups: { powerPelletDuration: 8000, dotValue: 10, powerPelletValue: 50, ghostValue: 200 },
-            gameplay: { gameSpeed: 150, levelsToWin: 3 }
+            gameplay: { gameSpeed: 150, levelsToWin: 2 }
         };
     }
     
@@ -92,7 +92,7 @@ async function createPacmanGame(settings, callbacks = null) {
     let game = {
         currentMazeIndex: Math.floor(Math.random() * mazeLayouts.length),
         levelsCompleted: 0,
-        levelsToWin: settings.levelsToWin || 2,
+        levelsToWin: pacmanConfig.gameplay?.levelsToWin || 2,
         maze: null,
         pacman: { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 }, // 0=right, 1=down, 2=left, 3=up
         ghosts: [
@@ -236,7 +236,7 @@ async function createPacmanGame(settings, callbacks = null) {
             const cell = game.maze[game.pacman.y][game.pacman.x];
             if (cell === 0) {
                 game.maze[game.pacman.y][game.pacman.x] = 3;
-                game.score += pacmanConfig.powerups.dotValue;
+                game.score += pacmanConfig.scoring?.dotValue || 10;
                 game.dotsRemaining--;
                 
                 // Check for level completion
@@ -245,7 +245,7 @@ async function createPacmanGame(settings, callbacks = null) {
                 }
             } else if (cell === 2) {
                 game.maze[game.pacman.y][game.pacman.x] = 3;
-                game.score += pacmanConfig.powerups.powerPelletValue;
+                game.score += pacmanConfig.powerups?.powerPelletPoints || 50;
                 game.dotsRemaining--;
                 
                 // Check for level completion
@@ -439,7 +439,7 @@ async function createPacmanGame(settings, callbacks = null) {
                     ghost.dead = true;
                     ghost.vulnerable = false;
                     ghost.returning = true;
-                    game.score += pacmanConfig.powerups.ghostValue;
+                    game.score += pacmanConfig.powerups?.ghostPoints || 200;
                 } else if (!ghost.returning) {
                     // Pac-Man dies
                     game.lives--;
@@ -494,12 +494,18 @@ async function createPacmanGame(settings, callbacks = null) {
             }
         }
         
-        // Draw UI
+        // Draw UI - retro Pac-Man style in single row
         ctx.fillStyle = '#ffff00';
-        ctx.font = '16px Arial';
-        ctx.fillText(`Score: ${game.score}`, 10, 20);
-        ctx.fillText(`Lives: ${game.lives}`, 120, 20);
-        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 200, 20);
+        ctx.font = 'bold 18px monospace';
+        ctx.textAlign = 'left';
+        
+        // Create retro-style UI text in one row (ensure score is a number)
+        const score = (game.score || 0).toString().padStart(6, '0');
+        let uiText = `SCORE ${score}    LIVES ${game.lives}    LEVEL ${game.levelsCompleted + 1}/${game.levelsToWin}    DOTS ${game.dotsRemaining}`;
+        if (game.powerMode) {
+            uiText += `    POWER ${Math.ceil(game.powerModeTimer / 1000)}S`;
+        }
+        ctx.fillText(uiText, 20, 20); // Moved up from 30 to 20 to embed in blue wall
         
         if (game.won) {
             ctx.fillStyle = 'rgba(0,0,0,0.8)';
@@ -570,17 +576,6 @@ async function createPacmanGame(settings, callbacks = null) {
             }
         });
         
-        // UI
-        ctx.fillStyle = '#ffff00';
-        ctx.font = '16px Arial';
-        ctx.fillText(`Score: ${game.score}`, 10, 25);
-        ctx.fillText(`Lives: ${game.lives}`, 10, 45);
-        ctx.fillText(`Dots: ${game.dotsRemaining}`, 10, 65);
-        
-        if (game.powerMode) {
-            ctx.fillStyle = '#ff0000';
-            ctx.fillText(`Power: ${Math.ceil(game.powerModeTimer / 1000)}s`, 10, 85);
-        }
         
         if (!game.gameStarted) {
             ctx.fillStyle = 'rgba(0,0,0,0.8)';

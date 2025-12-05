@@ -43,7 +43,11 @@ Track recent commands and context to recover from context window overflows.
 - `.gitignore` - Prevents accidental commit of decrypted files
 
 ## RECENT CHANGES SUMMARY
-1. **Configuration Modal Scrolling Fix**: Fixed mouse wheel scrolling in game configuration menu by updating CSS height constraints. Changed modal max-height from 80% to 80vh and added min-height: 0 and max-height calc() to #config-content to ensure proper scrollable area dimensions.
+1. **Pac-Man Retro UI Styling**: Fixed off-screen text by consolidating all UI elements into single row at top. Used retro styling with monospace font, padded score display (6 digits), and classic Pac-Man uppercase labels. Changed from multiple scattered text elements to unified horizontal layout.
+
+2. **Pac-Man Levels to Win Configuration**: Added `levelsToWin` setting to gameplay section in Pac-Man config. Moved from difficulty section to gameplay so it appears in configuration UI. Updated game initialization to use `pacmanConfig.gameplay.levelsToWin` instead of `settings.levelsToWin`.
+
+2. **Configuration Modal Scrolling Fix**: Fixed mouse wheel scrolling in game configuration menu by updating CSS height constraints. Changed modal max-height from 80% to 80vh and added min-height: 0 and max-height calc() to #config-content to ensure proper scrollable area dimensions.
 
 2. **Ghost Speed Scaling Implementation**: Updated ghosts to scale with player speed while maintaining personalities. Used formula `scaledDelay = (ghosts.speed) / (player.speed * ghostSpeedMultiplier)` where vulnerable ghosts use 0.5x multiplier, normal ghosts use 1.0x multiplier.
 
