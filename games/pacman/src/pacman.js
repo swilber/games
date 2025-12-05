@@ -557,7 +557,7 @@ async function createPacmanGame(settings, callbacks = null) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw maze with properly connected rounded corners
+        // Draw maze with both convex and concave rounded corners
         ctx.strokeStyle = '#00ffff';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
@@ -570,44 +570,65 @@ async function createPacmanGame(settings, callbacks = null) {
                     const pixelX = x * cellSize;
                     const pixelY = y * cellSize;
                     
-                    // Check adjacent cells
+                    // Check adjacent cells for wall borders
                     const topWall = y === 0 || game.maze[y-1][x] !== 1;
                     const bottomWall = y === game.maze.length-1 || game.maze[y+1][x] !== 1;
                     const leftWall = x === 0 || game.maze[y][x-1] !== 1;
                     const rightWall = x === game.maze[y].length-1 || game.maze[y][x+1] !== 1;
                     
+                    // Check for concave corners (inside corners)
+                    const concaveTopLeft = !topWall && !leftWall && 
+                        (y > 0 && game.maze[y-1][x] === 1) && 
+                        (x > 0 && game.maze[y][x-1] === 1) && 
+                        (y > 0 && x > 0 && game.maze[y-1][x-1] !== 1);
+                    
+                    const concaveTopRight = !topWall && !rightWall && 
+                        (y > 0 && game.maze[y-1][x] === 1) && 
+                        (x < game.maze[y].length-1 && game.maze[y][x+1] === 1) && 
+                        (y > 0 && x < game.maze[y].length-1 && game.maze[y-1][x+1] !== 1);
+                    
+                    const concaveBottomLeft = !bottomWall && !leftWall && 
+                        (y < game.maze.length-1 && game.maze[y+1][x] === 1) && 
+                        (x > 0 && game.maze[y][x-1] === 1) && 
+                        (y < game.maze.length-1 && x > 0 && game.maze[y+1][x-1] !== 1);
+                    
+                    const concaveBottomRight = !bottomWall && !rightWall && 
+                        (y < game.maze.length-1 && game.maze[y+1][x] === 1) && 
+                        (x < game.maze[y].length-1 && game.maze[y][x+1] === 1) && 
+                        (y < game.maze.length-1 && x < game.maze[y].length-1 && game.maze[y+1][x+1] !== 1);
+                    
                     const cornerRadius = 4;
                     
-                    // Draw each border as a separate stroke to avoid connection artifacts
+                    // Draw wall borders with gaps for BOTH convex AND concave corners
                     if (topWall) {
                         ctx.beginPath();
-                        ctx.moveTo(pixelX + (leftWall ? cornerRadius : 0), pixelY);
-                        ctx.lineTo(pixelX + cellSize - (rightWall ? cornerRadius : 0), pixelY);
+                        ctx.moveTo(pixelX + (leftWall || concaveTopLeft ? cornerRadius : 0), pixelY);
+                        ctx.lineTo(pixelX + cellSize - (rightWall || concaveTopRight ? cornerRadius : 0), pixelY);
                         ctx.stroke();
                     }
                     
                     if (bottomWall) {
                         ctx.beginPath();
-                        ctx.moveTo(pixelX + (leftWall ? cornerRadius : 0), pixelY + cellSize);
-                        ctx.lineTo(pixelX + cellSize - (rightWall ? cornerRadius : 0), pixelY + cellSize);
+                        ctx.moveTo(pixelX + (leftWall || concaveBottomLeft ? cornerRadius : 0), pixelY + cellSize);
+                        ctx.lineTo(pixelX + cellSize - (rightWall || concaveBottomRight ? cornerRadius : 0), pixelY + cellSize);
                         ctx.stroke();
                     }
                     
                     if (leftWall) {
                         ctx.beginPath();
-                        ctx.moveTo(pixelX, pixelY + (topWall ? cornerRadius : 0));
-                        ctx.lineTo(pixelX, pixelY + cellSize - (bottomWall ? cornerRadius : 0));
+                        ctx.moveTo(pixelX, pixelY + (topWall || concaveTopLeft ? cornerRadius : 0));
+                        ctx.lineTo(pixelX, pixelY + cellSize - (bottomWall || concaveBottomLeft ? cornerRadius : 0));
                         ctx.stroke();
                     }
                     
                     if (rightWall) {
                         ctx.beginPath();
-                        ctx.moveTo(pixelX + cellSize, pixelY + (topWall ? cornerRadius : 0));
-                        ctx.lineTo(pixelX + cellSize, pixelY + cellSize - (bottomWall ? cornerRadius : 0));
+                        ctx.moveTo(pixelX + cellSize, pixelY + (topWall || concaveTopRight ? cornerRadius : 0));
+                        ctx.lineTo(pixelX + cellSize, pixelY + cellSize - (bottomWall || concaveBottomRight ? cornerRadius : 0));
                         ctx.stroke();
                     }
                     
-                    // Draw corner arcs separately
+                    // Draw convex (outside) corner arcs
                     if (topWall && leftWall) {
                         ctx.beginPath();
                         ctx.arc(pixelX + cornerRadius, pixelY + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
@@ -626,6 +647,28 @@ async function createPacmanGame(settings, callbacks = null) {
                     if (bottomWall && rightWall) {
                         ctx.beginPath();
                         ctx.arc(pixelX + cellSize - cornerRadius, pixelY + cellSize - cornerRadius, cornerRadius, 0, 0.5 * Math.PI);
+                        ctx.stroke();
+                    }
+                    
+                    // Draw concave (inside) corner arcs - positioned opposite of convex arcs
+                    if (concaveTopLeft) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX - cornerRadius, pixelY - cornerRadius, cornerRadius, 0, 0.5 * Math.PI);
+                        ctx.stroke();
+                    }
+                    if (concaveTopRight) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cellSize + cornerRadius, pixelY - cornerRadius, cornerRadius, 0.5 * Math.PI, Math.PI);
+                        ctx.stroke();
+                    }
+                    if (concaveBottomLeft) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX - cornerRadius, pixelY + cellSize + cornerRadius, cornerRadius, 1.5 * Math.PI, 0);
+                        ctx.stroke();
+                    }
+                    if (concaveBottomRight) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cellSize + cornerRadius, pixelY + cellSize + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
                         ctx.stroke();
                     }
                 } else if (cell === 0) {
