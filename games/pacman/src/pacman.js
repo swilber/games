@@ -295,17 +295,14 @@ async function createPacmanGame(settings, callbacks = null) {
             let newX = game.pacman.x + dx;
             let newY = game.pacman.y + dy;
             
-            // Handle screen wrapping
-            if (newX < 0) newX = 27;
-            if (newX > 27) newX = 0;
+            // Handle screen wrapping - instantaneous
+            const mapWidth = game.maze[0] ? game.maze[0].length : 28;
+            if (newX < 0) newX = mapWidth - 1;
+            if (newX >= mapWidth) newX = 0;
             
             if (canMove(newX, newY)) {
                 game.pacman.x = newX;
                 game.pacman.y = newY;
-                
-                // Tunnel effect (wrap around)
-                if (game.pacman.x < 0) game.pacman.x = cols - 1;
-                if (game.pacman.x >= cols) game.pacman.x = 0;
             
             // Eat dots
             const cell = game.maze[game.pacman.y][game.pacman.x];
@@ -407,9 +404,10 @@ async function createPacmanGame(settings, callbacks = null) {
                 let newX = ghost.x + dx;
                 let newY = ghost.y + dy;
                 
-                // Handle screen wrapping
-                if (newX < 0) newX = 27;
-                if (newX > 27) newX = 0;
+                // Handle screen wrapping based on actual map dimensions
+                const mapWidth = game.maze[0] ? game.maze[0].length : 28;
+                if (newX < 0) newX = mapWidth - 1;
+                if (newX >= mapWidth) newX = 0;
                 
                 if (canMove(newX, newY)) {
                     possibleMoves.push(dir);
@@ -490,17 +488,14 @@ async function createPacmanGame(settings, callbacks = null) {
             let newX = ghost.x + dx;
             let newY = ghost.y + dy;
             
-            // Handle screen wrapping
-            if (newX < 0) newX = 27;
-            if (newX > 27) newX = 0;
+            // Handle screen wrapping based on actual map dimensions
+            const mapWidth = game.maze[0] ? game.maze[0].length : 28;
+            if (newX < 0) newX = mapWidth - 1;
+            if (newX >= mapWidth) newX = 0;
             
             if (canMove(newX, newY)) {
                 ghost.x = newX;
                 ghost.y = newY;
-                
-                // Tunnel effect
-                if (ghost.x < 0) ghost.x = cols - 1;
-                if (ghost.x >= cols) ghost.x = 0;
             }
         });
         
