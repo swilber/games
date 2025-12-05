@@ -565,10 +565,12 @@ async function createPacmanGame(settings, callbacks = null) {
         for (let y = 0; y < game.maze.length; y++) {
             for (let x = 0; x < game.maze[y].length; x++) {
                 const cell = game.maze[y][x];
+                const pixelX = x * cellSize;
+                const pixelY = y * cellSize;
+                const cornerRadius = 4;
                 
                 if (cell === 1) {
-                    const pixelX = x * cellSize;
-                    const pixelY = y * cellSize;
+                    // WALL CELL - Handle convex corners
                     
                     // Check adjacent cells for wall borders
                     const topWall = y === 0 || game.maze[y-1][x] !== 1;
@@ -576,30 +578,21 @@ async function createPacmanGame(settings, callbacks = null) {
                     const leftWall = x === 0 || game.maze[y][x-1] !== 1;
                     const rightWall = x === game.maze[y].length-1 || game.maze[y][x+1] !== 1;
                     
-                    // Check for concave corners (inside corners)
+                    // Check for adjacent empty cells that will have concave corners
                     const concaveTopLeft = !topWall && !leftWall && 
-                        (y > 0 && game.maze[y-1][x] === 1) && 
-                        (x > 0 && game.maze[y][x-1] === 1) && 
-                        (y > 0 && x > 0 && game.maze[y-1][x-1] !== 1);
-                    
+                        (y > 0 && x > 0 && game.maze[y-1][x-1] !== 1 && 
+                         game.maze[y-1][x] === 1 && game.maze[y][x-1] === 1);
                     const concaveTopRight = !topWall && !rightWall && 
-                        (y > 0 && game.maze[y-1][x] === 1) && 
-                        (x < game.maze[y].length-1 && game.maze[y][x+1] === 1) && 
-                        (y > 0 && x < game.maze[y].length-1 && game.maze[y-1][x+1] !== 1);
-                    
+                        (y > 0 && x < game.maze[y].length-1 && game.maze[y-1][x+1] !== 1 && 
+                         game.maze[y-1][x] === 1 && game.maze[y][x+1] === 1);
                     const concaveBottomLeft = !bottomWall && !leftWall && 
-                        (y < game.maze.length-1 && game.maze[y+1][x] === 1) && 
-                        (x > 0 && game.maze[y][x-1] === 1) && 
-                        (y < game.maze.length-1 && x > 0 && game.maze[y+1][x-1] !== 1);
-                    
+                        (y < game.maze.length-1 && x > 0 && game.maze[y+1][x-1] !== 1 && 
+                         game.maze[y+1][x] === 1 && game.maze[y][x-1] === 1);
                     const concaveBottomRight = !bottomWall && !rightWall && 
-                        (y < game.maze.length-1 && game.maze[y+1][x] === 1) && 
-                        (x < game.maze[y].length-1 && game.maze[y][x+1] === 1) && 
-                        (y < game.maze.length-1 && x < game.maze[y].length-1 && game.maze[y+1][x+1] !== 1);
+                        (y < game.maze.length-1 && x < game.maze[y].length-1 && game.maze[y+1][x+1] !== 1 && 
+                         game.maze[y+1][x] === 1 && game.maze[y][x+1] === 1);
                     
-                    const cornerRadius = 4;
-                    
-                    // Draw wall borders with gaps for BOTH convex AND concave corners
+                    // Draw convex wall borders (shortened for both convex AND concave corners)
                     if (topWall) {
                         ctx.beginPath();
                         ctx.moveTo(pixelX + (leftWall || concaveTopLeft ? cornerRadius : 0), pixelY);
@@ -650,33 +643,43 @@ async function createPacmanGame(settings, callbacks = null) {
                         ctx.stroke();
                     }
                     
-                    // Draw concave (inside) corner arcs - positioned opposite of convex arcs
-                    if (concaveTopLeft) {
+                } else if (cell !== 1) {
+                    // EMPTY CELL - Handle concave corners
+                    
+                    // Check for concave corners (walls surrounding this empty space)
+                    const topWall = y > 0 && game.maze[y-1][x] === 1;
+                    const bottomWall = y < game.maze.length-1 && game.maze[y+1][x] === 1;
+                    const leftWall = x > 0 && game.maze[y][x-1] === 1;
+                    const rightWall = x < game.maze[y].length-1 && game.maze[y][x+1] === 1;
+                    
+                    // Draw concave (inside) corner arcs - same angles as convex
+                    if (topWall && leftWall) {
                         ctx.beginPath();
-                        ctx.arc(pixelX - cornerRadius, pixelY - cornerRadius, cornerRadius, 0, 0.5 * Math.PI);
+                        ctx.arc(pixelX + cornerRadius, pixelY + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
                         ctx.stroke();
                     }
-                    if (concaveTopRight) {
+                    if (topWall && rightWall) {
                         ctx.beginPath();
-                        ctx.arc(pixelX + cellSize + cornerRadius, pixelY - cornerRadius, cornerRadius, 0.5 * Math.PI, Math.PI);
+                        ctx.arc(pixelX + cellSize - cornerRadius, pixelY + cornerRadius, cornerRadius, 1.5 * Math.PI, 0);
                         ctx.stroke();
                     }
-                    if (concaveBottomLeft) {
+                    if (bottomWall && leftWall) {
                         ctx.beginPath();
-                        ctx.arc(pixelX - cornerRadius, pixelY + cellSize + cornerRadius, cornerRadius, 1.5 * Math.PI, 0);
+                        ctx.arc(pixelX + cornerRadius, pixelY + cellSize - cornerRadius, cornerRadius, 0.5 * Math.PI, Math.PI);
                         ctx.stroke();
                     }
-                    if (concaveBottomRight) {
+                    if (bottomWall && rightWall) {
                         ctx.beginPath();
-                        ctx.arc(pixelX + cellSize + cornerRadius, pixelY + cellSize + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
+                        ctx.arc(pixelX + cellSize - cornerRadius, pixelY + cellSize - cornerRadius, cornerRadius, 0, 0.5 * Math.PI);
                         ctx.stroke();
                     }
-                } else if (cell === 0) {
-                    // Dot
+                }
+                
+                // Draw dots and power pellets
+                if (cell === 0) {
                     ctx.fillStyle = '#ffff00';
                     ctx.fillRect(x * cellSize + 8, y * cellSize + 8, 4, 4);
                 } else if (cell === 2) {
-                    // Power pellet
                     ctx.fillStyle = '#ffff00';
                     ctx.fillRect(x * cellSize + 4, y * cellSize + 4, 12, 12);
                 }
