@@ -234,7 +234,8 @@ function resetLevelProgress() {
 // Configuration Modal Functions
 async function openConfigModal() {
     document.getElementById('config-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    // Prevent background scrolling but allow modal content scrolling
+    document.body.style.overflow = 'hidden';
     showConfigType('system');
 }
 

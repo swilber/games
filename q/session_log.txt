@@ -43,7 +43,9 @@ Track recent commands and context to recover from context window overflows.
 - `.gitignore` - Prevents accidental commit of decrypted files
 
 ## RECENT CHANGES SUMMARY
-1. **Ghost Speed Scaling Implementation**: Updated ghosts to scale with player speed while maintaining personalities. Used formula `scaledDelay = (ghosts.speed) / (player.speed * ghostSpeedMultiplier)` where vulnerable ghosts use 0.5x multiplier, normal ghosts use 1.0x multiplier.
+1. **Configuration Modal Scrolling Fix**: Fixed mouse wheel scrolling in game configuration menu by updating CSS height constraints. Changed modal max-height from 80% to 80vh and added min-height: 0 and max-height calc() to #config-content to ensure proper scrollable area dimensions.
+
+2. **Ghost Speed Scaling Implementation**: Updated ghosts to scale with player speed while maintaining personalities. Used formula `scaledDelay = (ghosts.speed) / (player.speed * ghostSpeedMultiplier)` where vulnerable ghosts use 0.5x multiplier, normal ghosts use 1.0x multiplier.
 
 2. **Pac-Man Speed Configuration Fix**: Fixed player speed configuration not affecting gameplay by changing `pacmanConfig.player.moveSpeed` to `pacmanConfig.player.speed` to match JSON config property names.
 
