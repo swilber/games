@@ -23,84 +23,144 @@ async function createPacmanGame(settings, callbacks = null) {
     }
     
     const canvas = document.createElement('canvas');
+    const cellSize = 25;
+    
+    // Set initial canvas size (will be updated when map loads)
     canvas.width = 700;
-    canvas.height = 575;
+    canvas.height = 625; // Increased to fit 25-row ASCII map
     canvas.style.border = '2px solid #000';
     canvas.style.background = '#000';
     
+    // Update canvas size based on map dimensions
+    function updateCanvasSize() {
+        if (game.asciiMapData && game.asciiMapData.maze) {
+            const mapHeight = game.asciiMapData.maze.length;
+            const mapWidth = game.asciiMapData.maze[0] ? game.asciiMapData.maze[0].length : 28;
+            
+            canvas.width = mapWidth * cellSize;
+            canvas.height = mapHeight * cellSize;
+            canvas.style.width = canvas.width + 'px';
+            canvas.style.height = canvas.height + 'px';
+            
+            console.log(`Canvas resized to: ${canvas.width}x${canvas.height} for ${mapWidth}x${mapHeight} map`);
+        }
+    }
+
     const ctx = canvas.getContext('2d');
-    const cellSize = 25;
     const cols = Math.floor(canvas.width / cellSize);
     const rows = Math.floor(canvas.height / cellSize);
     
-    // Multiple maze layouts
+    // Load ASCII map from file
+    async function loadAsciiMap(mapFile) {
+        try {
+            const response = await fetch(`./games/pacman/maps/${mapFile}?v=${Date.now()}`);
+            const mapText = await response.text();
+            const lines = mapText.trim().split('\n');
+            
+            const maze = [];
+            let pacmanStart = { x: 14, y: 21 };
+            const ghostStarts = [];
+            
+            for (let y = 0; y < lines.length; y++) {
+                const row = [];
+                for (let x = 0; x < lines[y].length; x++) {
+                    const char = lines[y][x];
+                    switch (char) {
+                        case '#': row.push(1); break;  // Wall
+                        case '*': row.push(0); break;  // Dot
+                        case '@': row.push(2); break;  // Power pellet
+                        case ' ': row.push(3); break;  // Empty space
+                        case 'C': // Pac-Man start
+                            row.push(3);
+                            pacmanStart = { x, y };
+                            break;
+                        case 'G': // Ghost start
+                            row.push(3);
+                            ghostStarts.push({ x, y });
+                            break;
+                        default: row.push(3); break;   // Default to empty
+                    }
+                }
+                maze.push(row);
+            }
+            
+            return { maze, pacmanStart, ghostStarts };
+        } catch (error) {
+            console.warn('Could not load ASCII map:', error);
+            return null;
+        }
+    }
+
+    // Multiple maze layouts - authentic Pac-Man maps
     const mazeLayouts = [
-        // Layout 1 - Classic
+        // Original Pac-Man maze (easier)
         [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
             [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
             [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
             [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,1,1,3,3,3,3,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,3,3,1,1,1,3,1,1,0,1,1,1,1,1,1],
             [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
             [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
             [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
             [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
             [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,1],
+            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
             [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
             [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ],
-        // Layout 2 - Modified corners
+        // Ms. Pac-Man style maze (more challenging)
         [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
+            [1,2,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,2,1],
+            [1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,2,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,2,1],
-            [1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,0,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
-            [1,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
-            [1,1,1,1,0,1,1,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-            [3,3,3,3,0,1,1,3,3,3,3,3,3,3,3,3,3,3,3,1,1,0,3,3,3,3,3,3],
-            [1,1,1,1,0,1,1,3,1,1,3,3,3,3,3,3,1,1,3,1,1,0,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,3,1,3,3,3,3,3,3,3,3,1,3,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
-            [3,3,3,3,0,1,1,3,1,1,1,1,1,1,1,1,1,1,3,1,1,0,3,3,3,3,3,3],
-            [1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-            [1,0,0,0,0,1,1,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,0,0,0,0,0,1],
-            [1,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,1,1,1],
-            [1,0,1,1,0,1,1,0,1,1,1,1,0,1,1,0,1,1,1,1,0,1,1,0,1,1,0,1],
-            [1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1],
-            [1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,3,3,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,3,3,3,3,3,3,1,0,1,1,0,1,1,1,1,1,1],
+            [3,3,3,3,3,3,0,0,0,0,1,3,3,3,3,3,3,1,0,0,0,0,3,3,3,3,3,3],
+            [1,1,1,1,1,1,0,1,1,0,1,3,3,3,3,3,3,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1],
+            [1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
+            [1,2,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,2,1],
+            [1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ]
     ];
     
     let game = {
-        currentMazeIndex: Math.floor(Math.random() * mazeLayouts.length),
+        currentMazeIndex: 0, // Start with easier original Pac-Man maze
         levelsCompleted: 0,
         levelsToWin: pacmanConfig.gameplay?.levelsToWin || 2,
         maze: null,
-        pacman: { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 }, // 0=right, 1=down, 2=left, 3=up
-        ghosts: [
-            { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
-            { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
-            { x: 14, y: 12, direction: 0, color: '#00ffff', mode: 'scatter' },
-            { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
-        ],
+        pacman: { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 }, // Will be updated from map
+        ghosts: [], // Will be populated from map
         score: 0,
         lives: pacmanConfig.player.lives,
         dotsRemaining: 0,
@@ -110,47 +170,33 @@ async function createPacmanGame(settings, callbacks = null) {
         won: false,
         gameStarted: false,
         keys: {},
-        animationFrame: 0
+        animationFrame: 0,
+        asciiMapData: null // Store loaded ASCII map data
     };
     
     // Directions: right, down, left, up
     const directions = [[1, 0], [0, 1], [-1, 0], [0, -1]];
     
-    function initializeGame() {
+    async function initializeGame() {
+        // Try to load ASCII map first
+        game.asciiMapData = await loadAsciiMap('level1.txt');
+        console.log('ASCII map loaded:', !!game.asciiMapData);
+        
+        // Update canvas size based on loaded map
+        updateCanvasSize();
+        
+        initializeLevel();
+        
         // Count dots
         game.dotsRemaining = 0;
-        for (let y = 0; y < maze.length; y++) {
-            for (let x = 0; x < maze[y].length; x++) {
-                if (maze[y][x] === 0 || maze[y][x] === 2) {
+        for (let y = 0; y < game.maze.length; y++) {
+            for (let x = 0; x < game.maze[y].length; x++) {
+                if (game.maze[y][x] === 0 || game.maze[y][x] === 2) {
                     game.dotsRemaining++;
                 }
             }
         }
         
-        // Create ghosts
-        const ghostColors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
-        const startPositions = [[13, 11], [14, 11], [14, 12], [15, 11]];
-        
-        // Create ghosts with individual behaviors
-        const ghostData = [
-            { color: '#ff0000', behavior: 'chase', name: 'Blinky' },    // Red - direct chase
-            { color: '#ffb8ff', behavior: 'ambush', name: 'Pinky' },   // Pink - ambush ahead
-            { color: '#00ffff', behavior: 'patrol', name: 'Inky' },    // Cyan - patrol/shy
-            { color: '#ffb852', behavior: 'random', name: 'Clyde' }    // Orange - random/flee
-        ];
-        
-        for (let i = 0; i < pacmanConfig.ghosts.count; i++) {
-            game.ghosts.push({
-                x: startPositions[i][0],
-                y: startPositions[i][1],
-                direction: Math.floor(Math.random() * 4),
-                color: ghostData[i].color,
-                behavior: ghostData[i].behavior,
-                vulnerable: false,
-                dead: false,
-                modeTimer: 0
-            });
-        }
     }
     
     function canMove(x, y) {
@@ -165,20 +211,49 @@ async function createPacmanGame(settings, callbacks = null) {
             return;
         }
         
-        // Select new random maze
-        game.currentMazeIndex = Math.floor(Math.random() * mazeLayouts.length);
+        // Select next maze in sequence (cycle through available mazes)
+        game.currentMazeIndex = (game.currentMazeIndex + 1) % mazeLayouts.length;
         initializeLevel();
     }
     
     function initializeLevel() {
-        game.maze = JSON.parse(JSON.stringify(mazeLayouts[game.currentMazeIndex]));
-        game.pacman = { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 };
-        game.ghosts = [
-            { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
-            { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
-            { x: 14, y: 12, direction: 0, color: '#00ffff', mode: 'scatter' },
-            { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
-        ].slice(0, pacmanConfig.ghosts.count);
+        if (game.asciiMapData) {
+            console.log('Using ASCII map data');
+            // Use ASCII map data
+            game.maze = JSON.parse(JSON.stringify(game.asciiMapData.maze));
+            game.pacman = { 
+                x: game.asciiMapData.pacmanStart.x, 
+                y: game.asciiMapData.pacmanStart.y, 
+                direction: 0, 
+                nextDirection: 0, 
+                moveTimer: 0 
+            };
+            
+            // Set up ghosts from ASCII map positions
+            const colors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
+            game.ghosts = game.asciiMapData.ghostStarts.slice(0, pacmanConfig.ghosts.count).map((pos, i) => ({
+                x: pos.x,
+                y: pos.y,
+                direction: i % 4, // Vary initial directions
+                color: colors[i % colors.length],
+                mode: 'scatter',
+                moveTimer: 0,
+                vulnerable: false,
+                dead: false,
+                returning: false
+            }));
+        } else {
+            console.log('Using fallback hardcoded maze');
+            // Fallback to hardcoded maze
+            game.maze = JSON.parse(JSON.stringify(mazeLayouts[game.currentMazeIndex]));
+            game.pacman = { x: 14, y: 21, direction: 0, nextDirection: 0, moveTimer: 0 };
+            game.ghosts = [
+                { x: 13, y: 11, direction: 0, color: '#ff0000', mode: 'scatter' },
+                { x: 14, y: 11, direction: 2, color: '#ffb8ff', mode: 'scatter' },
+                { x: 14, y: 12, direction: 0, color: '#00ffff', mode: 'scatter' },
+                { x: 15, y: 11, direction: 2, color: '#ffb852', mode: 'scatter' }
+            ].slice(0, pacmanConfig.ghosts.count);
+        }
         
         // Count dots
         game.dotsRemaining = 0;
@@ -446,20 +521,36 @@ async function createPacmanGame(settings, callbacks = null) {
                     if (game.lives <= 0) {
                         game.gameOver = true;
                     } else {
-                        // Reset positions
-                        game.pacman.x = 14;
-                        game.pacman.y = 21;
-                        game.pacman.direction = 0;
-                        game.ghosts.forEach((g, i) => {
-                            const startPositions = [[13, 11], [14, 11], [14, 12], [15, 11]];
-                            if (i < startPositions.length) {
-                                g.x = startPositions[i][0];
-                                g.y = startPositions[i][1];
-                            }
-                            g.vulnerable = false;
-                            g.dead = false;
-                            g.returning = false;
-                        });
+                        // Reset positions using ASCII map data if available
+                        if (game.asciiMapData) {
+                            game.pacman.x = game.asciiMapData.pacmanStart.x;
+                            game.pacman.y = game.asciiMapData.pacmanStart.y;
+                            game.pacman.direction = 0;
+                            game.ghosts.forEach((g, i) => {
+                                if (i < game.asciiMapData.ghostStarts.length) {
+                                    g.x = game.asciiMapData.ghostStarts[i].x;
+                                    g.y = game.asciiMapData.ghostStarts[i].y;
+                                }
+                                g.vulnerable = false;
+                                g.dead = false;
+                                g.returning = false;
+                            });
+                        } else {
+                            // Fallback to hardcoded positions
+                            game.pacman.x = 14;
+                            game.pacman.y = 21;
+                            game.pacman.direction = 0;
+                            game.ghosts.forEach((g, i) => {
+                                const startPositions = [[13, 11], [14, 11], [14, 12], [15, 11]];
+                                if (i < startPositions.length) {
+                                    g.x = startPositions[i][0];
+                                    g.y = startPositions[i][1];
+                                }
+                                g.vulnerable = false;
+                                g.dead = false;
+                                g.returning = false;
+                            });
+                        }
                         game.powerMode = false;
                         game.powerModeTimer = 0;
                     }
@@ -622,7 +713,7 @@ async function createPacmanGame(settings, callbacks = null) {
         }
     }
     
-    function handleKeyDown(e) {
+    async function handleKeyDown(e) {
         // Only handle game-related keys
         const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyR'];
         if (!gameKeys.includes(e.code)) return;
@@ -650,8 +741,7 @@ async function createPacmanGame(settings, callbacks = null) {
             game.gameStarted = true;
             game.keys = {};
             
-            // Reinitialize ghosts with proper count
-            initializeGhosts();
+            // Reinitialize level with proper ghost setup
             initializeLevel();
             
             // Reset maze dots
@@ -669,7 +759,7 @@ async function createPacmanGame(settings, callbacks = null) {
                 }
             }
             
-            initializeGame();
+            await initializeGame();
             if (gameRunning) {
                 gameLoop();
             }
@@ -696,9 +786,14 @@ async function createPacmanGame(settings, callbacks = null) {
     
     gameArea.appendChild(canvas);
     
-    // Initialize first level
-    initializeLevel();
-    render();
+    // Initialize game with ASCII map loading
+    async function startGame() {
+        await initializeGame();
+        render();
+    }
+    
+    // Start the game
+    startGame();
     
     // Return cleanup function
     return {
