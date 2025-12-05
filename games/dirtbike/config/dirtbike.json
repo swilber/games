@@ -1,0 +1,42 @@
+{
+  "name": "Dirt Bike",
+  "description": "Navigate jumps and obstacles on your dirt bike",
+  "difficulty": {
+    "speed": {
+      "base": 6,
+      "multiplier": 1,
+      "min": 4,
+      "max": 15,
+      "formula": "base + difficulty * multiplier"
+    },
+    "gravity": {
+      "value": 0.5,
+      "static": true
+    },
+    "jumpPower": {
+      "value": 12,
+      "static": true
+    }
+  },
+  "gameplay": {
+    "speed": 6,
+    "gravity": 0.5,
+    "jumpPower": 12,
+    "trackLength": 2000,
+    "timeLimit": 60
+  },
+  "physics": {
+    "gravity": 0.5,
+    "jumpPower": 12,
+    "maxSpeed": 15,
+    "friction": 0.98,
+    "canvasWidth": 800,
+    "canvasHeight": 400
+  },
+  "visual": {
+    "bikeColor": "#ff4444",
+    "trackColor": "#8B4513",
+    "skyColor": "#87CEEB",
+    "rampColor": "#654321"
+  }
+}

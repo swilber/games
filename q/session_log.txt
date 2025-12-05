@@ -1,13 +1,17 @@
 # Q Session Log
-Last Updated: 2025-12-05T08:34:00.000-07:00
+Last Updated: 2025-12-05T14:16:31.024-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Fixed Pac-Man speed configuration issue
+- **Working on**: Implemented new dirt bike game using fake game as template
 - **Latest changes**: 
-  - **IMPLEMENTED**: Ghost speed scaling with player speed while maintaining individual personalities
+  - **CREATED**: Complete dirt bike game with physics-based gameplay
+  - **IMPLEMENTED**: Side-scrolling terrain, jumps, ramps, crash detection
+  - **ADDED**: Dirtbike game to config.json as level 16
+  - **INTEGRATED**: All necessary script.js functions for dirtbike support
+  - **FEATURES**: Lean controls, throttle, jumping, landing angle crashes, time limits
   - **REVERTED**: Previous change that made ghosts exactly same speed as Pac-Man
   - **FORMULA**: Ghost delay = `(config.ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
   - **PERSONALITIES**: Vulnerable ghosts move at 0.5x speed, normal ghosts at 1.0x speed

@@ -91,6 +91,12 @@
       "order": 15,
       "enabled": true,
       "type": "tetris"
+    },
+    {
+      "id": 16,
+      "order": 16,
+      "enabled": true,
+      "type": "dirtbike"
     }
   ]
 }

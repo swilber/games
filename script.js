@@ -278,6 +278,8 @@ function generateConfigForm(gameType, config) {
         generateFakeConfigForm(config, content);
     } else if (gameType === 'tetris') {
         generateTetrisConfigForm(config, content);
+    } else if (gameType === 'dirtbike') {
+        generateDirtbikeConfigForm(config, content);
     } else if (gameType === 'punchout') {
         generatePunchoutConfigForm(config, content);
     } else if (gameType === 'flappy') {
@@ -485,6 +487,29 @@ function generateFakeConfigForm(config, container) {
 }
 
 function generateTetrisConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'visual', title: 'Visual Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateDirtbikeConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' },
@@ -849,6 +874,12 @@ function getFallbackDifficulty(gameType, difficulty) {
                 dropSpeed: Math.max(100, 800 - (difficulty * 50)),
                 linesPerLevel: 10
             };
+        case 'dirtbike':
+            return {
+                speed: Math.max(2, 3 + (difficulty * 0.5)),
+                trackLength: Math.min(3000, 2000 + (difficulty * 100)),
+                timeLimit: Math.max(30, 60 - (difficulty * 2))
+            };
         case 'asteroids':
             return {
                 asteroidCount: Math.max(2, 2 + Math.floor(difficulty / 2)),
@@ -1182,6 +1213,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createFakeGame(settings, gameCallbacks);
         case 'tetris':
             return await createTetrisGame(settings, gameCallbacks);
+        case 'dirtbike':
+            return await createDirtbikeGame(settings, gameCallbacks);
         case 'breakout':
             return await createBreakoutGame(settings, gameCallbacks);
         case 'asteroids':
@@ -1253,6 +1286,7 @@ async function initializeLevel() {
         case 'snake':
         case 'fake':
         case 'tetris':
+        case 'dirtbike':
         case 'breakout':
         case 'asteroids':
         case 'spaceinvaders':
