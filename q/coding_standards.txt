@@ -42,12 +42,12 @@ Last Updated: 2025-12-04T17:16:00.000-07:00
 - **Identify duplication** and suggest consolidation
 
 ## SESSION LOG MAINTENANCE
-- Keep last 10-15 commands in session_log.txt
-- Update current session summary with major changes
-- Include enough context to recover from overflow
-- Remove old entries when they become irrelevant
-- Focus on actionable information for continuity
-- **ALWAYS include comprehensive testing instructions**
+- Keep summary of meaningful changes, not individual commands
+- Focus on problem-solving approach and implementation details
+- Include formulas, key decisions, and reasoning behind solutions
+- Remove routine operations like git commands, syntax validation, file operations
+- Prioritize information useful for understanding and continuing work
+- **Example**: "Updated ghost speed scaling using formula X because Y" vs routine development tasks
 
 ## GIT WORKFLOW
 - **NEVER automatically push changes** - wait for explicit user instructions

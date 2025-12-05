@@ -26,7 +26,7 @@ Track recent commands and context to recover from context window overflows.
   - Questions use ordered arrays - game N uses answer[N-1] to unlock, shows question[N] when completed
   - All 14 questions have unique numeric answers spanning Old and New Testament
   - Questions encrypted in questions.enc file, decrypted at runtime
-- **Status**: Pac-Man speed configuration fixed and ready for testing
+- **Status**: Pac-Man speed configuration fixes pushed to git (commit ebfccaf)
 
 ## ENCRYPTION WORKFLOW
 **To update questions:**
@@ -42,17 +42,16 @@ Track recent commands and context to recover from context window overflows.
 - `encrypt-questions.js` - Utility script for encryption/decryption (gitignored)
 - `.gitignore` - Prevents accidental commit of decrypted files
 
-## RECENT COMMANDS (Last 10)
-1. `node -c ./games/pacman/src/pacman.js` - Verified syntax after ghost speed scaling implementation
-2. Updated fallback config to use `ghosts.speed` instead of `normalSpeed/vulnerableSpeed`
-3. Implemented ghost speed scaling formula: `(ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
-4. Added vulnerable ghost speed multiplier (0.5x) vs normal ghosts (1.0x)
-5. Reverted ghost speed to delay-based system but with player speed scaling
-6. `node -c ./games/pacman/src/pacman.js` - Verified syntax after ghost speed change
-7. Updated ghost speed to match Pac-Man speed using `pacmanConfig.player.speed` increment
-8. Fixed syntax error by adding proper closing brace for ghost speed if statement
-9. Changed ghost movement from delay-based system to same timer system as Pac-Man
-10. `node -c ./games/pacman/src/pacman.js` - Verified syntax after speed configuration fix
+## RECENT CHANGES SUMMARY
+1. **Ghost Speed Scaling Implementation**: Updated ghosts to scale with player speed while maintaining personalities. Used formula `scaledDelay = (ghosts.speed) / (player.speed * ghostSpeedMultiplier)` where vulnerable ghosts use 0.5x multiplier, normal ghosts use 1.0x multiplier.
+
+2. **Pac-Man Speed Configuration Fix**: Fixed player speed configuration not affecting gameplay by changing `pacmanConfig.player.moveSpeed` to `pacmanConfig.player.speed` to match JSON config property names.
+
+3. **Configuration Property Consistency**: Updated both game code and fallback config to use consistent property names between JSON files and JavaScript code.
+
+4. **Question System Encryption**: Implemented encrypted Bible trivia questions using ordered arrays where game N requires answer[N-1] to unlock. Questions stored in questions.enc with development workflow using encrypt-questions.js utility.
+
+5. **GitHub Pages Deployment Fixes**: Resolved asset loading issues by using `./games/` prefix for paths and setting explicit canvas dimensions to prevent coordinate system conflicts.
 
 ## TESTING INSTRUCTIONS FOR PAC-MAN SPEED FIX
 **Prerequisites:**
