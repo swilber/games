@@ -557,25 +557,85 @@ async function createPacmanGame(settings, callbacks = null) {
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw maze
+        // Draw maze with properly connected rounded corners
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        
         for (let y = 0; y < game.maze.length; y++) {
             for (let x = 0; x < game.maze[y].length; x++) {
                 const cell = game.maze[y][x];
-                const pixelX = x * cellSize;
-                const pixelY = y * cellSize;
                 
                 if (cell === 1) {
-                    // Wall
-                    ctx.fillStyle = '#0000ff';
-                    ctx.fillRect(pixelX, pixelY, cellSize, cellSize);
+                    const pixelX = x * cellSize;
+                    const pixelY = y * cellSize;
+                    
+                    // Check adjacent cells
+                    const topWall = y === 0 || game.maze[y-1][x] !== 1;
+                    const bottomWall = y === game.maze.length-1 || game.maze[y+1][x] !== 1;
+                    const leftWall = x === 0 || game.maze[y][x-1] !== 1;
+                    const rightWall = x === game.maze[y].length-1 || game.maze[y][x+1] !== 1;
+                    
+                    const cornerRadius = 4;
+                    
+                    // Draw each border as a separate stroke to avoid connection artifacts
+                    if (topWall) {
+                        ctx.beginPath();
+                        ctx.moveTo(pixelX + (leftWall ? cornerRadius : 0), pixelY);
+                        ctx.lineTo(pixelX + cellSize - (rightWall ? cornerRadius : 0), pixelY);
+                        ctx.stroke();
+                    }
+                    
+                    if (bottomWall) {
+                        ctx.beginPath();
+                        ctx.moveTo(pixelX + (leftWall ? cornerRadius : 0), pixelY + cellSize);
+                        ctx.lineTo(pixelX + cellSize - (rightWall ? cornerRadius : 0), pixelY + cellSize);
+                        ctx.stroke();
+                    }
+                    
+                    if (leftWall) {
+                        ctx.beginPath();
+                        ctx.moveTo(pixelX, pixelY + (topWall ? cornerRadius : 0));
+                        ctx.lineTo(pixelX, pixelY + cellSize - (bottomWall ? cornerRadius : 0));
+                        ctx.stroke();
+                    }
+                    
+                    if (rightWall) {
+                        ctx.beginPath();
+                        ctx.moveTo(pixelX + cellSize, pixelY + (topWall ? cornerRadius : 0));
+                        ctx.lineTo(pixelX + cellSize, pixelY + cellSize - (bottomWall ? cornerRadius : 0));
+                        ctx.stroke();
+                    }
+                    
+                    // Draw corner arcs separately
+                    if (topWall && leftWall) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cornerRadius, pixelY + cornerRadius, cornerRadius, Math.PI, 1.5 * Math.PI);
+                        ctx.stroke();
+                    }
+                    if (topWall && rightWall) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cellSize - cornerRadius, pixelY + cornerRadius, cornerRadius, 1.5 * Math.PI, 0);
+                        ctx.stroke();
+                    }
+                    if (bottomWall && leftWall) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cornerRadius, pixelY + cellSize - cornerRadius, cornerRadius, 0.5 * Math.PI, Math.PI);
+                        ctx.stroke();
+                    }
+                    if (bottomWall && rightWall) {
+                        ctx.beginPath();
+                        ctx.arc(pixelX + cellSize - cornerRadius, pixelY + cellSize - cornerRadius, cornerRadius, 0, 0.5 * Math.PI);
+                        ctx.stroke();
+                    }
                 } else if (cell === 0) {
                     // Dot
                     ctx.fillStyle = '#ffff00';
-                    ctx.fillRect(pixelX + 8, pixelY + 8, 4, 4);
+                    ctx.fillRect(x * cellSize + 8, y * cellSize + 8, 4, 4);
                 } else if (cell === 2) {
                     // Power pellet
                     ctx.fillStyle = '#ffff00';
-                    ctx.fillRect(pixelX + 4, pixelY + 4, 12, 12);
+                    ctx.fillRect(x * cellSize + 4, y * cellSize + 4, 12, 12);
                 }
             }
         }
