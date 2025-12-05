@@ -1,17 +1,23 @@
 # Q Session Log
-Last Updated: 2025-12-05T14:16:31.024-07:00
+Last Updated: 2025-12-05T14:26:11.775-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Implemented new dirt bike game using fake game as template
+- **Working on**: Successfully implemented and debugged dirt bike game
 - **Latest changes**: 
-  - **CREATED**: Complete dirt bike game with physics-based gameplay
-  - **IMPLEMENTED**: Side-scrolling terrain, jumps, ramps, crash detection
-  - **ADDED**: Dirtbike game to config.json as level 16
-  - **INTEGRATED**: All necessary script.js functions for dirtbike support
-  - **FEATURES**: Lean controls, throttle, jumping, landing angle crashes, time limits
+  - **CREATED**: Complete dirt bike game with physics-based gameplay (level 16)
+  - **DEBUGGED**: Configuration loading issue - friction was limiting top speed
+  - **FIXED**: Removed quiz.js reference from index.html (404 error)
+  - **OPTIMIZED**: Reduced friction from 0.95 to 0.98 for higher sustained speeds
+  - **ENHANCED**: Terrain generation with hills, ramps, and obstacles
+  - **COMMITTED**: All changes pushed successfully (commit 23d58ca)
+
+## KEY LEARNING
+- Configuration debugging approach: Add console logs to compare config vs settings values
+- Friction in physics games can be a hidden speed limiter - monitor frame-by-frame velocity changes
+- Always check both config loading AND how values are applied in game logic
   - **REVERTED**: Previous change that made ghosts exactly same speed as Pac-Man
   - **FORMULA**: Ghost delay = `(config.ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
   - **PERSONALITIES**: Vulnerable ghosts move at 0.5x speed, normal ghosts at 1.0x speed
