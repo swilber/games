@@ -1086,6 +1086,11 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
     canvas.width = 600;
     canvas.height = 500;
     canvas.style.border = '2px solid #000';
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
+    // Ensure canvas dimensions match actual size
+    canvas.style.width = '600px';
+    canvas.style.height = '500px';
     const ctx = canvas.getContext('2d');
     
     // Game State
@@ -1113,7 +1118,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
     };
     
     async function loadLevel() {
-        const entities = await DKMapParser.loadMap(`/games/donkeykong/maps/${levelConfig.file}`, levelConfig.theme);
+        const entities = await DKMapParser.loadMap(`games/donkeykong/maps/${levelConfig.file}`, levelConfig.theme);
         
         entities.forEach(entity => {
             if (entity.type === 'platform') {
