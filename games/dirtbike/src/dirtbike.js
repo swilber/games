@@ -1,7 +1,7 @@
 async function createDirtbikeGame(settings, callbacks = null) {
     const gameArea = document.getElementById('game-area');
     
-    // Load Dirtbike configuration
+    // Load config
     let dirtbikeConfig = {};
     if (typeof configManager !== 'undefined') {
         dirtbikeConfig = await configManager.loadConfig('dirtbike');
@@ -14,10 +14,12 @@ async function createDirtbikeGame(settings, callbacks = null) {
     let gameInterval = null;
     let gameWon = false;
     let gameStarted = false;
-    let gameTime = 0;
+    let raceStarted = false;
+    let raceFinished = false;
+    let coastingToStop = false;
+    let countdown = 3;
+    let countdownTimer = 0;
     let trackPosition = 0;
-    let raceMode = 'qualify'; // 'qualify' or 'race'
-    let qualifyTime = 60; // seconds to qualify
     
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -25,11 +27,117 @@ async function createDirtbikeGame(settings, callbacks = null) {
     canvas.height = 400;
     const ctx = canvas.getContext('2d');
     
+    const trackLength = 2000;
+    const lanes = [
+        { y: 213 },
+        { y: 241 },
+        { y: 269 },
+        { y: 297 }
+    ];
+    
+    // Pre-rendered track elements
+    let trackCanvas = null;
+    let trackCtx = null;
+    
+    function generateTrack() {
+        // Create off-screen canvas for track
+        trackCanvas = document.createElement('canvas');
+        trackCanvas.width = trackLength + 2000; // Much more extra space for coasting
+        trackCanvas.height = 400;
+        trackCtx = trackCanvas.getContext('2d');
+        
+        // Draw sky
+        trackCtx.fillStyle = '#87CEEB';
+        trackCtx.fillRect(0, 0, trackCanvas.width, 120);
+        
+        // Draw fluffy clouds
+        trackCtx.fillStyle = '#FFFFFF';
+        for (let x = 0; x < trackCanvas.width; x += 200) {
+            const cloudX = x + Math.random() * 100;
+            const cloudY = 20 + Math.random() * 40;
+            
+            // Draw cloud as overlapping circles
+            trackCtx.beginPath();
+            trackCtx.arc(cloudX, cloudY, 15, 0, Math.PI * 2);
+            trackCtx.arc(cloudX + 20, cloudY, 18, 0, Math.PI * 2);
+            trackCtx.arc(cloudX + 40, cloudY, 15, 0, Math.PI * 2);
+            trackCtx.arc(cloudX + 10, cloudY - 10, 12, 0, Math.PI * 2);
+            trackCtx.arc(cloudX + 30, cloudY - 8, 14, 0, Math.PI * 2);
+            trackCtx.fill();
+        }
+        
+        // Draw audience stands
+        trackCtx.fillStyle = '#8B4513';
+        trackCtx.fillRect(0, 120, trackCanvas.width, 40);
+        
+        // Draw audience (simple dots)
+        trackCtx.fillStyle = '#FFE4B5';
+        for (let x = 0; x < trackCanvas.width; x += 15) {
+            for (let y = 130; y < 150; y += 10) {
+                trackCtx.beginPath();
+                trackCtx.arc(x + Math.random() * 10, y, 2, 0, Math.PI * 2);
+                trackCtx.fill();
+            }
+        }
+        
+        // Draw top grass
+        trackCtx.fillStyle = '#228B22';
+        trackCtx.fillRect(0, 160, trackCanvas.width, 44);
+        
+        // Draw dirt track (starts at first lane)
+        trackCtx.fillStyle = '#8B4513';
+        trackCtx.fillRect(0, 204, trackCanvas.width, 112);
+        
+        // Draw bottom grass
+        trackCtx.fillStyle = '#228B22';
+        trackCtx.fillRect(0, 316, trackCanvas.width, 84);
+        
+        // Draw lane dividers (moved up 5px)
+        trackCtx.strokeStyle = '#FFFFFF';
+        trackCtx.lineWidth = 2;
+        trackCtx.setLineDash([10, 10]);
+        for (let i = 1; i < 4; i++) {
+            const y = 213 + (i * 28); // 241, 269, 297
+            trackCtx.beginPath();
+            trackCtx.moveTo(0, y);
+            trackCtx.lineTo(trackCanvas.width, y);
+            trackCtx.stroke();
+        }
+        trackCtx.setLineDash([]);
+        
+        // Draw starting line at position 400 (where bikes actually start on screen)
+        trackCtx.strokeStyle = '#FFFFFF';
+        trackCtx.lineWidth = 3;
+        trackCtx.beginPath();
+        trackCtx.moveTo(400, 204);
+        trackCtx.lineTo(400, 316);
+        trackCtx.stroke();
+        
+        // Draw finish line at actual finish position
+        trackCtx.strokeStyle = '#000000';
+        trackCtx.lineWidth = 3;
+        trackCtx.beginPath();
+        trackCtx.moveTo(trackLength + 400, 204);
+        trackCtx.lineTo(trackLength + 400, 316);
+        trackCtx.stroke();
+        
+        // Checkered pattern for finish line
+        trackCtx.fillStyle = '#FFFFFF';
+        for (let y = 204; y < 316; y += 10) {
+            for (let x = 0; x < 10; x += 5) {
+                if ((Math.floor(y/5) + Math.floor(x/5)) % 2 === 0) {
+                    trackCtx.fillRect(trackLength + 400 + x - 5, y, 5, 5);
+                }
+            }
+        }
+    }
+    
     // Player bike
     const player = {
         lane: 2,
         targetLane: 2,
         laneTransition: 0,
+        position: 0,
         speed: 0,
         maxSpeed: 12,
         heat: 0,
@@ -38,99 +146,64 @@ async function createDirtbikeGame(settings, callbacks = null) {
         jumping: false,
         jumpHeight: 0,
         jumpVelocity: 0,
-        crashed: false,
-        crashTimer: 0,
-        wheelie: false,
-        wheelieTimer: 0
+        rotation: 0,
+        rotateForward: false
     };
     
-    // AI riders
-    const aiRiders = [];
-    for (let i = 0; i < 6; i++) {
-        aiRiders.push({
-            lane: Math.floor(Math.random() * 4),
-            position: Math.random() * 200 - 100,
-            speed: 3 + Math.random() * 4,
-            color: `hsl(${Math.random() * 360}, 70%, 50%)`
+    // AI opponents
+    const opponents = [];
+    for (let i = 0; i < 3; i++) {
+        opponents.push({
+            lane: i === 0 ? 0 : i === 1 ? 1 : 3, // Lanes 0, 1, 3 (player in lane 2)
+            position: 0,
+            speed: 3 + Math.random() * 2,
+            color: `hsl(${i * 120}, 70%, 50%)`
         });
-    }
-    
-    const trackLength = 2000;
-    const lanes = [
-        { y: 140, obstacles: [] },
-        { y: 200, obstacles: [] },
-        { y: 260, obstacles: [] },
-        { y: 320, obstacles: [] }
-    ];
-    
-    // Generate track
-    function generateTrack() {
-        for (let laneIndex = 0; laneIndex < 4; laneIndex++) {
-            const lane = lanes[laneIndex];
-            
-            for (let pos = 300; pos < trackLength; pos += 100 + Math.random() * 150) {
-                const obstacleType = Math.random();
-                
-                if (obstacleType < 0.5) {
-                    // Ramp
-                    const size = Math.random();
-                    lane.obstacles.push({
-                        x: pos,
-                        type: 'ramp',
-                        width: size < 0.3 ? 40 : size < 0.7 ? 60 : 80,
-                        height: size < 0.3 ? 15 : size < 0.7 ? 25 : 35
-                    });
-                } else if (obstacleType < 0.8) {
-                    // Mud puddle
-                    lane.obstacles.push({
-                        x: pos,
-                        type: 'mud',
-                        width: 30 + Math.random() * 20,
-                        height: 8
-                    });
-                }
-            }
-        }
     }
     
     function update() {
         if (!gameRunning) return;
         
-        gameTime += 1/60;
+        if (!raceStarted) {
+            // Countdown phase
+            countdownTimer += 1/60;
+            if (countdownTimer >= 1) {
+                countdownTimer = 0;
+                countdown--;
+                if (countdown <= 0) {
+                    raceStarted = true;
+                }
+            }
+            return;
+        }
         
-        // Update player
+        // Race phase
         updatePlayer();
+        updateOpponents();
         
-        // Update AI riders
-        updateAI();
+        // Check finish line crossing
+        if (!raceFinished && player.position >= trackLength) {
+            raceFinished = true;
+            coastingToStop = true;
+            player.throttle = false; // Stop acceleration
+        }
         
-        // Check win/lose conditions
-        if (raceMode === 'qualify') {
-            if (trackPosition >= trackLength) {
-                gameWon = true;
-                gameRunning = false;
-                if (callbacks?.onGameComplete) {
-                    setTimeout(() => callbacks.onGameComplete('dirtbike', { 
-                        completed: true, 
-                        time: gameTime.toFixed(1),
-                        mode: 'qualify'
-                    }), 1000);
-                }
-            } else if (gameTime > qualifyTime) {
-                gameRunning = false;
-                if (callbacks?.onGameComplete) {
-                    setTimeout(() => callbacks.onGameComplete('dirtbike', { 
-                        completed: false, 
-                        timeout: true 
-                    }), 1000);
-                }
+        // Check if coasting is complete (bike has stopped)
+        if (coastingToStop && player.speed < 0.1) {
+            gameWon = true;
+            gameRunning = false;
+            if (callbacks?.onGameComplete) {
+                callbacks.onGameComplete('dirtbike', { 
+                    completed: true,
+                    position: getPlayerPosition()
+                });
             }
         }
     }
     
     function updatePlayer() {
         // Lane switching
-        if (player.lane !== player.targetLane && !player.crashed) {
+        if (player.lane !== player.targetLane) {
             player.laneTransition += 0.12;
             if (player.laneTransition >= 1) {
                 player.lane = player.targetLane;
@@ -138,314 +211,153 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         
-        // Crash recovery
-        if (player.crashed) {
-            player.crashTimer -= 1/60;
-            if (player.crashTimer <= 0) {
-                player.crashed = false;
-                player.speed = 0;
-                player.heat = 0;
-            }
-            return;
-        }
-        
-        // Heat management
-        if (player.throttle && !player.jumping) {
-            player.heat += 0.3; // Much slower heat buildup
+        // Heat and speed
+        if (player.throttle) {
+            player.heat += 0.3;
             if (player.heat >= player.maxHeat) {
                 player.heat = player.maxHeat;
-                player.speed *= 0.98; // Less severe overheating penalty
+                player.speed *= 0.98; // Overheating
             } else {
                 player.speed += 0.15;
             }
         } else {
-            player.heat = Math.max(0, player.heat - 1.5); // Faster cooling
+            player.heat = Math.max(0, player.heat - 1.5);
         }
         
-        // Natural deceleration
-        player.speed *= 0.98;
+        player.speed *= 0.98; // Natural deceleration
         player.speed = Math.max(0, Math.min(player.maxSpeed, player.speed));
-        
-        // Movement
-        if (!player.crashed) {
-            trackPosition += player.speed;
-        }
+        player.position += player.speed;
         
         // Jumping physics
         if (player.jumping) {
-            player.jumpVelocity -= 1.2;
+            player.jumpVelocity -= 0.8; // Gravity
             player.jumpHeight += player.jumpVelocity;
+            
+            // Rotation while jumping
+            if (player.rotateForward) {
+                player.rotation += 0.05; // Slower forward rotation
+            } else {
+                player.rotation -= 0.05; // Slower backward rotation
+            }
             
             if (player.jumpHeight <= 0) {
                 player.jumpHeight = 0;
                 player.jumping = false;
                 player.jumpVelocity = 0;
                 
-                // Landing check - crash if going too fast with bad angle
-                if (player.speed > 8 && Math.random() < 0.3) {
-                    crash();
+                // Check landing angle for crash
+                const normalizedRotation = Math.abs(player.rotation % (Math.PI * 2));
+                if (normalizedRotation > 0.5 && normalizedRotation < Math.PI * 2 - 0.5) {
+                    // Bad landing - reset to start
+                    player.position = Math.max(0, player.position - 100);
+                    player.speed = 0;
                 }
+                
+                // Reset rotation on landing
+                player.rotation = 0;
             }
         }
         
-        // Wheelie
-        if (player.wheelie && !player.jumping) {
-            player.wheelieTimer += 1/60;
-        } else {
-            player.wheelie = false;
-            player.wheelieTimer = 0;
-        }
-        
-        // Obstacle collision
-        checkObstacleCollision();
-        
-        // AI rider collision
-        checkAICollision();
+        // Update camera
+        trackPosition = player.position;
     }
     
-    function updateAI() {
-        for (let ai of aiRiders) {
-            // Simple AI movement
-            ai.position += ai.speed;
+    function updateOpponents() {
+        for (let opponent of opponents) {
+            // Simple AI
+            opponent.speed += (Math.random() - 0.5) * 0.1;
+            opponent.speed = Math.max(2, Math.min(8, opponent.speed));
+            opponent.position += opponent.speed;
             
             // Occasional lane changes
             if (Math.random() < 0.002) {
-                ai.lane = Math.max(0, Math.min(3, ai.lane + (Math.random() < 0.5 ? -1 : 1)));
-            }
-            
-            // Speed variation
-            ai.speed += (Math.random() - 0.5) * 0.1;
-            ai.speed = Math.max(2, Math.min(8, ai.speed));
-        }
-    }
-    
-    function checkObstacleCollision() {
-        const currentLane = lanes[player.lane];
-        for (let obstacle of currentLane.obstacles) {
-            const obstacleScreenX = obstacle.x - trackPosition;
-            
-            if (obstacleScreenX > -20 && obstacleScreenX < 20 && !player.jumping) {
-                if (obstacle.type === 'ramp') {
-                    // Launch off ramp
-                    player.jumping = true;
-                    player.jumpVelocity = 8 + (player.speed * 0.5);
-                    player.speed += 1; // Speed boost
-                } else if (obstacle.type === 'mud') {
-                    // Slow down in mud
-                    player.speed *= 0.8; // Less severe slowdown
-                    player.heat += 3; // Less heat penalty
-                }
+                opponent.lane = Math.max(0, Math.min(3, opponent.lane + (Math.random() < 0.5 ? -1 : 1)));
             }
         }
     }
     
-    function checkAICollision() {
-        if (player.jumping || player.crashed) return;
-        
-        for (let ai of aiRiders) {
-            const aiScreenX = ai.position - trackPosition;
-            if (Math.abs(aiScreenX) < 25 && ai.lane === player.lane) {
-                crash();
-                break;
+    function getPlayerPosition() {
+        let position = 1;
+        for (let opponent of opponents) {
+            if (opponent.position > player.position) {
+                position++;
             }
         }
-    }
-    
-    function crash() {
-        player.crashed = true;
-        player.crashTimer = 2; // 2 seconds to recover
-        player.speed = 0;
-        player.jumping = false;
-        player.jumpHeight = 0;
-        
-        // Move AI riders ahead
-        for (let ai of aiRiders) {
-            if (ai.position < trackPosition + 100) {
-                ai.position = trackPosition + 100 + Math.random() * 50;
-            }
-        }
+        return position;
     }
     
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Sky
-        ctx.fillStyle = '#87CEEB';
-        ctx.fillRect(0, 0, canvas.width, 120);
-        
-        // Ground
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(0, 120, canvas.width, 280);
-        
-        // Lane dividers
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([15, 15]);
-        for (let i = 1; i < 4; i++) {
-            const y = 140 + (i * 60);
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
+        // Draw pre-rendered track
+        if (trackCanvas) {
+            const sourceX = trackPosition; // Direct position mapping
+            ctx.drawImage(trackCanvas, sourceX, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
         }
-        ctx.setLineDash([]);
         
-        // Track obstacles
-        renderObstacles();
-        
-        // AI riders
-        renderAI();
-        
-        // Player bike
+        // Render bikes
+        renderOpponents();
         renderPlayer();
         
         // UI
         renderUI();
     }
     
-    function renderObstacles() {
-        for (let laneIndex = 0; laneIndex < 4; laneIndex++) {
-            const lane = lanes[laneIndex];
-            
-            for (let obstacle of lane.obstacles) {
-                const screenX = obstacle.x - trackPosition + 400;
-                
-                if (screenX > -100 && screenX < canvas.width + 100) {
-                    const laneY = lane.y;
-                    
-                    if (obstacle.type === 'ramp') {
-                        // 3D ramp with proper perspective
-                        const rampBase = screenX;
-                        const rampTop = screenX + obstacle.width;
-                        const rampHeight = obstacle.height;
-                        
-                        // Main ramp face (light brown)
-                        ctx.fillStyle = '#A0522D';
-                        ctx.beginPath();
-                        ctx.moveTo(rampBase, laneY + 20); // Bottom left
-                        ctx.lineTo(rampTop, laneY + 20); // Bottom right  
-                        ctx.lineTo(rampTop - 10, laneY - rampHeight + 15); // Top right (perspective)
-                        ctx.lineTo(rampBase + 5, laneY - rampHeight + 20); // Top left (perspective)
-                        ctx.closePath();
-                        ctx.fill();
-                        
-                        // Right side (darker for 3D effect)
-                        ctx.fillStyle = '#654321';
-                        ctx.beginPath();
-                        ctx.moveTo(rampTop, laneY + 20); // Bottom right
-                        ctx.lineTo(rampTop + 8, laneY + 15); // Bottom right depth
-                        ctx.lineTo(rampTop - 2, laneY - rampHeight + 10); // Top right depth
-                        ctx.lineTo(rampTop - 10, laneY - rampHeight + 15); // Top right
-                        ctx.closePath();
-                        ctx.fill();
-                        
-                        // Top surface (lightest)
-                        ctx.fillStyle = '#D2B48C';
-                        ctx.beginPath();
-                        ctx.moveTo(rampBase + 5, laneY - rampHeight + 20); // Top left
-                        ctx.lineTo(rampTop - 10, laneY - rampHeight + 15); // Top right
-                        ctx.lineTo(rampTop - 2, laneY - rampHeight + 10); // Top right depth
-                        ctx.lineTo(rampBase + 13, laneY - rampHeight + 15); // Top left depth
-                        ctx.closePath();
-                        ctx.fill();
-                        
-                        // Ramp outline for definition
-                        ctx.strokeStyle = '#8B4513';
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(rampBase, laneY + 20);
-                        ctx.lineTo(rampTop, laneY + 20);
-                        ctx.lineTo(rampTop - 10, laneY - rampHeight + 15);
-                        ctx.lineTo(rampBase + 5, laneY - rampHeight + 20);
-                        ctx.closePath();
-                        ctx.stroke();
-                        
-                    } else if (obstacle.type === 'mud') {
-                        ctx.fillStyle = '#4A4A4A';
-                        ctx.fillRect(screenX, laneY + 15, obstacle.width, obstacle.height);
-                        
-                        // Mud texture
-                        ctx.fillStyle = '#3A3A3A';
-                        for (let i = 0; i < 3; i++) {
-                            ctx.fillRect(screenX + i * 8, laneY + 17, 4, 4);
-                        }
-                    }
-                }
-            }
-        }
+    function renderPlayer() {
+        const currentY = lanes[player.lane].y + 
+                        (player.laneTransition * (lanes[player.targetLane].y - lanes[player.lane].y)) - player.jumpHeight;
+        const bikeX = 400; // Player always in center of screen
+        
+        // Save context for rotation
+        ctx.save();
+        ctx.translate(bikeX, currentY);
+        ctx.rotate(player.rotation);
+        
+        // Player bike
+        ctx.fillStyle = '#0066FF';
+        ctx.fillRect(-8, -6, 16, 12);
+        
+        // Wheels
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(-5, 8, 3, 0, Math.PI * 2);
+        ctx.arc(5, 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Rider
+        ctx.fillStyle = '#FFE4B5';
+        ctx.fillRect(-3, -12, 6, 8);
+        
+        ctx.restore();
     }
     
-    function renderAI() {
-        for (let ai of aiRiders) {
-            const screenX = ai.position - trackPosition + 400;
+    function renderOpponents() {
+        for (let opponent of opponents) {
+            const screenX = opponent.position - trackPosition + 400;
             
             if (screenX > -50 && screenX < canvas.width + 50) {
-                const laneY = lanes[ai.lane].y;
+                const laneY = lanes[opponent.lane].y;
                 
-                // AI bike body
-                ctx.fillStyle = ai.color;
-                ctx.fillRect(screenX - 8, laneY - 5, 16, 12);
+                // Opponent bike
+                ctx.fillStyle = opponent.color;
+                ctx.fillRect(screenX - 8, laneY - 6, 16, 12);
                 
-                // AI wheels
+                // Wheels
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
                 ctx.arc(screenX - 5, laneY + 8, 3, 0, Math.PI * 2);
                 ctx.arc(screenX + 5, laneY + 8, 3, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // AI rider
+                // Rider
                 ctx.fillStyle = '#FFE4B5';
-                ctx.fillRect(screenX - 3, laneY - 8, 6, 6);
+                ctx.fillRect(screenX - 3, laneY - 12, 6, 8);
             }
-        }
-    }
-    
-    function renderPlayer() {
-        const currentY = lanes[player.lane].y + 
-                        (player.laneTransition * (lanes[player.targetLane].y - lanes[player.lane].y));
-        const bikeY = currentY - player.jumpHeight;
-        
-        if (player.crashed) {
-            // Crashed bike
-            ctx.fillStyle = '#666666';
-            ctx.save();
-            ctx.translate(400, bikeY);
-            ctx.rotate(Math.PI / 4);
-            ctx.fillRect(-8, -6, 16, 12);
-            ctx.restore();
-        } else {
-            // Normal bike
-            ctx.fillStyle = '#0066FF';
-            if (player.wheelie) {
-                ctx.save();
-                ctx.translate(400, bikeY);
-                ctx.rotate(-0.3);
-                ctx.fillRect(-8, -6, 16, 12);
-                ctx.restore();
-            } else {
-                ctx.fillRect(392, bikeY - 6, 16, 12);
-            }
-            
-            // Wheels
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            if (player.wheelie) {
-                ctx.arc(395, bikeY + 8, 3, 0, Math.PI * 2);
-                ctx.arc(405, bikeY + 5, 3, 0, Math.PI * 2);
-            } else {
-                ctx.arc(395, bikeY + 8, 3, 0, Math.PI * 2);
-                ctx.arc(405, bikeY + 8, 3, 0, Math.PI * 2);
-            }
-            ctx.fill();
-            
-            // Player rider
-            ctx.fillStyle = '#FFE4B5';
-            ctx.fillRect(397, bikeY - 12, 6, 8);
         }
     }
     
     function renderUI() {
-        // Speed gauge
+        // Speed and heat
         ctx.fillStyle = '#000000';
         ctx.font = '16px Arial';
         ctx.fillText(`Speed: ${Math.floor(player.speed * 10)}`, 10, 25);
@@ -459,48 +371,46 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.fillStyle = '#000000';
         ctx.fillText('Heat', 10, 65);
         
-        // Time and distance
-        ctx.fillText(`Time: ${gameTime.toFixed(1)}s`, 10, 85);
-        ctx.fillText(`Distance: ${Math.floor(trackPosition)}m`, 10, 105);
+        // Position and distance
+        ctx.fillText(`Position: ${getPlayerPosition()}/4`, 10, 85);
+        ctx.fillText(`Distance: ${Math.floor(player.position)}m`, 10, 105);
         
-        if (raceMode === 'qualify') {
-            const timeLeft = Math.max(0, qualifyTime - gameTime);
-            ctx.fillStyle = timeLeft < 10 ? '#FF0000' : '#000000';
-            ctx.fillText(`Qualify Time: ${timeLeft.toFixed(1)}s`, 200, 25);
-        }
-        
-        // Lane indicator
-        ctx.fillText(`Lane: ${player.lane + 1}`, 200, 45);
-        
-        // Instructions
-        if (!gameStarted) {
-            ctx.fillStyle = '#000000';
-            ctx.font = '18px Arial';
-            ctx.fillText('Up/Down: Change lanes, Space: Throttle, Shift: Wheelie', 150, 380);
-        }
-        
-        // Status messages
-        if (player.crashed) {
+        // Countdown
+        if (!raceStarted) {
             ctx.fillStyle = '#FF0000';
-            ctx.font = '24px Arial';
-            ctx.fillText('CRASHED!', 350, 200);
+            ctx.font = '48px Arial';
+            const text = countdown > 0 ? countdown.toString() : 'GO!';
+            const textWidth = ctx.measureText(text).width;
+            ctx.fillText(text, (canvas.width - textWidth) / 2, canvas.height / 2);
         }
         
+        // Instructions at bottom
+        ctx.fillStyle = '#000000';
+        ctx.font = '14px Arial';
+        ctx.fillText('↑/↓: Change Lanes    SPACE: Throttle    SHIFT: Jump    →: Rotate Forward', 10, 390);
+        
+        // Race finished message
+        if (raceFinished && coastingToStop) {
+            ctx.fillStyle = '#00FF00';
+            ctx.font = '32px Arial';
+            const text = 'You Won!';
+            const textWidth = ctx.measureText(text).width;
+            ctx.fillText(text, (canvas.width - textWidth) / 2, 100);
+        }
+        
+        // Final win message
         if (gameWon) {
             ctx.fillStyle = '#00FF00';
             ctx.font = '32px Arial';
-            ctx.fillText('QUALIFIED!', 300, 200);
-        }
-        
-        if (player.wheelieTimer > 1) {
-            ctx.fillStyle = '#FFAA00';
-            ctx.font = '20px Arial';
-            ctx.fillText(`Wheelie! +${Math.floor(player.wheelieTimer)}pts`, 250, 100);
+            const position = getPlayerPosition();
+            const text = position === 1 ? 'YOU WIN!' : `${position}${position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'} Place`;
+            const textWidth = ctx.measureText(text).width;
+            ctx.fillText(text, (canvas.width - textWidth) / 2, canvas.height / 2);
         }
     }
     
     function handleKeyDown(e) {
-        const gameKeys = ['ArrowUp', 'ArrowDown', 'Space', 'ShiftLeft', 'ShiftRight'];
+        const gameKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'];
         if (!gameKeys.includes(e.code)) return;
         
         if (!gameStarted) {
@@ -510,28 +420,40 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         
-        if (!gameRunning) return;
+        if (!gameRunning || !raceStarted || coastingToStop) return;
         
         switch(e.code) {
             case 'ArrowUp':
-                if (player.targetLane > 0 && !player.crashed) {
+                if (player.targetLane > 0) {
                     player.targetLane--;
                     player.laneTransition = 0;
                 }
                 break;
             case 'ArrowDown':
-                if (player.targetLane < 3 && !player.crashed) {
+                if (player.targetLane < 3) {
                     player.targetLane++;
                     player.laneTransition = 0;
                 }
                 break;
+            case 'ArrowLeft':
+                if (player.jumping) {
+                    player.rotateForward = false; // Default backward rotation
+                }
+                break;
+            case 'ArrowRight':
+                if (player.jumping) {
+                    player.rotateForward = true; // Forward rotation
+                }
+                break;
             case 'Space':
-                player.throttle = true;
+                player.throttle = true; // Throttle only
                 break;
             case 'ShiftLeft':
             case 'ShiftRight':
-                if (!player.jumping && !player.crashed) {
-                    player.wheelie = true;
+                if (!player.jumping) {
+                    // Jump
+                    player.jumping = true;
+                    player.jumpVelocity = 12;
                 }
                 break;
         }
@@ -542,11 +464,12 @@ async function createDirtbikeGame(settings, callbacks = null) {
     function handleKeyUp(e) {
         switch(e.code) {
             case 'Space':
-                player.throttle = false;
+                player.throttle = false; // Only throttle control
                 break;
-            case 'ShiftLeft':
-            case 'ShiftRight':
-                player.wheelie = false;
+            case 'ArrowRight':
+                if (player.jumping) {
+                    player.rotateForward = false; // Stop forward rotation
+                }
                 break;
         }
     }

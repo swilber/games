@@ -1,23 +1,24 @@
 # Q Session Log
-Last Updated: 2025-12-05T14:26:11.775-07:00
+Last Updated: 2025-12-05T14:36:08.843-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Successfully implemented and debugged dirt bike game
+- **Working on**: Complete Excitebike recreation with authentic mechanics
 - **Latest changes**: 
-  - **CREATED**: Complete dirt bike game with physics-based gameplay (level 16)
-  - **DEBUGGED**: Configuration loading issue - friction was limiting top speed
-  - **FIXED**: Removed quiz.js reference from index.html (404 error)
-  - **OPTIMIZED**: Reduced friction from 0.95 to 0.98 for higher sustained speeds
-  - **ENHANCED**: Terrain generation with hills, ramps, and obstacles
-  - **COMMITTED**: All changes pushed successfully (commit 23d58ca)
+  - **IMPLEMENTED**: Full Excitebike game with 4-lane pseudo-3D racing
+  - **ADDED**: Heat management system, AI riders, crash mechanics, wheelies
+  - **CREATED**: Proper 3D ramps with perspective, shading, and multiple faces
+  - **FIXED**: Heat buildup rate (4x slower), cooling rate (2x faster)
+  - **BALANCED**: Mud penalties and overheating effects for playability
+  - **COMMITTED**: Complete implementation pushed successfully (commit 2111f4c)
 
-## KEY LEARNING
-- Configuration debugging approach: Add console logs to compare config vs settings values
-- Friction in physics games can be a hidden speed limiter - monitor frame-by-frame velocity changes
-- Always check both config loading AND how values are applied in game logic
+## KEY LEARNINGS
+- **Game Balance Critical**: Initial heat system was unplayable (overheated immediately)
+- **Visual Authenticity Matters**: Simple triangular ramps looked flat, needed proper 3D perspective
+- **Iterative Refinement**: Started with basic concept, evolved through feedback to full recreation
+- **Physics Tuning**: Heat rates, cooling rates, and penalties need careful balancing for fun gameplay
   - **REVERTED**: Previous change that made ghosts exactly same speed as Pac-Man
   - **FORMULA**: Ghost delay = `(config.ghosts.speed) / (player.speed * ghostSpeedMultiplier)`
   - **PERSONALITIES**: Vulnerable ghosts move at 0.5x speed, normal ghosts at 1.0x speed

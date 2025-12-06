@@ -165,3 +165,21 @@ canvas.style.margin = '0 auto';
 - Encryption key is in code but provides basic obfuscation
 - Users browsing git only see encrypted questions.enc
 - Game decrypts seamlessly at runtime
+## GAME BALANCE AND TUNING PATTERNS
+- **Heat/Resource Systems**: Start with very low rates and increase gradually during testing
+- **Example**: Heat buildup of 0.3 per frame vs 1.2 per frame (4x difference in playability)
+- **Cooling Rates**: Should be faster than buildup rates for player forgiveness
+- **Penalty Systems**: Gradual penalties (0.98x speed) vs harsh penalties (0.95x speed)
+
+## 3D VISUAL RENDERING PATTERNS
+- **Pseudo-3D Ramps**: Require multiple faces (main, side, top) with different shading
+- **Perspective Distortion**: Use angled edges and offset coordinates for depth illusion
+- **Color Progression**: Light main face → darker side → lightest top surface
+- **Outline Definition**: Add stroke outlines to separate 3D elements from background
+
+## EXCITEBIKE-STYLE GAME PATTERNS
+- **Lane-Based Movement**: 4 lanes with smooth transitions between lanes
+- **AI Behavior**: Simple position-based movement with occasional lane changes
+- **Collision Systems**: Separate obstacle collision from AI collision logic
+- **Resource Management**: Heat vs speed tradeoff creates strategic gameplay
+- **Crash Recovery**: Timed recovery with AI repositioning for fair gameplay
