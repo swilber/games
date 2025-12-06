@@ -657,7 +657,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     function renderUI() {
         // Speed and heat
         ctx.fillStyle = '#000000';
-        ctx.font = '16px Arial';
+        ctx.font = '16px monospace';
         ctx.fillText(`Speed: ${Math.floor(player.speed * 10)}`, 10, 25);
         ctx.fillText(`Lap: ${player.currentLap}/${lapsRequired}`, 10, 65);
         
@@ -677,23 +677,28 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Countdown
         if (!raceStarted) {
             ctx.fillStyle = '#FF0000';
-            ctx.font = '48px Arial';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 48px monospace';
             const text = countdown > 0 ? countdown.toString() : 'GO!';
             const textWidth = ctx.measureText(text).width;
-            ctx.fillText(text, (canvas.width - textWidth) / 2, canvas.height / 2);
+            const x = (canvas.width - textWidth) / 2;
+            const y = canvas.height / 2;
+            ctx.strokeText(text, x, y);
+            ctx.fillText(text, x, y);
         }
         
         // Instructions at bottom
         ctx.fillStyle = '#000000';
-        ctx.font = '14px Arial';
-        ctx.fillText('↑/↓: Change Lanes    SPACE: Throttle    SHIFT: Jump    →: Rotate Forward', 10, 390);
+        ctx.font = '14px monospace';
+        ctx.fillText('UP/DOWN: Change Lanes    SPACE: Throttle    SHIFT: Jump    RIGHT: Rotate Forward', 10, 390);
         
         // Center lap display
         if (showLapDisplay) {
             ctx.fillStyle = '#FFFF00';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
-            ctx.font = 'bold 48px Arial';
+            ctx.font = 'bold 48px monospace';
             const lapText = `Lap ${displayedLap}/${lapsRequired}`;
             const textWidth = ctx.measureText(lapText).width;
             const x = (canvas.width - textWidth) / 2;
@@ -705,19 +710,27 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Race finished message
         if (raceFinished && coastingToStop) {
             ctx.fillStyle = '#00FF00';
-            ctx.font = '32px Arial';
-            const text = 'You Won!';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 64px monospace';
+            const text = 'YOU WON!';
             const textWidth = ctx.measureText(text).width;
-            ctx.fillText(text, (canvas.width - textWidth) / 2, 100);
+            const x = (canvas.width - textWidth) / 2;
+            ctx.strokeText(text, x, 100);
+            ctx.fillText(text, x, 100);
         }
         
         // Crash message (temporary)
         if (player.crashed && raceStarted) {
             ctx.fillStyle = '#FF0000';
-            ctx.font = '24px Arial';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.font = 'bold 24px monospace';
             const text = player.walkingBack ? 'Walking back...' : 'CRASH!';
             const textWidth = ctx.measureText(text).width;
-            ctx.fillText(text, (canvas.width - textWidth) / 2, 150);
+            const x = (canvas.width - textWidth) / 2;
+            ctx.strokeText(text, x, 150);
+            ctx.fillText(text, x, 150);
         }
         
         // Final win message
