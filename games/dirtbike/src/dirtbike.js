@@ -147,7 +147,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
         jumpHeight: 0,
         jumpVelocity: 0,
         rotation: 0,
-        rotateForward: false
+        rotateForward: false,
+        crashed: false,
+        crashTimer: 0,
+        riderX: 0,
+        riderY: 0,
+        bikeRotation: 0,
+        walkingBack: false
     };
     
     // AI opponents
@@ -203,6 +209,34 @@ async function createDirtbikeGame(settings, callbacks = null) {
     }
     
     function updatePlayer() {
+        // Handle crash animation
+        if (player.crashed) {
+            player.crashTimer += 1/60;
+            
+            if (player.crashTimer < 2) {
+                // Falling phase - rider falls, bike spins
+                player.riderY += 8; // Gravity on rider
+                player.bikeRotation += 0.3; // Bike spinning
+                
+                if (player.riderY > 0) player.riderY = 0; // Hit ground
+            } else if (player.crashTimer < 4) {
+                // Walking back phase
+                player.walkingBack = true;
+                player.riderX -= 15; // Walk back to bike
+                
+                if (player.riderX <= 0) {
+                    // Reached bike - crash recovery complete
+                    player.crashed = false;
+                    player.walkingBack = false;
+                    player.riderX = 0;
+                    player.riderY = 0;
+                    player.bikeRotation = 0;
+                    player.rotation = 0;
+                }
+            }
+            return; // Skip normal movement during crash
+        }
+        
         // Lane switching
         if (player.lane !== player.targetLane) {
             player.laneTransition += 0.12;
@@ -246,18 +280,23 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 player.jumping = false;
                 player.jumpVelocity = 0;
                 
-                // Check landing angle for crash
-                const normalizedRotation = Math.abs(player.rotation % (Math.PI * 2));
-                if (normalizedRotation > 0.5 && normalizedRotation < Math.PI * 2 - 0.5) {
-                    // Bad landing - reset to start
-                    player.position = Math.max(0, player.position - 100);
-                    player.speed = 0;
-                }
+                // Check landing angle for crash (improved)
+                const normalizedRotation = ((player.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                const isUpsideDown = normalizedRotation > Math.PI / 3 && normalizedRotation < Math.PI * 5 / 3;
+                const isSideways = (normalizedRotation > Math.PI / 6 && normalizedRotation < Math.PI / 3) || 
+                                 (normalizedRotation > Math.PI * 5 / 3 && normalizedRotation < Math.PI * 11 / 6);
                 
-                // Reset rotation on landing
-                player.rotation = 0;
+                if (isUpsideDown || (isSideways && player.speed > 5)) {
+                    crashPlayer("bad_landing");
+                } else {
+                    // Safe landing - reset rotation
+                    player.rotation = 0;
+                }
             }
         }
+        
+        // Check collisions with opponents
+        checkOpponentCollisions();
         
         // Update camera
         trackPosition = player.position;
@@ -273,6 +312,43 @@ async function createDirtbikeGame(settings, callbacks = null) {
             // Occasional lane changes
             if (Math.random() < 0.002) {
                 opponent.lane = Math.max(0, Math.min(3, opponent.lane + (Math.random() < 0.5 ? -1 : 1)));
+            }
+        }
+    }
+    
+    function checkOpponentCollisions() {
+        if (player.jumping) return; // No collision while jumping
+        
+        for (let opponent of opponents) {
+            // Check if opponent is in same lane and close position
+            if (opponent.lane === player.lane) {
+                const distance = Math.abs(opponent.position - player.position);
+                if (distance < 30) { // Collision threshold
+                    crashPlayer("collision");
+                    return;
+                }
+            }
+        }
+    }
+    
+    function crashPlayer(reason) {
+        player.crashed = true;
+        player.crashTimer = 0;
+        player.speed = 0;
+        player.jumping = false;
+        player.jumpHeight = 0;
+        player.heat = 0;
+        
+        // Set rider fall position (thrown forward)
+        player.riderX = 30 + Math.random() * 20; // Fall forward
+        player.riderY = -10 - Math.random() * 10; // Fall up then down
+        player.bikeRotation = Math.random() * Math.PI * 2; // Random bike spin
+        player.walkingBack = false;
+        
+        // Move opponents ahead to avoid immediate re-collision
+        for (let opponent of opponents) {
+            if (opponent.position < player.position + 200) {
+                opponent.position = player.position + 200 + Math.random() * 100;
             }
         }
     }
@@ -309,100 +385,135 @@ async function createDirtbikeGame(settings, callbacks = null) {
                         (player.laneTransition * (lanes[player.targetLane].y - lanes[player.lane].y)) - player.jumpHeight;
         const bikeX = 400; // Player always in center of screen
         
-        // Save context for rotation
-        ctx.save();
-        ctx.translate(bikeX, currentY);
-        ctx.rotate(player.rotation);
-        
+        if (player.crashed) {
+            // Render crashed bike (spinning on ground)
+            ctx.save();
+            ctx.translate(bikeX, currentY);
+            ctx.rotate(player.bikeRotation);
+            
+            // Crashed bike (darker colors)
+            renderBikeOnly('#003366'); // Darker blue
+            ctx.restore();
+            
+            // Render fallen rider
+            const riderScreenX = bikeX + player.riderX;
+            const riderScreenY = currentY + player.riderY;
+            
+            ctx.save();
+            ctx.translate(riderScreenX, riderScreenY);
+            
+            if (player.walkingBack) {
+                // Walking animation
+                renderWalkingRider();
+            } else {
+                // Fallen rider
+                renderFallenRider();
+            }
+            ctx.restore();
+            
+        } else {
+            // Normal bike rendering
+            ctx.save();
+            ctx.translate(bikeX, currentY);
+            ctx.rotate(player.rotation);
+            
+            renderBikeWithRider('#0066FF'); // Normal blue
+            ctx.restore();
+        }
+    }
+    
+    function renderBikeOnly(color) {
         // Wheels first (behind bike)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(-10, 8, 6, 0, Math.PI * 2); // Rear wheel
-        ctx.arc(10, 8, 6, 0, Math.PI * 2);  // Front wheel
+        ctx.arc(-10, 8, 6, 0, Math.PI * 2);
+        ctx.arc(10, 8, 6, 0, Math.PI * 2);
         ctx.fill();
         
-        // Wheel spokes
-        ctx.strokeStyle = '#666666';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 4; i++) {
-            const angle = (i * Math.PI) / 2;
-            // Rear wheel spokes
-            ctx.beginPath();
-            ctx.moveTo(-10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
-            ctx.lineTo(-10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
-            ctx.stroke();
-            // Front wheel spokes
-            ctx.beginPath();
-            ctx.moveTo(10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
-            ctx.lineTo(10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
-            ctx.stroke();
-        }
-        
         // Bike frame
-        ctx.strokeStyle = '#0066FF';
+        ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.beginPath();
-        // Main frame triangle
-        ctx.moveTo(-10, 8);  // Rear axle
-        ctx.lineTo(-2, -8);  // Seat post
-        ctx.lineTo(10, 8);   // Front axle
-        ctx.lineTo(6, -2);   // Head tube
-        ctx.lineTo(-2, -8);  // Back to seat post
+        ctx.moveTo(-10, 8);
+        ctx.lineTo(-2, -8);
+        ctx.lineTo(10, 8);
+        ctx.lineTo(6, -2);
+        ctx.lineTo(-2, -8);
         ctx.stroke();
         
-        // Seat
+        // Seat and tank
         ctx.fillStyle = '#000000';
         ctx.fillRect(-6, -10, 8, 3);
-        
-        // Handlebars
-        ctx.strokeStyle = '#333333';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(6, -2);   // Head tube
-        ctx.lineTo(8, -6);   // Handlebar stem
-        ctx.moveTo(6, -6);   // Left grip
-        ctx.lineTo(10, -6);  // Right grip
-        ctx.stroke();
-        
-        // Engine/gas tank
-        ctx.fillStyle = '#0066FF';
+        ctx.fillStyle = color;
         ctx.fillRect(-4, -6, 8, 6);
+    }
+    
+    function renderBikeWithRider(color) {
+        renderBikeOnly(color);
         
-        // Rider body (leaning forward, centered)
-        ctx.fillStyle = '#0066FF'; // Blue jersey matching bike
-        ctx.fillRect(-3, -18, 6, 12); // Torso centered between wheels
-        
-        // Rider legs
-        ctx.strokeStyle = '#0000FF'; // Blue pants
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(-1, -8);  // Hip (centered)
-        ctx.lineTo(-3, 2);   // Knee
-        ctx.lineTo(1, 6);    // Foot on peg
-        ctx.stroke();
+        // Rider body
+        ctx.fillStyle = color;
+        ctx.fillRect(-3, -18, 6, 12);
         
         // Rider arms
         ctx.strokeStyle = '#FFE4B5';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(1, -14);  // Shoulder (centered)
-        ctx.lineTo(2, -10);  // Elbow
-        ctx.lineTo(8, -6);   // Hand on grip
+        ctx.moveTo(1, -14);
+        ctx.lineTo(2, -10);
+        ctx.lineTo(8, -6);
         ctx.stroke();
         
-        // Dirt bike helmet (with visor, centered)
-        ctx.fillStyle = '#0066FF';
+        // Helmet
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(-1, -20, 5, 0, Math.PI * 2);
         ctx.fill();
+    }
+    
+    function renderFallenRider() {
+        // Fallen rider (on side)
+        ctx.fillStyle = '#0066FF';
+        ctx.fillRect(-6, -3, 12, 6); // Body on side
         
-        // Helmet visor
-        ctx.fillStyle = '#333333';
+        // Helmet
+        ctx.fillStyle = '#0066FF';
         ctx.beginPath();
-        ctx.arc(-1, -20, 4, -0.5, 0.5);
+        ctx.arc(-8, -1, 4, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.restore();
+        // Arms and legs sprawled
+        ctx.strokeStyle = '#FFE4B5';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-2, -1);
+        ctx.lineTo(4, -6);
+        ctx.moveTo(-2, 1);
+        ctx.lineTo(4, 6);
+        ctx.stroke();
+    }
+    
+    function renderWalkingRider() {
+        // Walking rider (upright)
+        ctx.fillStyle = '#0066FF';
+        ctx.fillRect(-3, -12, 6, 10); // Upright body
+        
+        // Helmet
+        ctx.fillStyle = '#0066FF';
+        ctx.beginPath();
+        ctx.arc(0, -14, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Walking legs
+        ctx.strokeStyle = '#0000FF';
+        ctx.lineWidth = 2;
+        const walkCycle = Math.sin(player.crashTimer * 10);
+        ctx.beginPath();
+        ctx.moveTo(-1, -2);
+        ctx.lineTo(-3 + walkCycle, 6);
+        ctx.moveTo(1, -2);
+        ctx.lineTo(3 - walkCycle, 6);
+        ctx.stroke();
     }
     
     function renderOpponents() {
@@ -550,6 +661,15 @@ async function createDirtbikeGame(settings, callbacks = null) {
             ctx.fillText(text, (canvas.width - textWidth) / 2, 100);
         }
         
+        // Crash message (temporary)
+        if (player.crashed && raceStarted) {
+            ctx.fillStyle = '#FF0000';
+            ctx.font = '24px Arial';
+            const text = player.walkingBack ? 'Walking back...' : 'CRASH!';
+            const textWidth = ctx.measureText(text).width;
+            ctx.fillText(text, (canvas.width - textWidth) / 2, 150);
+        }
+        
         // Final win message
         if (gameWon) {
             ctx.fillStyle = '#00FF00';
@@ -572,7 +692,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         
-        if (!gameRunning || !raceStarted || coastingToStop) return;
+        if (!gameRunning || !raceStarted || coastingToStop || player.crashed) return;
         
         switch(e.code) {
             case 'ArrowUp':
