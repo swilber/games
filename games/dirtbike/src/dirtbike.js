@@ -315,7 +315,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Heat and speed
         if (player.throttle) {
-            player.heat += 0.3;
+            player.heat += 0.15;
             if (player.heat >= player.maxHeat) {
                 player.heat = player.maxHeat;
                 player.speed *= 0.98; // Overheating
@@ -405,11 +405,14 @@ async function createDirtbikeGame(settings, callbacks = null) {
         if (player.jumping) return; // No collision while jumping
         
         for (let slick of oilSlicks) {
+            // Only check current lane - don't include transition target
             if (slick.lane === player.lane) {
                 const playerTrackPos = player.position % trackLength;
                 const slickTrackPos = slick.x % trackLength;
                 const distance = Math.abs(slickTrackPos - playerTrackPos);
-                if (distance < slick.width / 2) {
+                // Handle wrap-around at track boundaries
+                const wrapDistance = Math.min(distance, trackLength - distance);
+                if (wrapDistance < 15) {
                     // On oil slick - set to slow static speed
                     player.speed = Math.min(player.speed, 2);
                     player.onOilSlick = true;
