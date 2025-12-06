@@ -158,6 +158,50 @@ async function createDirtbikeGame(settings, callbacks = null) {
             trackCtx.ellipse(centerX, centerY, slick.width / 2, slick.height / 2, 0, 0, Math.PI * 2);
             trackCtx.fill();
         }
+        
+        // Draw jumps
+        generateJumps();
+        for (let jump of jumps) {
+            const jumpX = jump.x + 400;
+            const jumpTop = 204; // Top of track
+            const jumpBottom = 316; // Bottom of track
+            const jumpHeight = jump.height;
+            const jumpWidth = jump.width;
+            
+            // Main face (light brown)
+            trackCtx.fillStyle = '#D2B48C';
+            trackCtx.beginPath();
+            trackCtx.moveTo(jumpX, jumpBottom);
+            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
+            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpTop - jumpHeight);
+            trackCtx.lineTo(jumpX, jumpTop);
+            trackCtx.closePath();
+            trackCtx.fill();
+            
+            // Right face (darker brown)
+            trackCtx.fillStyle = '#A0522D';
+            trackCtx.beginPath();
+            trackCtx.moveTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
+            trackCtx.lineTo(jumpX + jumpWidth, jumpBottom);
+            trackCtx.lineTo(jumpX + jumpWidth, jumpTop);
+            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpTop - jumpHeight);
+            trackCtx.closePath();
+            trackCtx.fill();
+            
+            // Bottom face (lightest brown)
+            trackCtx.fillStyle = '#F4E4BC';
+            trackCtx.beginPath();
+            trackCtx.moveTo(jumpX, jumpBottom);
+            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
+            trackCtx.lineTo(jumpX + jumpWidth, jumpBottom);
+            trackCtx.closePath();
+            trackCtx.fill();
+            
+            // Outline
+            trackCtx.strokeStyle = '#8B4513';
+            trackCtx.lineWidth = 2;
+            trackCtx.stroke();
+        }
     }
     
     // Player bike
@@ -207,6 +251,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Oil slicks
     const oilSlicks = [];
     
+    // Jumps
+    const jumps = [];
+    
     // Generate oil slicks
     function generateOilSlicks() {
         oilSlicks.length = 0;
@@ -218,6 +265,21 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     lane: Math.floor(Math.random() * 4),
                     width: 40,
                     height: 20
+                });
+            }
+        }
+    }
+    
+    // Generate jumps
+    function generateJumps() {
+        jumps.length = 0;
+        const jumpsPerLap = 1;
+        for (let lap = 0; lap < lapsRequired; lap++) {
+            for (let i = 0; i < jumpsPerLap; i++) {
+                jumps.push({
+                    x: lap * trackLength + 800 + Math.random() * (trackLength - 1600),
+                    width: 60,
+                    height: 25
                 });
             }
         }
@@ -374,6 +436,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Check oil slick collisions
         checkOilSlickCollisions();
         
+        // Check jump collisions
+        checkJumpCollisions();
+        
         // Update camera (repeat track visually)
         trackPosition = player.position % trackLength;
     }
@@ -473,6 +538,25 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         player.onOilSlick = false;
+    }
+    
+    function checkJumpCollisions() {
+        if (player.jumping) return; // Already jumping
+        
+        for (let jump of jumps) {
+            const playerTrackPos = player.position % trackLength;
+            const jumpTrackPos = jump.x % trackLength;
+            const distance = Math.abs(jumpTrackPos - playerTrackPos);
+            const wrapDistance = Math.min(distance, trackLength - distance);
+            
+            if (wrapDistance < jump.width / 2) {
+                // Hit jump - launch player
+                player.jumping = true;
+                player.jumpHeight = 0;
+                player.jumpVelocity = 15; // Higher initial velocity for jumps
+                return;
+            }
+        }
     }
     
     function crashPlayer(reason) {
