@@ -1,18 +1,26 @@
 # Q Session Log
-Last Updated: 2025-12-05T14:36:08.843-07:00
+Last Updated: 2025-12-05T17:22:35.009-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Complete Excitebike recreation with authentic mechanics
+- **Working on**: Complete Excitebike-style dirt bike racing game implementation
 - **Latest changes**: 
-  - **IMPLEMENTED**: Full Excitebike game with 4-lane pseudo-3D racing
-  - **ADDED**: Heat management system, AI riders, crash mechanics, wheelies
-  - **CREATED**: Proper 3D ramps with perspective, shading, and multiple faces
-  - **FIXED**: Heat buildup rate (4x slower), cooling rate (2x faster)
-  - **BALANCED**: Mud penalties and overheating effects for playability
-  - **COMMITTED**: Complete implementation pushed successfully (commit 2111f4c)
+  - **IMPLEMENTED**: Full 4-lane pseudo-3D racing with starting lineup and countdown
+  - **ADDED**: Jump mechanics (SHIFT) with automatic backward rotation and manual forward control
+  - **CREATED**: Authentic track layout with audience stands, grass borders, and fluffy clouds
+  - **OPTIMIZED**: Pre-rendered track system for smooth performance
+  - **BALANCED**: Heat management, rotation speed, and landing physics
+  - **POLISHED**: Coast-to-stop finish behavior, position tracking, and control instructions
+  - **COMMITTED**: Complete racing game pushed successfully (commit 87d9b94)
+
+## KEY DEVELOPMENT INSIGHTS
+- **Pre-rendering**: Off-screen canvas dramatically improves performance for static elements
+- **Physics tuning**: Rotation speed, jump velocity, and heat rates need careful balance for fun gameplay
+- **Visual authenticity**: Proper lane spacing, track proportions, and environmental details crucial for nostalgic feel
+- **Control separation**: Jump and throttle work better as separate buttons for precise control
+- **Landing mechanics**: Rotation-based crash detection adds skill element to jumping
 
 ## KEY LEARNINGS
 - **Game Balance Critical**: Initial heat system was unplayable (overheated immediately)

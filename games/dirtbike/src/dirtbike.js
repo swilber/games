@@ -152,12 +152,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     // AI opponents
     const opponents = [];
+    const opponentColors = ['#FF0000', '#00FF00', '#FFFF00']; // Red, Green, Yellow
     for (let i = 0; i < 3; i++) {
         opponents.push({
             lane: i === 0 ? 0 : i === 1 ? 1 : 3, // Lanes 0, 1, 3 (player in lane 2)
             position: 0,
             speed: 3 + Math.random() * 2,
-            color: `hsl(${i * 120}, 70%, 50%)`
+            color: opponentColors[i]
         });
     }
     
@@ -313,20 +314,93 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.translate(bikeX, currentY);
         ctx.rotate(player.rotation);
         
-        // Player bike
-        ctx.fillStyle = '#0066FF';
-        ctx.fillRect(-8, -6, 16, 12);
-        
-        // Wheels
+        // Wheels first (behind bike)
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.arc(-5, 8, 3, 0, Math.PI * 2);
-        ctx.arc(5, 8, 3, 0, Math.PI * 2);
+        ctx.arc(-10, 8, 6, 0, Math.PI * 2); // Rear wheel
+        ctx.arc(10, 8, 6, 0, Math.PI * 2);  // Front wheel
         ctx.fill();
         
-        // Rider
-        ctx.fillStyle = '#FFE4B5';
-        ctx.fillRect(-3, -12, 6, 8);
+        // Wheel spokes
+        ctx.strokeStyle = '#666666';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI) / 2;
+            // Rear wheel spokes
+            ctx.beginPath();
+            ctx.moveTo(-10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
+            ctx.lineTo(-10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
+            ctx.stroke();
+            // Front wheel spokes
+            ctx.beginPath();
+            ctx.moveTo(10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
+            ctx.lineTo(10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
+            ctx.stroke();
+        }
+        
+        // Bike frame
+        ctx.strokeStyle = '#0066FF';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        // Main frame triangle
+        ctx.moveTo(-10, 8);  // Rear axle
+        ctx.lineTo(-2, -8);  // Seat post
+        ctx.lineTo(10, 8);   // Front axle
+        ctx.lineTo(6, -2);   // Head tube
+        ctx.lineTo(-2, -8);  // Back to seat post
+        ctx.stroke();
+        
+        // Seat
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(-6, -10, 8, 3);
+        
+        // Handlebars
+        ctx.strokeStyle = '#333333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(6, -2);   // Head tube
+        ctx.lineTo(8, -6);   // Handlebar stem
+        ctx.moveTo(6, -6);   // Left grip
+        ctx.lineTo(10, -6);  // Right grip
+        ctx.stroke();
+        
+        // Engine/gas tank
+        ctx.fillStyle = '#0066FF';
+        ctx.fillRect(-4, -6, 8, 6);
+        
+        // Rider body (leaning forward, centered)
+        ctx.fillStyle = '#0066FF'; // Blue jersey matching bike
+        ctx.fillRect(-3, -18, 6, 12); // Torso centered between wheels
+        
+        // Rider legs
+        ctx.strokeStyle = '#0000FF'; // Blue pants
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-1, -8);  // Hip (centered)
+        ctx.lineTo(-3, 2);   // Knee
+        ctx.lineTo(1, 6);    // Foot on peg
+        ctx.stroke();
+        
+        // Rider arms
+        ctx.strokeStyle = '#FFE4B5';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(1, -14);  // Shoulder (centered)
+        ctx.lineTo(2, -10);  // Elbow
+        ctx.lineTo(8, -6);   // Hand on grip
+        ctx.stroke();
+        
+        // Dirt bike helmet (with visor, centered)
+        ctx.fillStyle = '#0066FF';
+        ctx.beginPath();
+        ctx.arc(-1, -20, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Helmet visor
+        ctx.fillStyle = '#333333';
+        ctx.beginPath();
+        ctx.arc(-1, -20, 4, -0.5, 0.5);
+        ctx.fill();
         
         ctx.restore();
     }
@@ -338,20 +412,98 @@ async function createDirtbikeGame(settings, callbacks = null) {
             if (screenX > -50 && screenX < canvas.width + 50) {
                 const laneY = lanes[opponent.lane].y;
                 
-                // Opponent bike
-                ctx.fillStyle = opponent.color;
-                ctx.fillRect(screenX - 8, laneY - 6, 16, 12);
+                ctx.save();
+                ctx.translate(screenX, laneY);
                 
-                // Wheels
+                // Wheels first (behind bike)
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(screenX - 5, laneY + 8, 3, 0, Math.PI * 2);
-                ctx.arc(screenX + 5, laneY + 8, 3, 0, Math.PI * 2);
+                ctx.arc(-10, 8, 6, 0, Math.PI * 2); // Rear wheel
+                ctx.arc(10, 8, 6, 0, Math.PI * 2);  // Front wheel
                 ctx.fill();
                 
-                // Rider
-                ctx.fillStyle = '#FFE4B5';
-                ctx.fillRect(screenX - 3, laneY - 12, 6, 8);
+                // Wheel spokes
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI) / 2;
+                    // Rear wheel spokes
+                    ctx.beginPath();
+                    ctx.moveTo(-10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
+                    ctx.lineTo(-10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
+                    ctx.stroke();
+                    // Front wheel spokes
+                    ctx.beginPath();
+                    ctx.moveTo(10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
+                    ctx.lineTo(10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
+                    ctx.stroke();
+                }
+                
+                // Bike frame
+                ctx.strokeStyle = opponent.color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                // Main frame triangle
+                ctx.moveTo(-10, 8);  // Rear axle
+                ctx.lineTo(-2, -8);  // Seat post
+                ctx.lineTo(10, 8);   // Front axle
+                ctx.lineTo(6, -2);   // Head tube
+                ctx.lineTo(-2, -8);  // Back to seat post
+                ctx.stroke();
+                
+                // Seat
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(-6, -10, 8, 3);
+                
+                // Handlebars
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(6, -2);   // Head tube
+                ctx.lineTo(8, -6);   // Handlebar stem
+                ctx.moveTo(6, -6);   // Left grip
+                ctx.lineTo(10, -6);  // Right grip
+                ctx.stroke();
+                
+                // Engine/gas tank
+                ctx.fillStyle = opponent.color;
+                ctx.fillRect(-4, -6, 8, 6);
+                
+                // Rider body (leaning forward, centered)
+                ctx.fillStyle = opponent.color; // Jersey matching bike color
+                ctx.fillRect(-3, -18, 6, 12); // Torso centered between wheels
+                
+                // Rider legs
+                ctx.strokeStyle = '#0000FF'; // Blue pants
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-1, -8);  // Hip (centered)
+                ctx.lineTo(-3, 2);   // Knee
+                ctx.lineTo(1, 6);    // Foot on peg
+                ctx.stroke();
+                
+                // Rider arms
+                ctx.strokeStyle = '#FFE4B5';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(1, -14);  // Shoulder (centered)
+                ctx.lineTo(2, -10);  // Elbow
+                ctx.lineTo(8, -6);   // Hand on grip
+                ctx.stroke();
+                
+                // Dirt bike helmet (with visor, centered)
+                ctx.fillStyle = opponent.color;
+                ctx.beginPath();
+                ctx.arc(-1, -20, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Helmet visor
+                ctx.fillStyle = '#333333';
+                ctx.beginPath();
+                ctx.arc(-1, -20, 4, -0.5, 0.5);
+                ctx.fill();
+                
+                ctx.restore();
             }
         }
     }
