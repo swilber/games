@@ -20,6 +20,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
     let countdown = 3;
     let countdownTimer = 0;
     let trackPosition = 0;
+    let lapDisplayTimer = 0;
+    let showLapDisplay = false;
+    let displayedLap = 1;
     
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -28,6 +31,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
     const ctx = canvas.getContext('2d');
     
     const trackLength = 2000;
+    const lapsRequired = 3;
+    const totalTrackLength = trackLength * lapsRequired;
     const lanes = [
         { y: 213 },
         { y: 241 },
@@ -113,12 +118,12 @@ async function createDirtbikeGame(settings, callbacks = null) {
         trackCtx.lineTo(400, 316);
         trackCtx.stroke();
         
-        // Draw finish line at actual finish position
+        // Draw finish line at end of 3rd lap
         trackCtx.strokeStyle = '#000000';
         trackCtx.lineWidth = 3;
         trackCtx.beginPath();
-        trackCtx.moveTo(trackLength + 400, 204);
-        trackCtx.lineTo(trackLength + 400, 316);
+        trackCtx.moveTo(totalTrackLength + 400, 204);
+        trackCtx.lineTo(totalTrackLength + 400, 316);
         trackCtx.stroke();
         
         // Checkered pattern for finish line
@@ -126,9 +131,20 @@ async function createDirtbikeGame(settings, callbacks = null) {
         for (let y = 204; y < 316; y += 10) {
             for (let x = 0; x < 10; x += 5) {
                 if ((Math.floor(y/5) + Math.floor(x/5)) % 2 === 0) {
-                    trackCtx.fillRect(trackLength + 400 + x - 5, y, 5, 5);
+                    trackCtx.fillRect(totalTrackLength + 400 + x - 5, y, 5, 5);
                 }
             }
+        }
+        
+        // Draw lap markers at end of each lap
+        for (let lap = 1; lap < lapsRequired; lap++) {
+            const lapPosition = lap * trackLength + 400;
+            trackCtx.strokeStyle = '#FFFF00';
+            trackCtx.lineWidth = 2;
+            trackCtx.beginPath();
+            trackCtx.moveTo(lapPosition, 204);
+            trackCtx.lineTo(lapPosition, 316);
+            trackCtx.stroke();
         }
     }
     
@@ -153,7 +169,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         riderX: 0,
         riderY: 0,
         bikeRotation: 0,
-        walkingBack: false
+        walkingBack: false,
+        currentLap: 1
     };
     
     // AI opponents
@@ -188,8 +205,26 @@ async function createDirtbikeGame(settings, callbacks = null) {
         updatePlayer();
         updateOpponents();
         
-        // Check finish line crossing
-        if (!raceFinished && player.position >= trackLength) {
+        // Update lap display timer
+        if (showLapDisplay) {
+            lapDisplayTimer -= 1/60;
+            if (lapDisplayTimer <= 0) {
+                showLapDisplay = false;
+            }
+        }
+        
+        // Update current lap and detect crossing
+        const newLap = Math.floor(player.position / trackLength) + 1;
+        if (newLap > player.currentLap && newLap <= lapsRequired) {
+            // Crossed into new lap
+            showLapDisplay = true;
+            lapDisplayTimer = 3; // 3 seconds
+            displayedLap = newLap;
+        }
+        player.currentLap = newLap;
+        
+        // Check finish line crossing (only after completing all laps)
+        if (!raceFinished && player.position >= totalTrackLength) {
             raceFinished = true;
             coastingToStop = true;
             player.throttle = false; // Stop acceleration
@@ -298,8 +333,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Check collisions with opponents
         checkOpponentCollisions();
         
-        // Update camera
-        trackPosition = player.position;
+        // Update camera (repeat track visually)
+        trackPosition = player.position % trackLength;
     }
     
     function updateOpponents() {
@@ -518,7 +553,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     function renderOpponents() {
         for (let opponent of opponents) {
-            const screenX = opponent.position - trackPosition + 400;
+            const screenX = (opponent.position % trackLength) - trackPosition + 400;
             
             if (screenX > -50 && screenX < canvas.width + 50) {
                 const laneY = lanes[opponent.lane].y;
@@ -624,6 +659,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.fillStyle = '#000000';
         ctx.font = '16px Arial';
         ctx.fillText(`Speed: ${Math.floor(player.speed * 10)}`, 10, 25);
+        ctx.fillText(`Lap: ${player.currentLap}/${lapsRequired}`, 10, 65);
         
         // Heat gauge
         const heatPercent = player.heat / player.maxHeat;
@@ -651,6 +687,20 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.fillStyle = '#000000';
         ctx.font = '14px Arial';
         ctx.fillText('↑/↓: Change Lanes    SPACE: Throttle    SHIFT: Jump    →: Rotate Forward', 10, 390);
+        
+        // Center lap display
+        if (showLapDisplay) {
+            ctx.fillStyle = '#FFFF00';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.font = 'bold 48px Arial';
+            const lapText = `Lap ${displayedLap}/${lapsRequired}`;
+            const textWidth = ctx.measureText(lapText).width;
+            const x = (canvas.width - textWidth) / 2;
+            const y = canvas.height / 2;
+            ctx.strokeText(lapText, x, y);
+            ctx.fillText(lapText, x, y);
+        }
         
         // Race finished message
         if (raceFinished && coastingToStop) {
