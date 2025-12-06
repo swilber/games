@@ -146,6 +146,18 @@ async function createDirtbikeGame(settings, callbacks = null) {
             trackCtx.lineTo(lapPosition, 316);
             trackCtx.stroke();
         }
+        
+        // Draw oil slicks
+        generateOilSlicks();
+        trackCtx.fillStyle = '#4A2C17';
+        for (let slick of oilSlicks) {
+            const slickY = lanes[slick.lane].y;
+            const centerX = slick.x + 400 + slick.width / 2;
+            const centerY = slickY + slick.height / 2;
+            trackCtx.beginPath();
+            trackCtx.ellipse(centerX, centerY, slick.width / 2, slick.height / 2, 0, 0, Math.PI * 2);
+            trackCtx.fill();
+        }
     }
     
     // Player bike
@@ -170,7 +182,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         riderY: 0,
         bikeRotation: 0,
         walkingBack: false,
-        currentLap: 1
+        currentLap: 1,
+        onOilSlick: false
     };
     
     // AI opponents
@@ -183,6 +196,25 @@ async function createDirtbikeGame(settings, callbacks = null) {
             speed: 3 + Math.random() * 2,
             color: opponentColors[i]
         });
+    }
+    
+    // Oil slicks
+    const oilSlicks = [];
+    
+    // Generate oil slicks
+    function generateOilSlicks() {
+        oilSlicks.length = 0;
+        const slicksPerLap = 2;
+        for (let lap = 0; lap < lapsRequired; lap++) {
+            for (let i = 0; i < slicksPerLap; i++) {
+                oilSlicks.push({
+                    x: lap * trackLength + 500 + Math.random() * (trackLength - 1000),
+                    lane: Math.floor(Math.random() * 4),
+                    width: 40,
+                    height: 20
+                });
+            }
+        }
     }
     
     function update() {
@@ -333,6 +365,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Check collisions with opponents
         checkOpponentCollisions();
         
+        // Check oil slick collisions
+        checkOilSlickCollisions();
+        
         // Update camera (repeat track visually)
         trackPosition = player.position % trackLength;
     }
@@ -364,6 +399,25 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 }
             }
         }
+    }
+    
+    function checkOilSlickCollisions() {
+        if (player.jumping) return; // No collision while jumping
+        
+        for (let slick of oilSlicks) {
+            if (slick.lane === player.lane) {
+                const playerTrackPos = player.position % trackLength;
+                const slickTrackPos = slick.x % trackLength;
+                const distance = Math.abs(slickTrackPos - playerTrackPos);
+                if (distance < slick.width / 2) {
+                    // On oil slick - set to slow static speed
+                    player.speed = Math.min(player.speed, 2);
+                    player.onOilSlick = true;
+                    return;
+                }
+            }
+        }
+        player.onOilSlick = false;
     }
     
     function crashPlayer(reason) {
