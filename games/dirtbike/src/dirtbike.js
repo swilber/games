@@ -194,7 +194,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
             lane: i === 0 ? 0 : i === 1 ? 1 : 3, // Lanes 0, 1, 3 (player in lane 2)
             position: 0,
             speed: 3 + Math.random() * 2,
-            color: opponentColors[i]
+            color: opponentColors[i],
+            crashed: false,
+            crashTimer: 0,
+            riderX: 0,
+            riderY: 0,
+            bikeRotation: 0,
+            walkingBack: false
         });
     }
     
@@ -374,6 +380,33 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     function updateOpponents() {
         for (let opponent of opponents) {
+            // Handle crash animation
+            if (opponent.crashed) {
+                opponent.crashTimer += 1/60;
+                
+                if (opponent.crashTimer < 2) {
+                    // Falling phase - rider falls, bike spins
+                    opponent.riderY += 8; // Gravity on rider
+                    opponent.bikeRotation += 0.3; // Bike spinning
+                    
+                    if (opponent.riderY > 0) opponent.riderY = 0; // Hit ground
+                } else if (opponent.crashTimer < 4) {
+                    // Walking back phase
+                    opponent.walkingBack = true;
+                    opponent.riderX -= 15; // Walk back to bike
+                    
+                    if (opponent.riderX <= 0) {
+                        // Reached bike - crash recovery complete
+                        opponent.crashed = false;
+                        opponent.walkingBack = false;
+                        opponent.riderX = 0;
+                        opponent.riderY = 0;
+                        opponent.bikeRotation = 0;
+                    }
+                }
+                continue; // Skip normal movement during crash
+            }
+            
             // Simple AI
             opponent.speed += (Math.random() - 0.5) * 0.1;
             opponent.speed = Math.max(2, Math.min(8, opponent.speed));
@@ -389,16 +422,35 @@ async function createDirtbikeGame(settings, callbacks = null) {
     function checkOpponentCollisions() {
         if (player.jumping) return; // No collision while jumping
         
-        for (let opponent of opponents) {
+        for (let i = 0; i < opponents.length; i++) {
+            const opponent = opponents[i];
             // Check if opponent is in same lane and close position
             if (opponent.lane === player.lane) {
                 const distance = Math.abs(opponent.position - player.position);
                 if (distance < 30) { // Collision threshold
-                    crashPlayer("collision");
+                    // Determine who crashes based on position
+                    if (player.position > opponent.position) {
+                        // Player is ahead - opponent crashes into player's back
+                        crashOpponent(i);
+                    } else {
+                        // Player is behind - player crashes into opponent
+                        crashPlayer("collision");
+                    }
                     return;
                 }
             }
         }
+    }
+    
+    function crashOpponent(opponentIndex) {
+        const opponent = opponents[opponentIndex];
+        opponent.crashed = true;
+        opponent.crashTimer = 0;
+        opponent.speed = 0;
+        opponent.riderX = 0;
+        opponent.riderY = 0;
+        opponent.bikeRotation = Math.random() * Math.PI * 2;
+        opponent.walkingBack = false;
     }
     
     function checkOilSlickCollisions() {
@@ -629,98 +681,99 @@ async function createDirtbikeGame(settings, callbacks = null) {
             if (screenX > -50 && screenX < canvas.width + 50) {
                 const laneY = lanes[opponent.lane].y;
                 
-                ctx.save();
-                ctx.translate(screenX, laneY);
-                
-                // Wheels first (behind bike)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(-10, 8, 6, 0, Math.PI * 2); // Rear wheel
-                ctx.arc(10, 8, 6, 0, Math.PI * 2);  // Front wheel
-                ctx.fill();
-                
-                // Wheel spokes
-                ctx.strokeStyle = '#666666';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 4; i++) {
-                    const angle = (i * Math.PI) / 2;
-                    // Rear wheel spokes
+                if (opponent.crashed) {
+                    // Render crashed opponent
+                    ctx.save();
+                    ctx.translate(screenX, laneY);
+                    
+                    // Crashed bike (spinning on ground)
+                    ctx.save();
+                    ctx.rotate(opponent.bikeRotation);
+                    
+                    // Wheels
+                    ctx.fillStyle = '#000000';
                     ctx.beginPath();
-                    ctx.moveTo(-10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
-                    ctx.lineTo(-10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
-                    ctx.stroke();
-                    // Front wheel spokes
+                    ctx.arc(-10, 8, 6, 0, Math.PI * 2);
+                    ctx.arc(10, 8, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Frame
+                    ctx.strokeStyle = opponent.color;
+                    ctx.lineWidth = 3;
                     ctx.beginPath();
-                    ctx.moveTo(10 + Math.cos(angle) * 2, 8 + Math.sin(angle) * 2);
-                    ctx.lineTo(10 + Math.cos(angle) * 5, 8 + Math.sin(angle) * 5);
+                    ctx.moveTo(-8, 0);
+                    ctx.lineTo(8, 0);
+                    ctx.lineTo(0, -8);
+                    ctx.closePath();
                     ctx.stroke();
+                    
+                    ctx.restore();
+                    
+                    // Fallen rider
+                    if (!opponent.walkingBack) {
+                        ctx.translate(opponent.riderX + 15, opponent.riderY);
+                        ctx.fillStyle = opponent.color;
+                        ctx.fillRect(-3, -8, 6, 8);
+                        ctx.fillStyle = '#FFDDAA';
+                        ctx.beginPath();
+                        ctx.arc(0, -12, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Walking rider
+                        ctx.translate(opponent.riderX + 15, 0);
+                        ctx.fillStyle = opponent.color;
+                        ctx.fillRect(-2, -8, 4, 8);
+                        ctx.fillStyle = '#FFDDAA';
+                        ctx.beginPath();
+                        ctx.arc(0, -14, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Walking legs
+                        ctx.strokeStyle = opponent.color;
+                        ctx.lineWidth = 2;
+                        const walkCycle = Math.sin(opponent.crashTimer * 10);
+                        ctx.beginPath();
+                        ctx.moveTo(-1, -2);
+                        ctx.lineTo(-3 + walkCycle, 6);
+                        ctx.moveTo(1, -2);
+                        ctx.lineTo(3 - walkCycle, 6);
+                        ctx.stroke();
+                    }
+                    
+                    ctx.restore();
+                } else {
+                    // Normal opponent rendering
+                    ctx.save();
+                    ctx.translate(screenX, laneY);
+                    
+                    // Wheels first (behind bike)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(-10, 8, 6, 0, Math.PI * 2); // Rear wheel
+                    ctx.arc(10, 8, 6, 0, Math.PI * 2);  // Front wheel
+                    ctx.fill();
+                    
+                    // Bike frame
+                    ctx.strokeStyle = opponent.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 8);
+                    ctx.lineTo(-2, -8);
+                    ctx.lineTo(10, 8);
+                    ctx.lineTo(6, -2);
+                    ctx.lineTo(-2, -8);
+                    ctx.stroke();
+                    
+                    // Rider
+                    ctx.fillStyle = opponent.color;
+                    ctx.fillRect(-3, -18, 6, 12);
+                    ctx.fillStyle = '#FFDDAA';
+                    ctx.beginPath();
+                    ctx.arc(-1, -20, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.restore();
                 }
-                
-                // Bike frame
-                ctx.strokeStyle = opponent.color;
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                // Main frame triangle
-                ctx.moveTo(-10, 8);  // Rear axle
-                ctx.lineTo(-2, -8);  // Seat post
-                ctx.lineTo(10, 8);   // Front axle
-                ctx.lineTo(6, -2);   // Head tube
-                ctx.lineTo(-2, -8);  // Back to seat post
-                ctx.stroke();
-                
-                // Seat
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(-6, -10, 8, 3);
-                
-                // Handlebars
-                ctx.strokeStyle = '#333333';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(6, -2);   // Head tube
-                ctx.lineTo(8, -6);   // Handlebar stem
-                ctx.moveTo(6, -6);   // Left grip
-                ctx.lineTo(10, -6);  // Right grip
-                ctx.stroke();
-                
-                // Engine/gas tank
-                ctx.fillStyle = opponent.color;
-                ctx.fillRect(-4, -6, 8, 6);
-                
-                // Rider body (leaning forward, centered)
-                ctx.fillStyle = opponent.color; // Jersey matching bike color
-                ctx.fillRect(-3, -18, 6, 12); // Torso centered between wheels
-                
-                // Rider legs
-                ctx.strokeStyle = '#0000FF'; // Blue pants
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(-1, -8);  // Hip (centered)
-                ctx.lineTo(-3, 2);   // Knee
-                ctx.lineTo(1, 6);    // Foot on peg
-                ctx.stroke();
-                
-                // Rider arms
-                ctx.strokeStyle = '#FFE4B5';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(1, -14);  // Shoulder (centered)
-                ctx.lineTo(2, -10);  // Elbow
-                ctx.lineTo(8, -6);   // Hand on grip
-                ctx.stroke();
-                
-                // Dirt bike helmet (with visor, centered)
-                ctx.fillStyle = opponent.color;
-                ctx.beginPath();
-                ctx.arc(-1, -20, 5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Helmet visor
-                ctx.fillStyle = '#333333';
-                ctx.beginPath();
-                ctx.arc(-1, -20, 4, -0.5, 0.5);
-                ctx.fill();
-                
-                ctx.restore();
             }
         }
     }
