@@ -452,6 +452,20 @@ async function createDirtbikeGame(settings, callbacks = null) {
         return position;
     }
     
+    function getAllPositions() {
+        const racers = [
+            { name: 'Player', position: player.position, color: '#0066FF' },
+            ...opponents.map((opp, i) => ({ 
+                name: `Rider ${i + 2}`, 
+                position: opp.position, 
+                color: opp.color 
+            }))
+        ];
+        
+        racers.sort((a, b) => b.position - a.position);
+        return racers;
+    }
+    
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
@@ -728,6 +742,20 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.fillText(`Position: ${getPlayerPosition()}/4`, 10, 85);
         ctx.fillText(`Distance: ${Math.floor(player.position)}m`, 10, 105);
         
+        // Position leaderboard
+        if (raceStarted) {
+            const positions = getAllPositions();
+            ctx.fillStyle = '#000000';
+            ctx.font = '12px monospace';
+            ctx.fillText('POSITIONS:', canvas.width - 120, 25);
+            positions.forEach((racer, i) => {
+                ctx.fillStyle = racer.color;
+                const place = i + 1;
+                const suffix = place === 1 ? 'st' : place === 2 ? 'nd' : place === 3 ? 'rd' : 'th';
+                ctx.fillText(`${place}${suffix} ${racer.name}`, canvas.width - 120, 45 + i * 15);
+            });
+        }
+        
         // Countdown
         if (!raceStarted) {
             ctx.fillStyle = '#FF0000';
@@ -763,11 +791,18 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Race finished message
         if (raceFinished && coastingToStop) {
-            ctx.fillStyle = '#00FF00';
+            const position = getPlayerPosition();
+            ctx.fillStyle = position === 1 ? '#00FF00' : '#FFAA00';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
             ctx.font = 'bold 64px monospace';
-            const text = 'YOU WON!';
+            let text;
+            if (position === 1) {
+                text = 'YOU WON!';
+            } else {
+                const suffix = position === 2 ? 'nd' : position === 3 ? 'rd' : 'th';
+                text = `${position}${suffix} PLACE`;
+            }
             const textWidth = ctx.measureText(text).width;
             const x = (canvas.width - textWidth) / 2;
             ctx.strokeText(text, x, 100);
