@@ -159,48 +159,65 @@ async function createDirtbikeGame(settings, callbacks = null) {
             trackCtx.fill();
         }
         
-        // Draw jumps
+        // Draw terrain features
         generateTerrain();
-        for (let jump of jumps) {
-            const jumpX = jump.x + 400;
-            const jumpTop = 204; // Top of track
-            const jumpBottom = 316; // Bottom of track
-            const jumpHeight = jump.height;
-            const jumpWidth = jump.width;
-            
-            // Main face (light brown)
-            trackCtx.fillStyle = '#D2B48C';
-            trackCtx.beginPath();
-            trackCtx.moveTo(jumpX, jumpBottom);
-            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
-            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpTop - jumpHeight);
-            trackCtx.lineTo(jumpX, jumpTop);
-            trackCtx.closePath();
-            trackCtx.fill();
-            
-            // Right face (darker brown)
-            trackCtx.fillStyle = '#A0522D';
-            trackCtx.beginPath();
-            trackCtx.moveTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
-            trackCtx.lineTo(jumpX + jumpWidth, jumpBottom);
-            trackCtx.lineTo(jumpX + jumpWidth, jumpTop);
-            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpTop - jumpHeight);
-            trackCtx.closePath();
-            trackCtx.fill();
-            
-            // Bottom face (lightest brown)
-            trackCtx.fillStyle = '#F4E4BC';
-            trackCtx.beginPath();
-            trackCtx.moveTo(jumpX, jumpBottom);
-            trackCtx.lineTo(jumpX + jumpWidth / 2, jumpBottom - jumpHeight);
-            trackCtx.lineTo(jumpX + jumpWidth, jumpBottom);
-            trackCtx.closePath();
-            trackCtx.fill();
-            
-            // Outline
-            trackCtx.strokeStyle = '#8B4513';
-            trackCtx.lineWidth = 2;
-            trackCtx.stroke();
+        
+        // Find ramp sections and draw as proper 3D shapes
+        let rampStart = -1;
+        let rampEnd = -1;
+        
+        for (let i = 0; i < terrain.length; i++) {
+            if (terrain[i] > 0 && rampStart === -1) {
+                rampStart = i; // Start of ramp
+            }
+            if (terrain[i] === 0 && rampStart !== -1) {
+                rampEnd = i - 1; // End of ramp
+                
+                // Draw complete ramp
+                const startX = rampStart * 2 + 400;
+                const endX = rampEnd * 2 + 400;
+                const rampWidth = endX - startX;
+                const maxHeight = Math.max(...terrain.slice(rampStart, rampEnd + 1));
+                
+                const jumpTop = 204;
+                const jumpBottom = 316;
+                
+                // Main face (darker brown) - left slope
+                trackCtx.fillStyle = '#A0522D';
+                trackCtx.beginPath();
+                trackCtx.moveTo(startX, jumpBottom);
+                trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
+                trackCtx.lineTo(startX, jumpTop);
+                trackCtx.closePath();
+                trackCtx.fill();
+                
+                // Right face (light brown) - right slope
+                trackCtx.fillStyle = '#D2B48C';
+                trackCtx.beginPath();
+                trackCtx.moveTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                trackCtx.lineTo(endX, jumpBottom);
+                trackCtx.lineTo(endX, jumpTop);
+                trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
+                trackCtx.closePath();
+                trackCtx.fill();
+                
+                // Bottom face (lightest brown)
+                trackCtx.fillStyle = '#F4E4BC';
+                trackCtx.beginPath();
+                trackCtx.moveTo(startX, jumpBottom);
+                trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                trackCtx.lineTo(endX, jumpBottom);
+                trackCtx.closePath();
+                trackCtx.fill();
+                
+                // Outline
+                trackCtx.strokeStyle = '#8B4513';
+                trackCtx.lineWidth = 2;
+                trackCtx.stroke();
+                
+                rampStart = -1; // Reset for next ramp
+            }
         }
     }
     
@@ -252,48 +269,43 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Oil slicks
     const oilSlicks = [];
     
-    // Jumps
-    const jumps = [];
+    // Unified terrain system
+    const terrain = [];
     
-    // Terrain height map
-    const terrainHeights = [];
-    
-    // Generate terrain heights
+    // Generate unified terrain with all features
     function generateTerrain() {
-        terrainHeights.length = 0;
-        const segmentLength = trackLength; // One lap length
+        terrain.length = 0;
+        const resolution = 2; // pixels per terrain point
+        const trackPoints = Math.floor(trackLength / resolution);
         
-        // Initialize flat terrain for one lap
-        for (let x = 0; x < segmentLength; x += 5) {
-            terrainHeights.push(0);
+        // Initialize flat terrain
+        for (let i = 0; i < trackPoints; i++) {
+            terrain.push(0);
         }
         
-        // Add hills/jumps to terrain (only for one lap, will repeat)
-        generateJumps();
-        for (let jump of jumps) {
-            // Use modulo to get position within single lap
-            const jumpPos = jump.x % trackLength;
-            const startX = Math.floor(jumpPos / 5);
-            const endX = Math.floor((jumpPos + jump.width) / 5);
+        // Add ramps/hills directly to terrain
+        const rampCount = 1;
+        for (let r = 0; r < rampCount; r++) {
+            const rampStart = Math.floor(trackPoints * 0.3 + Math.random() * trackPoints * 0.4);
+            const rampWidth = Math.floor(100 / resolution); // 100px wide ramp
+            const rampHeight = 35;
             
-            for (let i = startX; i <= endX && i < terrainHeights.length; i++) {
-                const progress = (i - startX) / (endX - startX);
-                // Triangular hill shape
+            for (let i = 0; i < rampWidth && rampStart + i < trackPoints; i++) {
+                const progress = i / (rampWidth - 1);
                 const height = progress <= 0.5 ? 
-                    jump.height * (progress * 2) : 
-                    jump.height * (2 - progress * 2);
-                terrainHeights[i] = Math.max(terrainHeights[i], height);
+                    rampHeight * (progress * 2) : 
+                    rampHeight * (2 - progress * 2);
+                terrain[rampStart + i] = height;
             }
         }
     }
     
-    // Get terrain height at position
+    // Get terrain height at any position
     function getTerrainHeight(position) {
-        // Use modulo to repeat terrain for each lap
         const lapPosition = position % trackLength;
-        const index = Math.floor(lapPosition / 5);
-        if (index >= 0 && index < terrainHeights.length) {
-            return terrainHeights[index];
+        const index = Math.floor(lapPosition / 2); // 2 pixel resolution
+        if (index >= 0 && index < terrain.length) {
+            return terrain[index];
         }
         return 0;
     }
@@ -309,21 +321,6 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     lane: Math.floor(Math.random() * 4),
                     width: 40,
                     height: 20
-                });
-            }
-        }
-    }
-    
-    // Generate jumps
-    function generateJumps() {
-        jumps.length = 0;
-        const jumpsPerLap = 1;
-        for (let lap = 0; lap < lapsRequired; lap++) {
-            for (let i = 0; i < jumpsPerLap; i++) {
-                jumps.push({
-                    x: lap * trackLength + 800 + Math.random() * (trackLength - 1600),
-                    width: 60,
-                    height: 25
                 });
             }
         }
