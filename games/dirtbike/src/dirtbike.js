@@ -1015,6 +1015,19 @@ async function createDirtbikeGame(settings, callbacks = null) {
             const x = (canvas.width - textWidth) / 2;
             ctx.strokeText(text, x, 100);
             ctx.fillText(text, x, 100);
+            
+            // Show restart option for non-first place
+            if (position > 1) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.font = 'bold 24px monospace';
+                const restartText = 'Press R to Restart';
+                const restartWidth = ctx.measureText(restartText).width;
+                const restartX = (canvas.width - restartWidth) / 2;
+                ctx.strokeText(restartText, restartX, 150);
+                ctx.fillText(restartText, restartX, 150);
+            }
         }
         
         // Crash message (temporary)
@@ -1042,8 +1055,62 @@ async function createDirtbikeGame(settings, callbacks = null) {
     }
     
     function handleKeyDown(e) {
-        const gameKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'];
+        const gameKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyR'];
         if (!gameKeys.includes(e.code)) return;
+        
+        // Handle restart
+        if (e.code === 'KeyR' && raceFinished && coastingToStop && getPlayerPosition() > 1) {
+            // Reset game state
+            gameWon = false;
+            gameStarted = false;
+            raceStarted = false;
+            raceFinished = false;
+            coastingToStop = false;
+            countdown = 3;
+            countdownTimer = 0;
+            trackPosition = 0;
+            lapDisplayTimer = 0;
+            showLapDisplay = false;
+            displayedLap = 1;
+            
+            // Reset player
+            player.lane = 2;
+            player.targetLane = 2;
+            player.laneTransition = 0;
+            player.position = 0;
+            player.speed = 0;
+            player.heat = 0;
+            player.throttle = false;
+            player.jumping = false;
+            player.jumpHeight = 0;
+            player.jumpVelocity = 0;
+            player.rotation = 0;
+            player.rotateForward = false;
+            player.crashed = false;
+            player.crashTimer = 0;
+            player.riderX = 0;
+            player.riderY = 0;
+            player.bikeRotation = 0;
+            player.walkingBack = false;
+            player.currentLap = 1;
+            player.onOilSlick = false;
+            player.jumpCooldown = 0;
+            
+            // Reset opponents
+            for (let i = 0; i < opponents.length; i++) {
+                opponents[i].position = 0;
+                opponents[i].speed = 3 + Math.random() * 2;
+                opponents[i].crashed = false;
+                opponents[i].crashTimer = 0;
+                opponents[i].riderX = 0;
+                opponents[i].riderY = 0;
+                opponents[i].bikeRotation = 0;
+                opponents[i].walkingBack = false;
+            }
+            
+            gameRunning = true;
+            return;
+        }
         
         if (!gameStarted) {
             gameStarted = true;
