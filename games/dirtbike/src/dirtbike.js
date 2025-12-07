@@ -283,19 +283,47 @@ async function createDirtbikeGame(settings, callbacks = null) {
             terrain.push(0);
         }
         
-        // Add ramps/hills directly to terrain
-        const rampCount = 1;
-        for (let r = 0; r < rampCount; r++) {
-            const rampStart = Math.floor(trackPoints * 0.3 + Math.random() * trackPoints * 0.4);
-            const rampWidth = Math.floor(100 / resolution); // 100px wide ramp
-            const rampHeight = 35;
+        // Add multiple hills with different sizes
+        const hillCount = 5;
+        const hills = [];
+        
+        // Generate non-overlapping hills
+        for (let h = 0; h < hillCount; h++) {
+            let attempts = 0;
+            let hillPlaced = false;
             
-            for (let i = 0; i < rampWidth && rampStart + i < trackPoints; i++) {
-                const progress = i / (rampWidth - 1);
+            while (!hillPlaced && attempts < 50) {
+                const hillWidth = 30 + Math.random() * 70; // 60-200px wide
+                const hillHeight = 15 + Math.random() * 30; // 15-45px high
+                const hillStart = Math.floor(Math.random() * (trackPoints - hillWidth / resolution));
+                const hillEnd = hillStart + Math.floor(hillWidth / resolution);
+                
+                // Check for overlap with existing hills
+                let overlaps = false;
+                for (let existingHill of hills) {
+                    if (!(hillEnd < existingHill.start || hillStart > existingHill.end)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+                
+                if (!overlaps) {
+                    hills.push({ start: hillStart, end: hillEnd, height: hillHeight });
+                    hillPlaced = true;
+                }
+                attempts++;
+            }
+        }
+        
+        // Add hills to terrain
+        for (let hill of hills) {
+            const hillWidth = hill.end - hill.start;
+            for (let i = 0; i < hillWidth && hill.start + i < trackPoints; i++) {
+                const progress = i / (hillWidth - 1);
                 const height = progress <= 0.5 ? 
-                    rampHeight * (progress * 2) : 
-                    rampHeight * (2 - progress * 2);
-                terrain[rampStart + i] = height;
+                    hill.height * (progress * 2) : 
+                    hill.height * (2 - progress * 2);
+                terrain[hill.start + i] = height;
             }
         }
     }
