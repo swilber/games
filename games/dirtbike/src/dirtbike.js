@@ -160,7 +160,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         }
         
         // Draw jumps
-        generateJumps();
+        generateTerrain();
         for (let jump of jumps) {
             const jumpX = jump.x + 400;
             const jumpTop = 204; // Top of track
@@ -227,7 +227,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         bikeRotation: 0,
         walkingBack: false,
         currentLap: 1,
-        onOilSlick: false
+        onOilSlick: false,
+        jumpCooldown: 0
     };
     
     // AI opponents
@@ -253,6 +254,45 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     // Jumps
     const jumps = [];
+    
+    // Terrain height map
+    const terrainHeights = [];
+    
+    // Generate terrain heights
+    function generateTerrain() {
+        terrainHeights.length = 0;
+        const totalLength = totalTrackLength + 2000;
+        
+        // Initialize flat terrain
+        for (let x = 0; x < totalLength; x += 5) {
+            terrainHeights.push(0);
+        }
+        
+        // Add hills/jumps to terrain
+        generateJumps();
+        for (let jump of jumps) {
+            const startX = Math.floor(jump.x / 5);
+            const endX = Math.floor((jump.x + jump.width) / 5);
+            
+            for (let i = startX; i <= endX && i < terrainHeights.length; i++) {
+                const progress = (i - startX) / (endX - startX);
+                // Triangular hill shape
+                const height = progress <= 0.5 ? 
+                    jump.height * (progress * 2) : 
+                    jump.height * (2 - progress * 2);
+                terrainHeights[i] = Math.max(terrainHeights[i], height);
+            }
+        }
+    }
+    
+    // Get terrain height at position
+    function getTerrainHeight(position) {
+        const index = Math.floor(position / 5);
+        if (index >= 0 && index < terrainHeights.length) {
+            return terrainHeights[index];
+        }
+        return 0;
+    }
     
     // Generate oil slicks
     function generateOilSlicks() {
@@ -398,6 +438,11 @@ async function createDirtbikeGame(settings, callbacks = null) {
         player.speed = Math.max(0, Math.min(player.maxSpeed, player.speed));
         player.position += player.speed;
         
+        // Update jump cooldown
+        if (player.jumpCooldown > 0) {
+            player.jumpCooldown--;
+        }
+        
         // Jumping physics
         if (player.jumping) {
             player.jumpVelocity -= 0.8; // Gravity
@@ -436,8 +481,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Check oil slick collisions
         checkOilSlickCollisions();
         
-        // Check jump collisions
-        checkJumpCollisions();
+        // Update terrain following
+        updateTerrainFollowing();
         
         // Update camera (repeat track visually)
         trackPosition = player.position % trackLength;
@@ -540,21 +585,43 @@ async function createDirtbikeGame(settings, callbacks = null) {
         player.onOilSlick = false;
     }
     
-    function checkJumpCollisions() {
-        if (player.jumping) return; // Already jumping
+    function updateTerrainFollowing() {
+        const terrainHeight = getTerrainHeight(player.position);
         
-        for (let jump of jumps) {
-            const playerTrackPos = player.position % trackLength;
-            const jumpTrackPos = jump.x % trackLength;
-            const distance = Math.abs(jumpTrackPos - playerTrackPos);
-            const wrapDistance = Math.min(distance, trackLength - distance);
+        if (player.jumping) {
+            // Check if landed back on terrain
+            if (player.jumpHeight <= terrainHeight) {
+                player.jumpHeight = terrainHeight;
+                player.jumping = false;
+                player.jumpVelocity = 0;
+                
+                // Check landing angle for crash
+                const normalizedRotation = ((player.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                const isUpsideDown = normalizedRotation > Math.PI / 3 && normalizedRotation < Math.PI * 5 / 3;
+                const isSideways = (normalizedRotation > Math.PI / 6 && normalizedRotation < Math.PI / 3) || 
+                                 (normalizedRotation > Math.PI * 5 / 3 && normalizedRotation < Math.PI * 11 / 6);
+                
+                if (isUpsideDown || (isSideways && player.speed > 5)) {
+                    crashPlayer("bad_landing");
+                } else {
+                    player.rotation = 0;
+                }
+            }
+        } else {
+            // Follow terrain when not jumping
+            const currentHeight = player.jumpHeight || 0;
+            const heightDiff = terrainHeight - currentHeight;
             
-            if (wrapDistance < jump.width / 2) {
-                // Hit jump - launch player
+            // If going up a steep slope fast enough, launch into air
+            if (heightDiff > 3 && player.speed > 6) {
                 player.jumping = true;
-                player.jumpHeight = 0;
-                player.jumpVelocity = 15; // Higher initial velocity for jumps
-                return;
+                player.jumpVelocity = Math.min(player.speed * 0.8, 15);
+                if (player.throttle) {
+                    player.jumpVelocity += 3;
+                }
+            } else {
+                // Follow terrain contour
+                player.jumpHeight = terrainHeight;
             }
         }
     }
