@@ -261,18 +261,20 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Generate terrain heights
     function generateTerrain() {
         terrainHeights.length = 0;
-        const totalLength = totalTrackLength + 2000;
+        const segmentLength = trackLength; // One lap length
         
-        // Initialize flat terrain
-        for (let x = 0; x < totalLength; x += 5) {
+        // Initialize flat terrain for one lap
+        for (let x = 0; x < segmentLength; x += 5) {
             terrainHeights.push(0);
         }
         
-        // Add hills/jumps to terrain
+        // Add hills/jumps to terrain (only for one lap, will repeat)
         generateJumps();
         for (let jump of jumps) {
-            const startX = Math.floor(jump.x / 5);
-            const endX = Math.floor((jump.x + jump.width) / 5);
+            // Use modulo to get position within single lap
+            const jumpPos = jump.x % trackLength;
+            const startX = Math.floor(jumpPos / 5);
+            const endX = Math.floor((jumpPos + jump.width) / 5);
             
             for (let i = startX; i <= endX && i < terrainHeights.length; i++) {
                 const progress = (i - startX) / (endX - startX);
@@ -287,7 +289,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     // Get terrain height at position
     function getTerrainHeight(position) {
-        const index = Math.floor(position / 5);
+        // Use modulo to repeat terrain for each lap
+        const lapPosition = position % trackLength;
+        const index = Math.floor(lapPosition / 5);
         if (index >= 0 && index < terrainHeights.length) {
             return terrainHeights[index];
         }
