@@ -149,26 +149,38 @@ async function createSkiFreeGame(settings, callbacks = null) {
         const maxSpeed = 4; // Much slower max speed
         const baseSpeed = 1; // Much slower base speed
         
-        // Calculate movement based on ski direction with speed limits
+        // Friction-based movement system
         const directions = [
-            { vx: -1.5, vy: 0, maxSpeed: 1.5 },    // 0: left (horizontal only)
-            { vx: -1, vy: 1.5, maxSpeed: 2 },      // 1: left-down (slower)
-            { vx: 0, vy: 2.5, maxSpeed: 3 },       // 2: down (fastest)
-            { vx: 1, vy: 1.5, maxSpeed: 2 },       // 3: right-down (slower)
-            { vx: 1.5, vy: 0, maxSpeed: 1.5 }      // 4: right (horizontal only)
+            { targetVx: -1, targetVy: 0, friction: 0.85, maxSpeed: 1 },     // 0: left (high friction)
+            { targetVx: -0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.5 }, // 1: left-down (medium friction)
+            { targetVx: 0, targetVy: 1.5, friction: 0.96, maxSpeed: 2 },    // 2: down (low friction)
+            { targetVx: 0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.5 },  // 3: right-down (medium friction)
+            { targetVx: 1, targetVy: 0, friction: 0.85, maxSpeed: 1 }       // 4: right (high friction)
         ];
         
         const direction = directions[player.skiDirection];
         
-        // Apply movement with speed limits
-        player.vx = direction.vx;
-        player.vy = direction.vy;
+        // Apply friction to current velocity
+        player.vx *= direction.friction;
+        player.vy *= direction.friction;
+        
+        // Add acceleration toward target velocity
+        const accel = 0.1;
+        player.vx += (direction.targetVx - player.vx) * accel;
+        player.vy += (direction.targetVy - player.vy) * accel;
+        
+        // Apply speed limits
+        const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+        if (currentSpeed > direction.maxSpeed) {
+            player.vx = (player.vx / currentSpeed) * direction.maxSpeed;
+            player.vy = (player.vy / currentSpeed) * direction.maxSpeed;
+        }
         
         // Apply movement
         player.x += player.vx;
         player.y += player.vy;
         
-        // Calculate speed for scoring (based on total movement)
+        // Calculate speed for scoring
         player.speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         
         // Keep player on screen vertically
