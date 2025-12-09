@@ -1,26 +1,37 @@
 # Q Session Log
-Last Updated: 2025-12-05T17:22:35.009-07:00
+Last Updated: 2025-12-06T00:38:46.242-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Complete Excitebike-style dirt bike racing game implementation
+- **Working on**: Complete Excitebike-style dirt bike racing game with authentic mechanics
 - **Latest changes**: 
-  - **IMPLEMENTED**: Full 4-lane pseudo-3D racing with starting lineup and countdown
-  - **ADDED**: Jump mechanics (SHIFT) with automatic backward rotation and manual forward control
-  - **CREATED**: Authentic track layout with audience stands, grass borders, and fluffy clouds
-  - **OPTIMIZED**: Pre-rendered track system for smooth performance
-  - **BALANCED**: Heat management, rotation speed, and landing physics
-  - **POLISHED**: Coast-to-stop finish behavior, position tracking, and control instructions
-  - **COMMITTED**: Complete racing game pushed successfully (commit 87d9b94)
+  - **FIXED**: Oil slick collision detection during lane transitions to prevent cross-lane effects
+  - **IMPLEMENTED**: Transition-aware lane detection using 50% threshold for accurate collision
+  - **ELIMINATED**: False oil slick slowdowns when player is in adjacent lanes
+  - **ENHANCED**: Precise collision detection based on visual player position during transitions
+  - **COMMITTED**: Complete oil slick collision fix (commit 519e5a4)
+  - **Previous**: Game completion logic to only advance winners to question screen
+  - **Previous**: Final position storage to prevent placement changes after finish
+  - **Previous**: Rotation control fixes and configurable opponent crash frequency
+
+## LAP SYSTEM IMPLEMENTATION DETAILS
+- **Track Structure**: `totalTrackLength = trackLength * lapsRequired` (6000 pixels for 3 laps)
+- **Lap Calculation**: `Math.floor(player.position / trackLength) + 1` for current lap
+- **Lap Markers**: Yellow vertical lines at positions `lap * trackLength + 400`
+- **Finish Line**: Black checkered pattern only appears at `totalTrackLength + 400`
+- **Race Completion**: Changed from `player.position >= trackLength` to `player.position >= totalTrackLength`
+- **UI Display**: Shows "Lap: X/3" with proper clamping to prevent showing "Lap: 4/3"
 
 ## KEY DEVELOPMENT INSIGHTS
-- **Pre-rendering**: Off-screen canvas dramatically improves performance for static elements
-- **Physics tuning**: Rotation speed, jump velocity, and heat rates need careful balance for fun gameplay
-- **Visual authenticity**: Proper lane spacing, track proportions, and environmental details crucial for nostalgic feel
-- **Control separation**: Jump and throttle work better as separate buttons for precise control
-- **Landing mechanics**: Rotation-based crash detection adds skill element to jumping
+- **Pre-rendered optimization**: Track elements drawn once to off-screen canvas for performance
+- **Animation sequences**: Multi-phase animations (falling → walking → recovery) create engaging gameplay
+- **State management**: Crash states require careful coordination between rendering and game logic
+- **Visual storytelling**: Different rendering modes (normal, crashed, walking) communicate game state clearly
+- **Collision systems**: Separate detection for rider collisions vs landing angle crashes
+- **Recovery mechanics**: Timed recovery sequences add consequence to crashes without being punitive
+- **Lap progression**: Visual markers and UI feedback essential for player understanding of race progress
 
 ## KEY LEARNINGS
 - **Game Balance Critical**: Initial heat system was unplayable (overheated immediately)

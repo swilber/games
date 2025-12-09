@@ -34,7 +34,36 @@ async function createDirtbikeGame(settings, callbacks = null) {
     const trackLength = 2000;
     const lapsRequired = 3;
     const totalTrackLength = trackLength * lapsRequired;
-    const opponentCrashChance = 0.3; // 30% chance opponents will crash on bad landings
+    
+    // Level system
+    let currentLevel = 1;
+    const maxLevels = 3;
+    
+    // Level configurations
+    const levelConfigs = {
+        1: { // Day - Blue sky with clouds
+            hillCount: 3,
+            oilSlicksPerLap: 2,
+            opponentCrashChance: 0.4,
+            skyColor: '#87CEEB',
+            theme: 'day'
+        },
+        2: { // Night - Dark sky with stars and moon
+            hillCount: 5,
+            oilSlicksPerLap: 3,
+            opponentCrashChance: 0.25,
+            skyColor: '#191970',
+            theme: 'night'
+        },
+        3: { // Dawn - Light over horizon
+            hillCount: 7,
+            oilSlicksPerLap: 4,
+            opponentCrashChance: 0.15,
+            skyColor: '#FFB347',
+            theme: 'dawn'
+        }
+    };
+    
     const lanes = [
         { y: 213 },
         { y: 241 },
@@ -53,23 +82,45 @@ async function createDirtbikeGame(settings, callbacks = null) {
         trackCanvas.height = 400;
         trackCtx = trackCanvas.getContext('2d');
         
-        // Draw sky
-        trackCtx.fillStyle = '#87CEEB';
+        // Draw sky based on current level
+        const config = levelConfigs[currentLevel];
+        trackCtx.fillStyle = config.skyColor;
         trackCtx.fillRect(0, 0, trackCanvas.width, 120);
         
-        // Draw fluffy clouds
-        trackCtx.fillStyle = '#FFFFFF';
-        for (let x = 0; x < trackCanvas.width; x += 200) {
-            const cloudX = x + Math.random() * 100;
-            const cloudY = 20 + Math.random() * 40;
-            
-            // Draw cloud as overlapping circles
+        // Draw theme-specific sky elements
+        if (config.theme === 'day') {
+            // Draw fluffy clouds
+            trackCtx.fillStyle = '#FFFFFF';
+            for (let x = 0; x < trackCanvas.width; x += 200) {
+                const cloudX = x + Math.random() * 100;
+                const cloudY = 20 + Math.random() * 40;
+                
+                trackCtx.beginPath();
+                trackCtx.arc(cloudX, cloudY, 15, 0, Math.PI * 2);
+                trackCtx.arc(cloudX + 20, cloudY, 18, 0, Math.PI * 2);
+                trackCtx.arc(cloudX + 40, cloudY, 15, 0, Math.PI * 2);
+                trackCtx.arc(cloudX + 10, cloudY - 10, 12, 0, Math.PI * 2);
+                trackCtx.arc(cloudX + 30, cloudY - 8, 14, 0, Math.PI * 2);
+                trackCtx.fill();
+            }
+        } else if (config.theme === 'night') {
+            // Draw stars
+            trackCtx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 50; i++) {
+                const starX = Math.random() * trackCanvas.width;
+                const starY = Math.random() * 100;
+                trackCtx.fillRect(starX, starY, 2, 2);
+            }
+            // Draw moon
+            trackCtx.fillStyle = '#FFFACD';
             trackCtx.beginPath();
-            trackCtx.arc(cloudX, cloudY, 15, 0, Math.PI * 2);
-            trackCtx.arc(cloudX + 20, cloudY, 18, 0, Math.PI * 2);
-            trackCtx.arc(cloudX + 40, cloudY, 15, 0, Math.PI * 2);
-            trackCtx.arc(cloudX + 10, cloudY - 10, 12, 0, Math.PI * 2);
-            trackCtx.arc(cloudX + 30, cloudY - 8, 14, 0, Math.PI * 2);
+            trackCtx.arc(100, 40, 20, 0, Math.PI * 2);
+            trackCtx.fill();
+        } else if (config.theme === 'dawn') {
+            // Draw sun on horizon
+            trackCtx.fillStyle = '#FFD700';
+            trackCtx.beginPath();
+            trackCtx.arc(700, 110, 25, 0, Math.PI * 2);
             trackCtx.fill();
         }
         
@@ -294,8 +345,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
             terrain.push(0);
         }
         
-        // Add multiple hills with different sizes
-        const hillCount = 5;
+        // Add multiple hills with different sizes based on level
+        const hillCount = levelConfigs[currentLevel].hillCount;
         const hills = [];
         
         // Generate non-overlapping hills
@@ -352,7 +403,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Generate oil slicks
     function generateOilSlicks() {
         oilSlicks.length = 0;
-        const slicksPerLap = 2;
+        const slicksPerLap = levelConfigs[currentLevel].oilSlicksPerLap;
         for (let lap = 0; lap < lapsRequired; lap++) {
             for (let i = 0; i < slicksPerLap; i++) {
                 oilSlicks.push({
@@ -365,6 +416,66 @@ async function createDirtbikeGame(settings, callbacks = null) {
         }
     }
     
+    function resetForNextLevel() {
+        // Reset game state
+        gameRunning = false;
+        gameWon = false;
+        gameStarted = false;
+        raceStarted = false;
+        raceFinished = false;
+        coastingToStop = false;
+        countdown = 3;
+        countdownTimer = 0;
+        trackPosition = 0;
+        lapDisplayTimer = 0;
+        showLapDisplay = false;
+        displayedLap = 1;
+        finalPosition = 1;
+        
+        // Reset player
+        player.lane = 2;
+        player.targetLane = 2;
+        player.laneTransition = 0;
+        player.position = 0;
+        player.speed = 0;
+        player.heat = 0;
+        player.throttle = false;
+        player.jumping = false;
+        player.jumpHeight = 0;
+        player.jumpVelocity = 0;
+        player.horizontalVelocity = 0;
+        player.rotation = 0;
+        player.rotateForward = false;
+        player.rotateBackward = false;
+        player.crashed = false;
+        player.crashTimer = 0;
+        player.riderX = 0;
+        player.riderY = 0;
+        player.bikeRotation = 0;
+        player.walkingBack = false;
+        player.currentLap = 1;
+        
+        // Reset opponents
+        for (let opponent of opponents) {
+            opponent.position = 0;
+            opponent.speed = 0;
+            opponent.crashed = false;
+            opponent.crashTimer = 0;
+            opponent.jumping = false;
+            opponent.jumpHeight = 0;
+            opponent.jumpVelocity = 0;
+            opponent.horizontalVelocity = 0;
+            opponent.rotation = 0;
+            opponent.currentLap = 1;
+        }
+        
+        // Regenerate track with new level settings
+        generateTrack();
+        
+        // Restart game
+        gameRunning = true;
+    }
+
     function update() {
         if (!gameRunning) return;
         
@@ -415,12 +526,27 @@ async function createDirtbikeGame(settings, callbacks = null) {
         if (coastingToStop && player.speed < 0.1) {
             gameWon = finalPosition === 1; // Only won if finished in 1st place
             gameRunning = false;
-            if (callbacks?.onGameComplete && finalPosition === 1) {
-                // Only go to question screen if player won
-                callbacks.onGameComplete('dirtbike', { 
-                    completed: true,
-                    position: finalPosition
-                });
+            
+            if (finalPosition === 1) {
+                // Player won - check for level progression
+                if (currentLevel < maxLevels) {
+                    // Advance to next level
+                    currentLevel++;
+                    // Reset game state for next level
+                    resetForNextLevel();
+                } else {
+                    // Completed all levels
+                    if (callbacks?.onGameComplete) {
+                        callbacks.onGameComplete('dirtbike', { 
+                            completed: true,
+                            position: finalPosition,
+                            allLevelsComplete: true
+                        });
+                    }
+                }
+            } else {
+                // Player lost - restart current level
+                resetForNextLevel();
             }
         }
     }
@@ -670,7 +796,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             // AI tries to correct rotation for landing (but sometimes fails)
             if (Math.abs(opponent.rotation) > 0.1) {
                 // Sometimes AI fails to correct properly (based on crash chance)
-                const aiSkill = Math.random() > opponentCrashChance ? 1.0 : 0.3; // Reduced correction when failing
+                const aiSkill = Math.random() > levelConfigs[currentLevel].opponentCrashChance ? 1.0 : 0.3; // Reduced correction when failing
                 
                 if (opponent.rotation > 0) {
                     opponent.rotation -= 0.03 * aiSkill; // Correct clockwise rotation
@@ -1129,6 +1255,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         ctx.font = '16px monospace';
         ctx.fillText(`Speed: ${Math.floor(player.speed * 10)}`, 10, 25);
         ctx.fillText(`Lap: ${player.currentLap}/${lapsRequired}`, 10, 65);
+        ctx.fillText(`Level: ${currentLevel}/${maxLevels}`, 10, 125);
         
         // Heat gauge
         const heatPercent = player.heat / player.maxHeat;
