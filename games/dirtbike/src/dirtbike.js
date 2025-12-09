@@ -363,7 +363,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         opponents.push({
             lane: i === 0 ? 0 : i === 1 ? 1 : 3, // Lanes 0, 1, 3 (player in lane 2)
             position: 0,
-            speed: 5 + Math.random() * 2.5, // 5-7.5 speed range (slightly slower)
+            speed: 5.5 + Math.random() * 2.75, // 5.5-8.25 speed range (middle ground)
             color: opponentColors[i],
             crashed: false,
             crashTimer: 0,
@@ -623,7 +623,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             const randomIndex = Math.floor(Math.random() * availableLanes.length);
             opponent.lane = availableLanes.splice(randomIndex, 1)[0];
             opponent.position = 0;
-            opponent.speed = 5 + Math.random() * 2.5; // Match initial speed range
+            opponent.speed = 5.5 + Math.random() * 2.75; // Match initial speed range
             opponent.crashed = false;
             opponent.crashTimer = 0;
             opponent.jumping = false;
@@ -865,7 +865,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Simple AI behavior
             opponent.speed += (Math.random() - 0.5) * 0.1;
-            opponent.speed = Math.max(3, Math.min(9, opponent.speed)); // 3-9 speed range
+            opponent.speed = Math.max(3.5, Math.min(9.5, opponent.speed)); // 3.5-9.5 speed range
             
             // Only apply normal speed when not jumping (like player)
             if (!opponent.jumping) {
