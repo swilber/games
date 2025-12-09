@@ -55,9 +55,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 20, // More hills
             oilSlicksPerLap: 15, // More oil slicks
             opponentCrashChance: 0.25,
-            opponentBaseSpeed: 5, // Medium level
-            opponentSpeedRange: 2.5, // 5-7.5 speed range
-            opponentMaxSpeed: 8.5, // Medium max speed
+            opponentBaseSpeed: 4.5, // Halfway between level 1 and old level 2
+            opponentSpeedRange: 2.25, // 4.5-6.75 speed range
+            opponentMaxSpeed: 8.0, // Between level 1 and old level 2 max
             skyColor: '#191970',
             theme: 'night'
         },
@@ -65,9 +65,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 25, // More hills
             oilSlicksPerLap: 20, // More oil slicks
             opponentCrashChance: 0.15,
-            opponentBaseSpeed: 5.5, // Hard level - current speed
-            opponentSpeedRange: 2.75, // 5.5-8.25 speed range
-            opponentMaxSpeed: 9.5, // Current max speed
+            opponentBaseSpeed: 5, // Old level 2 speed
+            opponentSpeedRange: 2.5, // 5-7.5 speed range (old level 2)
+            opponentMaxSpeed: 8.5, // Old level 2 max speed
             skyColor: '#FFB347',
             theme: 'dawn'
         }
