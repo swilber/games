@@ -31,7 +31,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     canvas.height = 400;
     const ctx = canvas.getContext('2d');
     
-    const trackLength = 2000;
+    const trackLength = 6000; // 3x longer laps
     const lapsRequired = 3;
     const totalTrackLength = trackLength * lapsRequired;
     
@@ -42,22 +42,22 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Level configurations
     const levelConfigs = {
         1: { // Day - Blue sky with clouds
-            hillCount: 3,
-            oilSlicksPerLap: 2,
+            hillCount: 9, // 3x more hills
+            oilSlicksPerLap: 6, // 3x more oil slicks
             opponentCrashChance: 0.4,
             skyColor: '#87CEEB',
             theme: 'day'
         },
         2: { // Night - Dark sky with stars and moon
-            hillCount: 5,
-            oilSlicksPerLap: 3,
+            hillCount: 15, // 3x more hills
+            oilSlicksPerLap: 9, // 3x more oil slicks
             opponentCrashChance: 0.25,
             skyColor: '#191970',
             theme: 'night'
         },
         3: { // Dawn - Light over horizon
-            hillCount: 7,
-            oilSlicksPerLap: 4,
+            hillCount: 21, // 3x more hills
+            oilSlicksPerLap: 12, // 3x more oil slicks
             opponentCrashChance: 0.15,
             skyColor: '#FFB347',
             theme: 'dawn'
