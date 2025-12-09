@@ -33,6 +33,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     const trackLength = 2000;
     const lapsRequired = 3;
     const totalTrackLength = trackLength * lapsRequired;
+    const opponentCrashChance = 0.3; // 30% chance opponents will crash on bad landings
     const lanes = [
         { y: 213 },
         { y: 241 },
@@ -238,6 +239,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         horizontalVelocity: 0,
         rotation: 0,
         rotateForward: false,
+        rotateBackward: false,
         crashed: false,
         crashTimer: 0,
         riderX: 0,
@@ -491,9 +493,14 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Rotation while jumping
             if (player.rotateForward) {
-                player.rotation += 0.05; // Forward rotation (clockwise) with RIGHT arrow
+                player.rotation += 0.05; // RIGHT arrow: clockwise
+                console.log("Rotating clockwise (RIGHT pressed)");
+            } else if (player.rotateBackward) {
+                player.rotation -= 0.05; // LEFT arrow: counter-clockwise (faster)
+                console.log("Rotating counter-clockwise (LEFT pressed)");
             } else {
-                player.rotation -= 0.02; // Natural backward rotation (counter-clockwise)
+                player.rotation -= 0.02; // Natural: counter-clockwise (slower)
+                console.log("Natural counter-clockwise rotation");
             }
             
             if (player.jumpHeight <= 0) {
@@ -650,12 +657,15 @@ async function createDirtbikeGame(settings, callbacks = null) {
             opponent.position += opponent.horizontalVelocity;
             // No air resistance - maintain horizontal velocity
             
-            // AI tries to correct rotation for landing
+            // AI tries to correct rotation for landing (but sometimes fails)
             if (Math.abs(opponent.rotation) > 0.1) {
+                // Sometimes AI fails to correct properly (based on crash chance)
+                const aiSkill = Math.random() > opponentCrashChance ? 1.0 : 0.3; // Reduced correction when failing
+                
                 if (opponent.rotation > 0) {
-                    opponent.rotation -= 0.03; // Correct clockwise rotation
+                    opponent.rotation -= 0.03 * aiSkill; // Correct clockwise rotation
                 } else {
-                    opponent.rotation += 0.03; // Correct counter-clockwise rotation
+                    opponent.rotation += 0.03 * aiSkill; // Correct counter-clockwise rotation
                 }
             }
             
@@ -781,13 +791,17 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 player.jumpVelocity = launchSpeed * Math.sin(slopeAngle); // Vertical component
                 player.horizontalVelocity = launchSpeed * Math.cos(slopeAngle); // Horizontal component
                 
+                // Reset rotation states for clean jump start
+                player.rotateForward = false;
+                player.rotateBackward = false;
+                
                 if (player.throttle) {
                     // Throttle boost in slope direction
                     player.jumpVelocity += 2 * Math.sin(slopeAngle);
                     player.horizontalVelocity += 2 * Math.cos(slopeAngle);
                 }
                 player.jumpHeight = terrainHeight;
-                console.log(`Launching! Angle: ${slopeAngle.toFixed(2)}, Vertical: ${player.jumpVelocity.toFixed(2)}, Horizontal: ${player.horizontalVelocity.toFixed(2)}`);
+                console.log(`Launching! Angle: ${slopeAngle.toFixed(2)}, Vertical: ${player.jumpVelocity.toFixed(2)}, Horizontal: ${player.horizontalVelocity.toFixed(2)} - Reset rotation states`);
             } else {
                 // Follow terrain
                 player.jumpHeight = terrainHeight;
@@ -1255,6 +1269,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             player.jumpVelocity = 0;
             player.rotation = 0;
             player.rotateForward = false;
+            player.rotateBackward = false;
             player.crashed = false;
             player.crashTimer = 0;
             player.riderX = 0;
@@ -1267,6 +1282,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Reset opponents
             for (let i = 0; i < opponents.length; i++) {
+                opponents[i].lane = i === 0 ? 0 : i === 1 ? 1 : 3; // Reset to starting lanes
                 opponents[i].position = 0;
                 opponents[i].speed = 3 + Math.random() * 2;
                 opponents[i].crashed = false;
@@ -1275,6 +1291,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 opponents[i].riderY = 0;
                 opponents[i].bikeRotation = 0;
                 opponents[i].walkingBack = false;
+                // Reset physics properties
+                opponents[i].jumping = false;
+                opponents[i].jumpHeight = 0;
+                opponents[i].jumpVelocity = 0;
+                opponents[i].horizontalVelocity = 0;
+                opponents[i].rotation = 0;
+                opponents[i].rotateForward = false;
             }
             
             gameRunning = true;
@@ -1305,12 +1328,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 break;
             case 'ArrowLeft':
                 if (player.jumping) {
-                    player.rotateForward = false; // Default backward rotation
+                    player.rotateBackward = true; // LEFT arrow: faster counter-clockwise
                 }
                 break;
             case 'ArrowRight':
                 if (player.jumping) {
                     player.rotateForward = true; // Forward rotation
+                    console.log("RIGHT key pressed - setting rotateForward = true");
                 }
                 break;
             case 'Space':
@@ -1334,9 +1358,15 @@ async function createDirtbikeGame(settings, callbacks = null) {
             case 'Space':
                 player.throttle = false; // Only throttle control
                 break;
+            case 'ArrowLeft':
+                if (player.jumping) {
+                    player.rotateBackward = false; // Stop faster counter-clockwise
+                }
+                break;
             case 'ArrowRight':
                 if (player.jumping) {
                     player.rotateForward = false; // Stop forward rotation
+                    console.log("RIGHT key released - setting rotateForward = false");
                 }
                 break;
         }
