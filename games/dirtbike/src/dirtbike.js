@@ -227,8 +227,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 rampEnd = i - 1; // End of ramp
                 
                 // Draw complete ramp
-                const startX = rampStart * 2 + 400;
-                const endX = rampEnd * 2 + 400;
+                const startX = rampStart * 2;
+                const endX = rampEnd * 2;
                 const rampWidth = endX - startX;
                 const maxHeight = Math.max(...terrain.slice(rampStart, rampEnd + 1));
                 
