@@ -338,42 +338,48 @@ async function createDirtbikeGame(settings, callbacks = null) {
     function generateTerrain() {
         terrain.length = 0;
         const resolution = 2; // pixels per terrain point
-        const trackPoints = Math.floor(trackLength / resolution);
+        const totalTrackPoints = Math.floor(totalTrackLength / resolution); // All 3 laps
         
-        // Initialize flat terrain
-        for (let i = 0; i < trackPoints; i++) {
+        // Initialize flat terrain for all laps
+        for (let i = 0; i < totalTrackPoints; i++) {
             terrain.push(0);
         }
         
-        // Add multiple hills with different sizes based on level
+        // Add hills across all laps
         const hillCount = levelConfigs[currentLevel].hillCount;
         const hills = [];
         
-        // Generate non-overlapping hills
-        for (let h = 0; h < hillCount; h++) {
-            let attempts = 0;
-            let hillPlaced = false;
+        // Generate hills for each lap
+        for (let lap = 0; lap < lapsRequired; lap++) {
+            const lapStartPoint = Math.floor((lap * trackLength) / resolution);
+            const lapEndPoint = Math.floor(((lap + 1) * trackLength) / resolution);
             
-            while (!hillPlaced && attempts < 50) {
-                const hillWidth = 30 + Math.random() * 70; // 60-200px wide
-                const hillHeight = 15 + Math.random() * 30; // 15-45px high
-                const hillStart = Math.floor(Math.random() * (trackPoints - hillWidth / resolution));
-                const hillEnd = hillStart + Math.floor(hillWidth / resolution);
+            // Generate non-overlapping hills for this lap
+            for (let h = 0; h < hillCount; h++) {
+                let attempts = 0;
+                let hillPlaced = false;
                 
-                // Check for overlap with existing hills
-                let overlaps = false;
-                for (let existingHill of hills) {
-                    if (!(hillEnd < existingHill.start || hillStart > existingHill.end)) {
-                        overlaps = true;
-                        break;
+                while (!hillPlaced && attempts < 50) {
+                    const hillWidth = 30 + Math.random() * 70; // 60-200px wide
+                    const hillHeight = 15 + Math.random() * 30; // 15-45px high
+                    const hillStart = lapStartPoint + Math.floor(Math.random() * (lapEndPoint - lapStartPoint - hillWidth / resolution));
+                    const hillEnd = hillStart + Math.floor(hillWidth / resolution);
+                    
+                    // Check for overlap with existing hills
+                    let overlaps = false;
+                    for (let existingHill of hills) {
+                        if (!(hillEnd < existingHill.start || hillStart > existingHill.end)) {
+                            overlaps = true;
+                            break;
+                        }
                     }
+                    
+                    if (!overlaps && hillEnd < lapEndPoint) {
+                        hills.push({ start: hillStart, end: hillEnd, height: hillHeight });
+                        hillPlaced = true;
+                    }
+                    attempts++;
                 }
-                
-                if (!overlaps) {
-                    hills.push({ start: hillStart, end: hillEnd, height: hillHeight });
-                    hillPlaced = true;
-                }
-                attempts++;
             }
         }
         
@@ -392,8 +398,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     // Get terrain height at any position
     function getTerrainHeight(position) {
-        const lapPosition = position % trackLength;
-        const index = Math.floor(lapPosition / 2); // 2 pixel resolution
+        const index = Math.floor(position / 2); // 2 pixel resolution
         if (index >= 0 && index < terrain.length) {
             return terrain[index];
         }
