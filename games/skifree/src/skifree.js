@@ -149,16 +149,18 @@ async function createSkiFreeGame(settings, callbacks = null) {
         const maxSpeed = 4; // Much slower max speed
         const baseSpeed = 1; // Much slower base speed
         
-        // Calculate movement based on ski direction
+        // Calculate movement based on ski direction with speed limits
         const directions = [
-            { vx: -2, vy: 1 },    // 0: left
-            { vx: -1, vy: 2 },    // 1: left-down  
-            { vx: 0, vy: 3 },     // 2: down (fastest)
-            { vx: 1, vy: 2 },     // 3: right-down
-            { vx: 2, vy: 1 }      // 4: right
+            { vx: -1.5, vy: 0, maxSpeed: 1.5 },    // 0: left (horizontal only)
+            { vx: -1, vy: 1.5, maxSpeed: 2 },      // 1: left-down (slower)
+            { vx: 0, vy: 2.5, maxSpeed: 3 },       // 2: down (fastest)
+            { vx: 1, vy: 1.5, maxSpeed: 2 },       // 3: right-down (slower)
+            { vx: 1.5, vy: 0, maxSpeed: 1.5 }      // 4: right (horizontal only)
         ];
         
         const direction = directions[player.skiDirection];
+        
+        // Apply movement with speed limits
         player.vx = direction.vx;
         player.vy = direction.vy;
         
@@ -166,8 +168,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.x += player.vx;
         player.y += player.vy;
         
-        // Calculate speed for scoring (based on downhill component)
-        player.speed = Math.abs(player.vy);
+        // Calculate speed for scoring (based on total movement)
+        player.speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         
         // Keep player on screen vertically
         if (player.y > canvas.height - 50) {
@@ -196,9 +198,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Keep player on screen
         player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
         
-        // Update distance and scroll
-        distance += Math.abs(player.vy); // Only count downhill movement
-        scrollY -= Math.abs(player.vy); // Terrain moves upward as player skis down
+        // Update distance and scroll (only count downhill movement)
+        distance += Math.max(0, player.vy); // Only positive Y movement counts
+        scrollY -= Math.max(0, player.vy); // Terrain moves upward as player skis down
         
         // Start yeti chase after certain distance
         if (distance > 2000 && !yetiChasing) {
