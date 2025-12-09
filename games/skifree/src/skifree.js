@@ -32,7 +32,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     // Player object
     const player = {
         x: canvas.width / 2,
-        y: canvas.height - 100,
+        y: 50, // Start at top of screen
         vx: 0,
         vy: 0,
         speed: 0,
@@ -52,7 +52,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const jumps = [];
     const slalomFlags = [];
     const skiLifts = [];
-    const yeti = { x: canvas.width / 2, y: -200, active: false };
+    const yeti = { x: canvas.width / 2, y: canvas.height + 200, active: false };
     
     // Terrain scroll offset
     let scrollY = 0;
@@ -63,7 +63,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             obstacles.push({
                 type: 'tree',
                 x: Math.random() * canvas.width,
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 width: 20,
                 height: 40
             });
@@ -74,7 +74,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             obstacles.push({
                 type: 'rock',
                 x: Math.random() * canvas.width,
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 width: 15,
                 height: 15
             });
@@ -84,9 +84,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (Math.random() < 0.008) {
             otherSkiers.push({
                 x: Math.random() * canvas.width,
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 vx: (Math.random() - 0.5) * 2,
-                vy: 2 + Math.random() * 2,
+                vy: -2 - Math.random() * 2, // Move upward (toward top of screen)
                 color: ['#0000ff', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 3)]
             });
         }
@@ -95,7 +95,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (Math.random() < 0.005) {
             jumps.push({
                 x: Math.random() * (canvas.width - 60),
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 width: 60,
                 height: 20
             });
@@ -105,7 +105,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (Math.random() < 0.01) {
             slalomFlags.push({
                 x: Math.random() * canvas.width,
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 collected: false,
                 color: Math.random() > 0.5 ? '#ff0000' : '#0000ff'
             });
@@ -115,7 +115,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (Math.random() < 0.002) {
             skiLifts.push({
                 x: Math.random() * (canvas.width - 100),
-                y: -50,
+                y: canvas.height + 50, // Start below screen
                 width: 100,
                 height: 30,
                 active: true
@@ -137,7 +137,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (player.onLift) {
             // Riding ski lift - move up slowly
             player.liftProgress += 0.5;
-            scrollY -= 1;
+            scrollY += 1; // Move uphill
             if (player.liftProgress > 200) {
                 player.onLift = false;
                 player.liftProgress = 0;
@@ -145,12 +145,23 @@ async function createSkiFreeGame(settings, callbacks = null) {
             return;
         }
         
-        // Apply gravity and movement
+        // Apply gravity and movement - skiing downhill (toward bottom of screen)
         const maxSpeed = skiFreeConfig.physics?.maxSpeed || 12;
         const baseSpeed = skiFreeConfig.gameplay?.speed || 3;
         
         // Increase speed going downhill
         player.speed = Math.min(maxSpeed, baseSpeed + distance * 0.001);
+        
+        // Move player downhill (positive Y direction)
+        player.y += player.speed;
+        
+        // Keep player on screen vertically
+        if (player.y > canvas.height - 50) {
+            player.y = canvas.height - 50;
+        }
+        if (player.y < 50) {
+            player.y = 50;
+        }
         
         // Handle jumping
         if (player.jumping) {
@@ -173,7 +184,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Update distance and scroll
         distance += player.speed;
-        scrollY += player.speed;
+        scrollY -= player.speed; // Terrain moves upward as player skis down
         
         // Start yeti chase after certain distance
         if (distance > 2000 && !yetiChasing) {
@@ -190,7 +201,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Yeti chases player
         const dx = player.x - yeti.x;
         yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.1, 3);
-        yeti.y += yetiSpeed;
+        yeti.y -= yetiSpeed; // Yeti moves upward (chasing from below)
         
         // Check if yeti caught player
         if (Math.abs(yeti.x - player.x) < 30 && Math.abs(yeti.y - player.y) < 30) {
@@ -207,17 +218,17 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
         
         // Reset yeti position if it goes off screen
-        if (yeti.y > canvas.height + 100) {
-            yeti.y = -100;
+        if (yeti.y < -100) {
+            yeti.y = canvas.height + 100; // Reset to bottom of screen
         }
     }
     
     function updateObstacles() {
         // Update and remove off-screen obstacles
         for (let i = obstacles.length - 1; i >= 0; i--) {
-            obstacles[i].y += scrollY * 0.1;
+            obstacles[i].y += scrollY * 0.1; // Move with terrain scroll
             
-            if (obstacles[i].y > canvas.height + 50) {
+            if (obstacles[i].y < -50) { // Remove when off top of screen
                 obstacles.splice(i, 1);
                 continue;
             }
@@ -235,9 +246,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         for (let i = otherSkiers.length - 1; i >= 0; i--) {
             const skier = otherSkiers[i];
             skier.x += skier.vx;
-            skier.y += skier.vy + scrollY * 0.1;
+            skier.y += skier.vy + scrollY * 0.1; // Move with terrain scroll
             
-            if (skier.y > canvas.height + 50) {
+            if (skier.y < -50) { // Remove when off top of screen
                 otherSkiers.splice(i, 1);
                 continue;
             }
@@ -253,9 +264,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Update jumps
         for (let i = jumps.length - 1; i >= 0; i--) {
-            jumps[i].y += scrollY * 0.1;
+            jumps[i].y += scrollY * 0.1; // Move with terrain scroll
             
-            if (jumps[i].y > canvas.height + 50) {
+            if (jumps[i].y < -50) { // Remove when off top of screen
                 jumps.splice(i, 1);
                 continue;
             }
@@ -295,9 +306,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
         
         // Remove off-screen objects
-        slalomFlags.splice(0, slalomFlags.length, ...slalomFlags.filter(f => f.y < canvas.height + 50));
-        jumps.splice(0, jumps.length, ...jumps.filter(j => j.y < canvas.height + 50));
-        skiLifts.splice(0, skiLifts.length, ...skiLifts.filter(l => l.y < canvas.height + 50));
+        slalomFlags.splice(0, slalomFlags.length, ...slalomFlags.filter(f => f.y > -50));
+        jumps.splice(0, jumps.length, ...jumps.filter(j => j.y > -50));
+        skiLifts.splice(0, skiLifts.length, ...skiLifts.filter(l => l.y > -50));
     }
     
     function render() {
