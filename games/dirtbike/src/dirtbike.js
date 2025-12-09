@@ -504,6 +504,37 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         
+        // Generate one guaranteed gigantic plateau per lap
+        let attempts = 0;
+        let plateauPlaced = false;
+        
+        while (!plateauPlaced && attempts < 100) {
+            const plateauWidth = 200 + Math.random() * 200; // 200-400px wide (gigantic)
+            const plateauHeight = 50 + Math.random() * 50; // 50-100px high (very tall)
+            const hillStart = Math.floor(Math.random() * (singleLapPoints - plateauWidth / resolution));
+            const hillEnd = hillStart + Math.floor(plateauWidth / resolution);
+            
+            // Check for overlap with existing hills
+            let overlaps = false;
+            for (let existingHill of hills) {
+                if (!(hillEnd < existingHill.start || hillStart > existingHill.end)) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            
+            if (!overlaps && hillEnd < singleLapPoints) {
+                hills.push({ 
+                    start: hillStart, 
+                    end: hillEnd, 
+                    height: plateauHeight,
+                    type: 'plateau'
+                });
+                plateauPlaced = true;
+            }
+            attempts++;
+        }
+        
         // Add hills to base terrain
         for (let hill of hills) {
             const hillWidth = hill.end - hill.start;
