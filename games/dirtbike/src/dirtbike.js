@@ -1286,10 +1286,22 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Countdown
         if (!raceStarted) {
+            // Race number display
+            ctx.fillStyle = '#0066FF';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.font = 'bold 36px monospace';
+            const raceText = `Race ${currentLevel}`;
+            const raceWidth = ctx.measureText(raceText).width;
+            const raceX = (canvas.width - raceWidth) / 2;
+            ctx.strokeText(raceText, raceX, 150);
+            ctx.fillText(raceText, raceX, 150);
+            
+            // Countdown display (bigger)
             ctx.fillStyle = '#FF0000';
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 3;
-            ctx.font = 'bold 48px monospace';
+            ctx.lineWidth = 4;
+            ctx.font = 'bold 72px monospace';
             const text = countdown > 0 ? countdown.toString() : 'GO!';
             const textWidth = ctx.measureText(text).width;
             const x = (canvas.width - textWidth) / 2;
