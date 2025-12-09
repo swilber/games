@@ -263,7 +263,14 @@ async function createDirtbikeGame(settings, callbacks = null) {
             riderX: 0,
             riderY: 0,
             bikeRotation: 0,
-            walkingBack: false
+            walkingBack: false,
+            // Add physics properties like player
+            jumping: false,
+            jumpHeight: 0,
+            jumpVelocity: 0,
+            horizontalVelocity: 0,
+            rotation: 0,
+            rotateForward: false
         });
     }
     
@@ -494,13 +501,16 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 player.jumping = false;
                 player.jumpVelocity = 0;
                 
-                // Check landing angle for crash (improved)
+                // Check landing angle for crash - allow 45 degrees in either direction
                 const normalizedRotation = ((player.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                const isUpsideDown = normalizedRotation > Math.PI / 3 && normalizedRotation < Math.PI * 5 / 3;
-                const isSideways = (normalizedRotation > Math.PI / 6 && normalizedRotation < Math.PI / 3) || 
-                                 (normalizedRotation > Math.PI * 5 / 3 && normalizedRotation < Math.PI * 11 / 6);
+                const maxSafeAngle = Math.PI / 4; // 45 degrees
                 
-                if (isUpsideDown || (isSideways && player.speed > 5)) {
+                // Check if rotation is within safe landing range (45 degrees forward or backward from upright)
+                const isUpsideDown = normalizedRotation > (Math.PI - maxSafeAngle) && normalizedRotation < (Math.PI + maxSafeAngle);
+                const isTooSteep = normalizedRotation > maxSafeAngle && normalizedRotation < (Math.PI - maxSafeAngle) ||
+                                  normalizedRotation > (Math.PI + maxSafeAngle) && normalizedRotation < (2 * Math.PI - maxSafeAngle);
+                
+                if (isUpsideDown || isTooSteep) {
                     crashPlayer("bad_landing");
                 } else {
                     // Safe landing - reset rotation
@@ -546,15 +556,23 @@ async function createDirtbikeGame(settings, callbacks = null) {
                         opponent.riderX = 0;
                         opponent.riderY = 0;
                         opponent.bikeRotation = 0;
+                        opponent.rotation = 0;
                     }
                 }
                 continue; // Skip normal movement during crash
             }
             
-            // Simple AI
+            // Simple AI behavior
             opponent.speed += (Math.random() - 0.5) * 0.1;
             opponent.speed = Math.max(2, Math.min(8, opponent.speed));
-            opponent.position += opponent.speed;
+            
+            // Only apply normal speed when not jumping (like player)
+            if (!opponent.jumping) {
+                opponent.position += opponent.speed;
+            }
+            
+            // Apply same terrain physics as player
+            updateOpponentTerrainFollowing(opponent);
             
             // Occasional lane changes
             if (Math.random() < 0.002) {
@@ -619,6 +637,85 @@ async function createDirtbikeGame(settings, callbacks = null) {
         player.onOilSlick = false;
     }
     
+    function updateOpponentTerrainFollowing(opponent) {
+        const terrainHeight = getTerrainHeight(opponent.position);
+        const gravity = 0.15;
+        
+        if (opponent.jumping) {
+            // Apply gravity and physics while airborne
+            opponent.jumpVelocity -= gravity;
+            opponent.jumpHeight += opponent.jumpVelocity;
+            
+            // Use horizontal velocity instead of normal speed while jumping
+            opponent.position += opponent.horizontalVelocity;
+            // No air resistance - maintain horizontal velocity
+            
+            // AI tries to correct rotation for landing
+            if (Math.abs(opponent.rotation) > 0.1) {
+                if (opponent.rotation > 0) {
+                    opponent.rotation -= 0.03; // Correct clockwise rotation
+                } else {
+                    opponent.rotation += 0.03; // Correct counter-clockwise rotation
+                }
+            }
+            
+            // Check if landed back on terrain
+            if (opponent.jumpHeight <= terrainHeight) {
+                opponent.jumpHeight = terrainHeight;
+                opponent.jumping = false;
+                opponent.jumpVelocity = 0;
+                opponent.horizontalVelocity = 0;
+                
+                // Check landing angle for crash - same as player
+                const normalizedRotation = ((opponent.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                const maxSafeAngle = Math.PI / 4; // 45 degrees
+                
+                const isUpsideDown = normalizedRotation > (Math.PI - maxSafeAngle) && normalizedRotation < (Math.PI + maxSafeAngle);
+                const isTooSteep = normalizedRotation > maxSafeAngle && normalizedRotation < (Math.PI - maxSafeAngle) ||
+                                  normalizedRotation > (Math.PI + maxSafeAngle) && normalizedRotation < (2 * Math.PI - maxSafeAngle);
+                
+                if (isUpsideDown || isTooSteep) {
+                    // Opponent crashes
+                    opponent.crashed = true;
+                    opponent.crashTimer = 0;
+                    opponent.speed = 0;
+                    opponent.riderX = 0;
+                    opponent.riderY = 0;
+                    opponent.bikeRotation = Math.random() * Math.PI * 2;
+                    opponent.walkingBack = false;
+                } else {
+                    opponent.rotation = 0;
+                }
+            }
+        } else {
+            // Same launch physics as player
+            const lookAhead = 10;
+            const lookBehind = 5;
+            const futureHeight = getTerrainHeight(opponent.position + lookAhead);
+            const pastHeight = getTerrainHeight(opponent.position - lookBehind);
+            const currentTerrain = terrainHeight;
+            
+            const wasGoingUp = currentTerrain > pastHeight;
+            const willGoDown = futureHeight < currentTerrain;
+            const isAtPeak = wasGoingUp && willGoDown;
+            const upwardSlope = currentTerrain - pastHeight;
+            
+            // Launch if at hill peak with sufficient velocity
+            if (isAtPeak && opponent.speed > 4 && upwardSlope > 1) {
+                const slopeAngle = Math.atan2(upwardSlope, lookBehind);
+                const launchSpeed = opponent.speed * 0.8;
+                
+                opponent.jumping = true;
+                opponent.jumpVelocity = launchSpeed * Math.sin(slopeAngle);
+                opponent.horizontalVelocity = launchSpeed * Math.cos(slopeAngle);
+                opponent.jumpHeight = terrainHeight;
+            } else {
+                // Follow terrain
+                opponent.jumpHeight = terrainHeight;
+            }
+        }
+    }
+    
     function updateTerrainFollowing() {
         const terrainHeight = getTerrainHeight(player.position);
         const gravity = 0.15;
@@ -630,7 +727,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Use horizontal velocity instead of normal speed while jumping
             player.position += player.horizontalVelocity;
-            player.horizontalVelocity *= 0.99; // Very slight air resistance
+            // No air resistance - maintain horizontal velocity
             
             // Check if landed back on terrain
             if (player.jumpHeight <= terrainHeight) {
@@ -639,13 +736,16 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 player.jumpVelocity = 0;
                 player.horizontalVelocity = 0; // Reset horizontal velocity on landing
                 
-                // Check landing angle for crash
+                // Check landing angle for crash - allow 45 degrees in either direction
                 const normalizedRotation = ((player.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-                const isUpsideDown = normalizedRotation > Math.PI / 3 && normalizedRotation < Math.PI * 5 / 3;
-                const isSideways = (normalizedRotation > Math.PI / 6 && normalizedRotation < Math.PI / 3) || 
-                                 (normalizedRotation > Math.PI * 5 / 3 && normalizedRotation < Math.PI * 11 / 6);
+                const maxSafeAngle = Math.PI / 4; // 45 degrees
                 
-                if (isUpsideDown || (isSideways && player.speed > 5)) {
+                // Check if rotation is within safe landing range (45 degrees forward or backward from upright)
+                const isUpsideDown = normalizedRotation > (Math.PI - maxSafeAngle) && normalizedRotation < (Math.PI + maxSafeAngle);
+                const isTooSteep = normalizedRotation > maxSafeAngle && normalizedRotation < (Math.PI - maxSafeAngle) ||
+                                  normalizedRotation > (Math.PI + maxSafeAngle) && normalizedRotation < (2 * Math.PI - maxSafeAngle);
+                
+                if (isUpsideDown || isTooSteep) {
                     crashPlayer("bad_landing");
                 } else {
                     player.rotation = 0;
@@ -964,7 +1064,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 } else {
                     // Normal opponent rendering
                     ctx.save();
-                    ctx.translate(screenX, laneY);
+                    ctx.translate(screenX, laneY - opponent.jumpHeight);
+                    ctx.rotate(opponent.rotation); // Add rotation like player
                     
                     // Wheels first (behind bike)
                     ctx.fillStyle = '#000000';
