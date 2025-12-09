@@ -1600,6 +1600,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Handle restart
         if (e.code === 'KeyR' && raceFinished && coastingToStop && finalPosition > 1) {
+            // Reset to level 1 (restart entire game)
+            currentLevel = 1;
+            
             // Reset game state
             gameWon = false;
             gameStarted = false;
@@ -1638,11 +1641,11 @@ async function createDirtbikeGame(settings, callbacks = null) {
             player.onOilSlick = false;
             player.jumpCooldown = 0;
             
-            // Reset opponents
+            // Reset opponents with level 1 speeds
             for (let i = 0; i < opponents.length; i++) {
                 opponents[i].lane = i === 0 ? 0 : i === 1 ? 1 : 3; // Reset to starting lanes
                 opponents[i].position = 0;
-                opponents[i].speed = 3 + Math.random() * 2;
+                opponents[i].speed = levelConfigs[1].opponentBaseSpeed + Math.random() * levelConfigs[1].opponentSpeedRange;
                 opponents[i].crashed = false;
                 opponents[i].crashTimer = 0;
                 opponents[i].riderX = 0;
@@ -1657,6 +1660,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 opponents[i].rotation = 0;
                 opponents[i].rotateForward = false;
             }
+            
+            // Regenerate track for level 1
+            generateTrack();
             
             gameRunning = true;
             return;
