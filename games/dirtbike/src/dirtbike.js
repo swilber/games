@@ -640,6 +640,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     player.rotation = 0;
                 }
             }
+            
+            // Continue moving forward slowly during crash to prevent falling too far behind
+            player.position += 1; // Slow forward movement during crash
             return; // Skip normal movement during crash
         }
         
