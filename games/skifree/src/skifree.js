@@ -151,11 +151,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Friction-based movement system with direction-specific max speeds
         const directions = [
-            { targetVx: -1, targetVy: 0, friction: 0.85, maxSpeed: 0.4 },    // 0: left (slowest)
-            { targetVx: -0.7, targetVy: 1, friction: 0.92, maxSpeed: 0.6 }, // 1: left-down 
-            { targetVx: 0, targetVy: 1.5, friction: 0.96, maxSpeed: 0.9 },  // 2: down (fastest)
-            { targetVx: 0.7, targetVy: 1, friction: 0.92, maxSpeed: 0.6 },  // 3: right-down
-            { targetVx: 1, targetVy: 0, friction: 0.85, maxSpeed: 0.4 }     // 4: right (slowest)
+            { targetVx: -0.4, targetVy: 0, friction: 0.85, maxSpeed: 0.4 },    // 0: left (slowest)
+            { targetVx: -0.3, targetVy: 0.5, friction: 0.92, maxSpeed: 0.6 }, // 1: left-down 
+            { targetVx: 0, targetVy: 0.9, friction: 0.96, maxSpeed: 0.9 },    // 2: down (fastest)
+            { targetVx: 0.3, targetVy: 0.5, friction: 0.92, maxSpeed: 0.6 },  // 3: right-down
+            { targetVx: 0.4, targetVy: 0, friction: 0.85, maxSpeed: 0.4 }     // 4: right (slowest)
         ];
         
         const direction = directions[player.skiDirection];
