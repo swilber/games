@@ -509,8 +509,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         let plateauPlaced = false;
         
         while (!plateauPlaced && attempts < 100) {
-            const plateauWidth = 200 + Math.random() * 200; // 200-400px wide (gigantic)
-            const plateauHeight = 50 + Math.random() * 50; // 50-100px high (very tall)
+            const plateauWidth = 400 + Math.random() * 400; // 400-800px wide (massive)
+            const plateauHeight = 80 + Math.random() * 80; // 80-160px high (extremely tall)
             const hillStart = Math.floor(Math.random() * (singleLapPoints - plateauWidth / resolution));
             const hillEnd = hillStart + Math.floor(plateauWidth / resolution);
             
