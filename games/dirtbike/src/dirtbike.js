@@ -746,6 +746,37 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 opponent.lane = Math.max(0, Math.min(3, opponent.lane + (Math.random() < 0.5 ? -1 : 1)));
             }
         }
+        
+        // Check opponent-to-opponent collisions
+        checkOpponentToOpponentCollisions();
+    }
+    
+    function checkOpponentToOpponentCollisions() {
+        for (let i = 0; i < opponents.length; i++) {
+            const opponent1 = opponents[i];
+            if (opponent1.jumping || opponent1.crashed) continue; // Skip if jumping or already crashed
+            
+            for (let j = i + 1; j < opponents.length; j++) {
+                const opponent2 = opponents[j];
+                if (opponent2.jumping || opponent2.crashed) continue; // Skip if jumping or already crashed
+                
+                // Check if opponents are in same lane and close position
+                if (opponent1.lane === opponent2.lane) {
+                    const distance = Math.abs(opponent1.position - opponent2.position);
+                    if (distance < 30) { // Same collision threshold as player
+                        // Determine who crashes based on position (same logic as player collisions)
+                        if (opponent1.position > opponent2.position) {
+                            // Opponent1 is ahead - opponent2 crashes into opponent1's back
+                            crashOpponent(j);
+                        } else {
+                            // Opponent2 is ahead - opponent1 crashes into opponent2's back
+                            crashOpponent(i);
+                        }
+                        return; // Only handle one collision per frame
+                    }
+                }
+            }
+        }
     }
     
     function checkOpponentCollisions() {
