@@ -246,7 +246,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     const flatWidth = rampWidth * 0.5;
                     const rampDownWidth = rampWidth * 0.25;
                     
-                    // Left ramp up
+                    // Left ramp up (darker brown)
                     trackCtx.fillStyle = '#A0522D';
                     trackCtx.beginPath();
                     trackCtx.moveTo(startX, jumpBottom);
@@ -256,23 +256,23 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     trackCtx.closePath();
                     trackCtx.fill();
                     
-                    // Flat top
-                    trackCtx.fillStyle = '#F4E4BC';
-                    trackCtx.beginPath();
-                    trackCtx.moveTo(startX + rampUpWidth, jumpBottom - maxHeight);
-                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
-                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpTop - maxHeight);
-                    trackCtx.lineTo(startX + rampUpWidth, jumpTop - maxHeight);
-                    trackCtx.closePath();
-                    trackCtx.fill();
-                    
-                    // Right ramp down
+                    // Right ramp down (lightest brown)
                     trackCtx.fillStyle = '#D2B48C';
                     trackCtx.beginPath();
                     trackCtx.moveTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
                     trackCtx.lineTo(endX, jumpBottom);
                     trackCtx.lineTo(endX, jumpTop);
                     trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpTop - maxHeight);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                    
+                    // Flat top face (medium brown - lighter than ramp up, darker than ramp down)
+                    trackCtx.fillStyle = '#C19A6B';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX + rampUpWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpTop - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth, jumpTop - maxHeight);
                     trackCtx.closePath();
                     trackCtx.fill();
                 } else {
