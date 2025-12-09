@@ -640,9 +640,6 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     player.rotation = 0;
                 }
             }
-            
-            // Continue moving forward slowly during crash to prevent falling too far behind
-            player.position += 1; // Slow forward movement during crash
             return; // Skip normal movement during crash
         }
         
@@ -1052,13 +1049,6 @@ async function createDirtbikeGame(settings, callbacks = null) {
         player.riderY = -10 - Math.random() * 10; // Fall up then down
         player.bikeRotation = Math.random() * Math.PI * 2; // Random bike spin
         player.walkingBack = false;
-        
-        // Move opponents ahead to avoid immediate re-collision
-        for (let opponent of opponents) {
-            if (opponent.position < player.position + 200) {
-                opponent.position = player.position + 200 + Math.random() * 100;
-            }
-        }
     }
     
     function getPlayerPosition() {
