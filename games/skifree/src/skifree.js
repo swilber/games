@@ -36,7 +36,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         vx: 0,
         vy: 0,
         speed: 0,
-        angle: 0,
+        skiDirection: 2, // 0=left, 1=left-down, 2=down, 3=right-down, 4=right
         jumping: false,
         jumpHeight: 0,
         jumpVelocity: 0,
@@ -146,14 +146,28 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
         
         // Apply gravity and movement - skiing downhill (toward bottom of screen)
-        const maxSpeed = skiFreeConfig.physics?.maxSpeed || 12;
-        const baseSpeed = skiFreeConfig.gameplay?.speed || 3;
+        const maxSpeed = 4; // Much slower max speed
+        const baseSpeed = 1; // Much slower base speed
         
-        // Increase speed going downhill
-        player.speed = Math.min(maxSpeed, baseSpeed + distance * 0.001);
+        // Calculate movement based on ski direction
+        const directions = [
+            { vx: -2, vy: 1 },    // 0: left
+            { vx: -1, vy: 2 },    // 1: left-down  
+            { vx: 0, vy: 3 },     // 2: down (fastest)
+            { vx: 1, vy: 2 },     // 3: right-down
+            { vx: 2, vy: 1 }      // 4: right
+        ];
         
-        // Move player downhill (positive Y direction)
-        player.y += player.speed;
+        const direction = directions[player.skiDirection];
+        player.vx = direction.vx;
+        player.vy = direction.vy;
+        
+        // Apply movement
+        player.x += player.vx;
+        player.y += player.vy;
+        
+        // Calculate speed for scoring (based on downhill component)
+        player.speed = Math.abs(player.vy);
         
         // Keep player on screen vertically
         if (player.y > canvas.height - 50) {
@@ -183,8 +197,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
         
         // Update distance and scroll
-        distance += player.speed;
-        scrollY -= player.speed; // Terrain moves upward as player skis down
+        distance += Math.abs(player.vy); // Only count downhill movement
+        scrollY -= Math.abs(player.vy); // Terrain moves upward as player skis down
         
         // Start yeti chase after certain distance
         if (distance > 2000 && !yetiChasing) {
@@ -385,13 +399,19 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.fillStyle = '#FF0000';
             ctx.fillRect(-8, -5, 16, 10);
         } else {
-            // Draw normal player
+            // Draw normal player with ski direction
             ctx.fillStyle = skiFreeConfig.visual?.playerColor || '#ff0000';
             ctx.fillRect(-5, -10, 10, 20);
             
-            // Draw skis
+            // Draw skis based on direction
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-10, 5, 20, 3);
+            const skiAngles = [-45, -22.5, 0, 22.5, 45]; // Angles for each direction
+            const angle = skiAngles[player.skiDirection] * Math.PI / 180;
+            
+            ctx.save();
+            ctx.rotate(angle);
+            ctx.fillRect(-12, 5, 24, 3); // Skis
+            ctx.restore();
             
             // Draw poles
             ctx.strokeStyle = '#000000';
@@ -436,10 +456,10 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (!gameStarted) {
             ctx.fillStyle = '#000000';
             ctx.font = '18px Arial';
-            ctx.fillText('Use LEFT/RIGHT arrows to steer', canvas.width / 2 - 120, canvas.height / 2);
-            ctx.fillText('Avoid trees, rocks, and other skiers', canvas.width / 2 - 140, canvas.height / 2 + 25);
-            ctx.fillText('Hit jumps for bonus points', canvas.width / 2 - 100, canvas.height / 2 + 50);
-            ctx.fillText('Collect slalom flags for points', canvas.width / 2 - 110, canvas.height / 2 + 75);
+            ctx.fillText('Use LEFT/RIGHT arrows to turn skis', canvas.width / 2 - 130, canvas.height / 2);
+            ctx.fillText('Ski positions: Left, Left-Down, Down, Right-Down, Right', canvas.width / 2 - 180, canvas.height / 2 + 25);
+            ctx.fillText('Avoid trees, rocks, and other skiers', canvas.width / 2 - 140, canvas.height / 2 + 50);
+            ctx.fillText('Hit jumps for bonus points', canvas.width / 2 - 100, canvas.height / 2 + 75);
             ctx.fillText('Press any arrow key to start', canvas.width / 2 - 100, canvas.height / 2 + 100);
         }
         
@@ -489,13 +509,14 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         if (!gameRunning || player.crashed || player.onLift) return;
         
-        const turnSpeed = 3;
         switch(e.code) {
             case 'ArrowLeft':
-                player.vx -= turnSpeed;
+                // Move ski direction one position to the left
+                player.skiDirection = Math.max(0, player.skiDirection - 1);
                 break;
             case 'ArrowRight':
-                player.vx += turnSpeed;
+                // Move ski direction one position to the right
+                player.skiDirection = Math.min(4, player.skiDirection + 1);
                 break;
         }
         
