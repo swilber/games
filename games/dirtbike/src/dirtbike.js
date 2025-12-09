@@ -1483,25 +1483,35 @@ async function createDirtbikeGame(settings, callbacks = null) {
     }
     
     function renderUI() {
-        // Speed and heat
-        ctx.fillStyle = '#000000';
-        ctx.font = '16px monospace';
-        ctx.fillText(`Speed: ${Math.floor(player.speed * 10)}`, 10, 25);
-        ctx.fillText(`Lap: ${player.currentLap}/${lapsRequired}`, 10, 65);
-        ctx.fillText(`Level: ${currentLevel}/${maxLevels}`, 10, 125);
+        // Set text color based on theme
+        const textColor = levelConfigs[currentLevel].theme === 'night' ? '#FFFFFF' : '#000000';
         
-        // Heat gauge
+        // Top row UI - all in one line
+        ctx.fillStyle = textColor;
+        ctx.font = '16px monospace';
+        
+        // Calculate positions for horizontal layout
+        const speed = `Speed: ${Math.floor(player.speed * 10)}`;
+        const lap = `Lap: ${player.currentLap}/${lapsRequired}`;
+        const level = `Level: ${currentLevel}/${maxLevels}`;
+        const position = `Position: ${getPlayerPosition()}/4`;
+        const distance = `Distance: ${Math.floor(player.position)}m`;
+        
+        // Display all info in single row across top
+        ctx.fillText(speed, 10, 25);
+        ctx.fillText(lap, 150, 25);
+        ctx.fillText(level, 280, 25);
+        ctx.fillText(position, 420, 25);
+        ctx.fillText(distance, 580, 25);
+        
+        // Heat gauge (moved to top row)
         const heatPercent = player.heat / player.maxHeat;
         ctx.fillStyle = '#333333';
-        ctx.fillRect(10, 35, 100, 15);
+        ctx.fillRect(10, 35, 100, 10); // Smaller height
         ctx.fillStyle = heatPercent > 0.8 ? '#FF0000' : heatPercent > 0.6 ? '#FFAA00' : '#00FF00';
-        ctx.fillRect(10, 35, 100 * heatPercent, 15);
-        ctx.fillStyle = '#000000';
-        ctx.fillText('Heat', 10, 65);
-        
-        // Position and distance
-        ctx.fillText(`Position: ${getPlayerPosition()}/4`, 10, 85);
-        ctx.fillText(`Distance: ${Math.floor(player.position)}m`, 10, 105);
+        ctx.fillRect(10, 35, 100 * heatPercent, 10);
+        ctx.fillStyle = textColor;
+        ctx.fillText('Heat', 120, 44);
         
         // Position leaderboard
         if (raceStarted) {
