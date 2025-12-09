@@ -1039,11 +1039,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             const wasGoingUp = currentTerrain > pastHeight;
             const willGoDown = futureHeight < currentTerrain;
+            const willStayFlat = Math.abs(futureHeight - currentTerrain) < 2; // Within 2 pixels is considered flat
             const isAtPeak = wasGoingUp && willGoDown;
+            const isAtPlateauEdge = wasGoingUp && willStayFlat && upwardSlope > 3; // Plateau transition with decent slope
             const upwardSlope = currentTerrain - pastHeight;
             
-            // Launch if at hill peak with sufficient velocity
-            if (isAtPeak && opponent.speed > 4 && upwardSlope > 1) {
+            // Launch if at hill peak OR plateau edge with sufficient velocity
+            if ((isAtPeak || isAtPlateauEdge) && opponent.speed > 4 && upwardSlope > 1) {
                 const slopeAngle = Math.atan2(upwardSlope, lookBehind);
                 const launchSpeed = opponent.speed * 0.8;
                 
@@ -1104,16 +1106,18 @@ async function createDirtbikeGame(settings, callbacks = null) {
             const pastHeight = getTerrainHeight(player.position - lookBehind);
             const currentTerrain = terrainHeight;
             
-            // Calculate if we're at a hill peak (going from up to down)
+            // Calculate if we're at a hill peak (going from up to down) or plateau edge (going from up to flat)
             const wasGoingUp = currentTerrain > pastHeight;
             const willGoDown = futureHeight < currentTerrain;
+            const willStayFlat = Math.abs(futureHeight - currentTerrain) < 2; // Within 2 pixels is considered flat
             const isAtPeak = wasGoingUp && willGoDown;
+            const isAtPlateauEdge = wasGoingUp && willStayFlat && upwardSlope > 3; // Plateau transition with decent slope
             
             // Calculate slope we just came from
             const upwardSlope = currentTerrain - pastHeight;
             
-            // Launch if we're at a hill peak with sufficient velocity (any slope)
-            if (isAtPeak && player.speed > 4 && upwardSlope > 1) {
+            // Launch if we're at a hill peak OR plateau edge with sufficient velocity
+            if ((isAtPeak || isAtPlateauEdge) && player.speed > 4 && upwardSlope > 1) {
                 // Calculate slope angle for launch direction
                 const slopeAngle = Math.atan2(upwardSlope, lookBehind);
                 const launchSpeed = player.speed * 0.8; // Back to original
