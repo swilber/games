@@ -65,9 +65,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 25, // More hills
             oilSlicksPerLap: 20, // More oil slicks
             opponentCrashChance: 0.15,
-            opponentBaseSpeed: 4.5, // Reduced by 0.5
-            opponentSpeedRange: 2.5, // 4.5-7 speed range
-            opponentMaxSpeed: 8.0, // Reduced by 0.5
+            opponentBaseSpeed: 5, // Increased by 0.5
+            opponentSpeedRange: 2.5, // 5-7.5 speed range
+            opponentMaxSpeed: 8.5, // Increased by 0.5
             skyColor: '#FFB347',
             theme: 'dawn'
         }
