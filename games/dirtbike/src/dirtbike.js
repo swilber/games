@@ -78,7 +78,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     function generateTrack() {
         // Create off-screen canvas for track
         trackCanvas = document.createElement('canvas');
-        trackCanvas.width = trackLength + 2000; // Much more extra space for coasting
+        trackCanvas.width = totalTrackLength + 2000; // All 3 laps plus coasting space
         trackCanvas.height = 400;
         trackCtx = trackCanvas.getContext('2d');
         
