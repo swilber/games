@@ -42,22 +42,22 @@ async function createDirtbikeGame(settings, callbacks = null) {
     // Level configurations
     const levelConfigs = {
         1: { // Day - Blue sky with clouds
-            hillCount: 9, // 3x more hills
-            oilSlicksPerLap: 6, // 3x more oil slicks
+            hillCount: 15, // More hills for longer track
+            oilSlicksPerLap: 10, // More oil slicks
             opponentCrashChance: 0.4,
             skyColor: '#87CEEB',
             theme: 'day'
         },
         2: { // Night - Dark sky with stars and moon
-            hillCount: 15, // 3x more hills
-            oilSlicksPerLap: 9, // 3x more oil slicks
+            hillCount: 20, // More hills
+            oilSlicksPerLap: 15, // More oil slicks
             opponentCrashChance: 0.25,
             skyColor: '#191970',
             theme: 'night'
         },
         3: { // Dawn - Light over horizon
-            hillCount: 21, // 3x more hills
-            oilSlicksPerLap: 12, // 3x more oil slicks
+            hillCount: 25, // More hills
+            oilSlicksPerLap: 20, // More oil slicks
             opponentCrashChance: 0.15,
             skyColor: '#FFB347',
             theme: 'dawn'
