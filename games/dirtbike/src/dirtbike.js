@@ -479,9 +479,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Rotation while jumping
             if (player.rotateForward) {
-                player.rotation += 0.05; // Slower forward rotation
+                player.rotation += 0.05; // Forward rotation (clockwise) with RIGHT arrow
             } else {
-                player.rotation -= 0.05; // Slower backward rotation
+                player.rotation -= 0.02; // Natural backward rotation (counter-clockwise)
             }
             
             if (player.jumpHeight <= 0) {
@@ -616,8 +616,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     function updateTerrainFollowing() {
         const terrainHeight = getTerrainHeight(player.position);
+        const gravity = 0.2;
         
         if (player.jumping) {
+            // Apply gravity and physics while airborne
+            player.jumpVelocity -= gravity;
+            player.jumpHeight += player.jumpVelocity;
+            
             // Check if landed back on terrain
             if (player.jumpHeight <= terrainHeight) {
                 player.jumpHeight = terrainHeight;
@@ -637,19 +642,39 @@ async function createDirtbikeGame(settings, callbacks = null) {
                 }
             }
         } else {
-            // Follow terrain when not jumping
+            // Physics-based terrain following
             const currentHeight = player.jumpHeight || 0;
-            const heightDiff = terrainHeight - currentHeight;
             
-            // If going up a steep slope fast enough, launch into air
-            if (heightDiff > 3 && player.speed > 6) {
+            // Look ahead and behind to detect hill shape
+            const lookAhead = 10;
+            const lookBehind = 5;
+            const futureHeight = getTerrainHeight(player.position + lookAhead);
+            const pastHeight = getTerrainHeight(player.position - lookBehind);
+            const currentTerrain = terrainHeight;
+            
+            // Calculate if we're at a hill peak (going from up to down)
+            const wasGoingUp = currentTerrain > pastHeight;
+            const willGoDown = futureHeight < currentTerrain;
+            const isAtPeak = wasGoingUp && willGoDown;
+            
+            // Calculate slope we just came from
+            const upwardSlope = currentTerrain - pastHeight;
+            
+            // Launch if we're at a hill peak with sufficient speed and momentum
+            if (isAtPeak && player.speed > 5 && upwardSlope > 3) {
+                // Launch with momentum based on speed and slope
+                const momentum = player.speed * 0.8;
+                const slopeBonus = Math.min(upwardSlope * 0.3, 5);
+                
                 player.jumping = true;
-                player.jumpVelocity = Math.min(player.speed * 0.8, 15);
+                player.jumpVelocity = momentum + slopeBonus;
                 if (player.throttle) {
-                    player.jumpVelocity += 3;
+                    player.jumpVelocity += 4; // Throttle boost
                 }
+                player.jumpHeight = terrainHeight;
+                console.log(`Launching! Speed: ${player.speed}, Slope: ${upwardSlope}, Velocity: ${player.jumpVelocity}`);
             } else {
-                // Follow terrain contour
+                // Follow terrain
                 player.jumpHeight = terrainHeight;
             }
         }
