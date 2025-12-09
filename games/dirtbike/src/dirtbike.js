@@ -275,6 +275,16 @@ async function createDirtbikeGame(settings, callbacks = null) {
                     trackCtx.lineTo(startX + rampUpWidth, jumpTop - maxHeight);
                     trackCtx.closePath();
                     trackCtx.fill();
+                    
+                    // Bottom trapezoidal face (lightest brown)
+                    trackCtx.fillStyle = '#F4E4BC';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX, jumpBottom);
+                    trackCtx.lineTo(startX + rampUpWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(endX, jumpBottom);
+                    trackCtx.closePath();
+                    trackCtx.fill();
                 } else {
                     // Draw regular triangular hill
                     // Main face (darker brown) - left slope
