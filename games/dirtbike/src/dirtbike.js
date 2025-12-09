@@ -23,6 +23,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     let lapDisplayTimer = 0;
     let showLapDisplay = false;
     let displayedLap = 1;
+    let finalPosition = 1; // Store final position when player finishes
     
     // Create canvas
     const canvas = document.createElement('canvas');
@@ -407,6 +408,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             raceFinished = true;
             coastingToStop = true;
             player.throttle = false; // Stop acceleration
+            finalPosition = getPlayerPosition(); // Store final position
         }
         
         // Check if coasting is complete (bike has stopped)
@@ -1182,7 +1184,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Race finished message
         if (raceFinished && coastingToStop) {
-            const position = getPlayerPosition();
+            const position = finalPosition; // Use stored final position
             ctx.fillStyle = position === 1 ? '#00FF00' : '#FFAA00';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
@@ -1242,7 +1244,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         if (!gameKeys.includes(e.code)) return;
         
         // Handle restart
-        if (e.code === 'KeyR' && raceFinished && coastingToStop && getPlayerPosition() > 1) {
+        if (e.code === 'KeyR' && raceFinished && coastingToStop && finalPosition > 1) {
             // Reset game state
             gameWon = false;
             gameStarted = false;
@@ -1255,6 +1257,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             lapDisplayTimer = 0;
             showLapDisplay = false;
             displayedLap = 1;
+            finalPosition = 1; // Reset final position
             
             // Reset player
             player.lane = 2;
