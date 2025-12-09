@@ -1495,14 +1495,12 @@ async function createDirtbikeGame(settings, callbacks = null) {
         const lap = `Lap: ${player.currentLap}/${lapsRequired}`;
         const level = `Level: ${currentLevel}/${maxLevels}`;
         const position = `Position: ${getPlayerPosition()}/4`;
-        const distance = `Distance: ${Math.floor(player.position)}m`;
         
         // Display all info in single row across top
         ctx.fillText(speed, 10, 25);
         ctx.fillText(lap, 150, 25);
         ctx.fillText(level, 280, 25);
         ctx.fillText(position, 420, 25);
-        ctx.fillText(distance, 580, 25);
         
         // Heat gauge (moved to top row)
         const heatPercent = player.heat / player.maxHeat;
