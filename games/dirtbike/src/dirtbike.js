@@ -45,6 +45,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 15, // More hills for longer track
             oilSlicksPerLap: 10, // More oil slicks
             opponentCrashChance: 0.4,
+            opponentBaseSpeed: 4, // Easy level - slower opponents
+            opponentSpeedRange: 2, // 4-6 speed range
+            opponentMaxSpeed: 7.5, // Lower max speed
             skyColor: '#87CEEB',
             theme: 'day'
         },
@@ -52,6 +55,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 20, // More hills
             oilSlicksPerLap: 15, // More oil slicks
             opponentCrashChance: 0.25,
+            opponentBaseSpeed: 5, // Medium level
+            opponentSpeedRange: 2.5, // 5-7.5 speed range
+            opponentMaxSpeed: 8.5, // Medium max speed
             skyColor: '#191970',
             theme: 'night'
         },
@@ -59,6 +65,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             hillCount: 25, // More hills
             oilSlicksPerLap: 20, // More oil slicks
             opponentCrashChance: 0.15,
+            opponentBaseSpeed: 5.5, // Hard level - current speed
+            opponentSpeedRange: 2.75, // 5.5-8.25 speed range
+            opponentMaxSpeed: 9.5, // Current max speed
             skyColor: '#FFB347',
             theme: 'dawn'
         }
@@ -363,7 +372,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         opponents.push({
             lane: i === 0 ? 0 : i === 1 ? 1 : 3, // Lanes 0, 1, 3 (player in lane 2)
             position: 0,
-            speed: 5.5 + Math.random() * 2.75, // 5.5-8.25 speed range (middle ground)
+            speed: levelConfigs[currentLevel].opponentBaseSpeed + Math.random() * levelConfigs[currentLevel].opponentSpeedRange,
             color: opponentColors[i],
             crashed: false,
             crashTimer: 0,
@@ -623,7 +632,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             const randomIndex = Math.floor(Math.random() * availableLanes.length);
             opponent.lane = availableLanes.splice(randomIndex, 1)[0];
             opponent.position = 0;
-            opponent.speed = 5.5 + Math.random() * 2.75; // Match initial speed range
+            opponent.speed = levelConfigs[currentLevel].opponentBaseSpeed + Math.random() * levelConfigs[currentLevel].opponentSpeedRange;
             opponent.crashed = false;
             opponent.crashTimer = 0;
             opponent.jumping = false;
@@ -865,7 +874,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
             
             // Simple AI behavior
             opponent.speed += (Math.random() - 0.5) * 0.1;
-            opponent.speed = Math.max(3.5, Math.min(9.5, opponent.speed)); // 3.5-9.5 speed range
+            opponent.speed = Math.max(2, Math.min(levelConfigs[currentLevel].opponentMaxSpeed, opponent.speed));
             
             // Only apply normal speed when not jumping (like player)
             if (!opponent.jumping) {
