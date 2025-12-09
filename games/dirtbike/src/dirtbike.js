@@ -226,45 +226,88 @@ async function createDirtbikeGame(settings, callbacks = null) {
             if (terrain[i] === 0 && rampStart !== -1) {
                 rampEnd = i - 1; // End of ramp
                 
-                // Draw complete ramp (account for player screen position)
+                // Analyze terrain shape to determine if it's a plateau
+                const rampTerrain = terrain.slice(rampStart, rampEnd + 1);
+                const maxHeight = Math.max(...rampTerrain);
+                const flatTopCount = rampTerrain.filter(h => h >= maxHeight * 0.95).length; // Count near-max height points
+                const isPlateauShape = flatTopCount > rampTerrain.length * 0.3; // If >30% is flat top, it's a plateau
+                
+                // Draw complete ramp
                 const startX = rampStart * 2 + 400;
                 const endX = rampEnd * 2 + 400;
                 const rampWidth = endX - startX;
-                const maxHeight = Math.max(...terrain.slice(rampStart, rampEnd + 1));
                 
                 const jumpTop = 204;
                 const jumpBottom = 316;
                 
-                // Main face (darker brown) - left slope
-                trackCtx.fillStyle = '#A0522D';
-                trackCtx.beginPath();
-                trackCtx.moveTo(startX, jumpBottom);
-                trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
-                trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
-                trackCtx.lineTo(startX, jumpTop);
-                trackCtx.closePath();
-                trackCtx.fill();
+                if (isPlateauShape) {
+                    // Draw plateau (trapezoidal) shape
+                    const rampUpWidth = rampWidth * 0.25;
+                    const flatWidth = rampWidth * 0.5;
+                    const rampDownWidth = rampWidth * 0.25;
+                    
+                    // Left ramp up
+                    trackCtx.fillStyle = '#A0522D';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX, jumpBottom);
+                    trackCtx.lineTo(startX + rampUpWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth, jumpTop - maxHeight);
+                    trackCtx.lineTo(startX, jumpTop);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                    
+                    // Flat top
+                    trackCtx.fillStyle = '#F4E4BC';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX + rampUpWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpTop - maxHeight);
+                    trackCtx.lineTo(startX + rampUpWidth, jumpTop - maxHeight);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                    
+                    // Right ramp down
+                    trackCtx.fillStyle = '#D2B48C';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX + rampUpWidth + flatWidth, jumpBottom - maxHeight);
+                    trackCtx.lineTo(endX, jumpBottom);
+                    trackCtx.lineTo(endX, jumpTop);
+                    trackCtx.lineTo(startX + rampUpWidth + flatWidth, jumpTop - maxHeight);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                } else {
+                    // Draw regular triangular hill
+                    // Main face (darker brown) - left slope
+                    trackCtx.fillStyle = '#A0522D';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX, jumpBottom);
+                    trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                    trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
+                    trackCtx.lineTo(startX, jumpTop);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                    
+                    // Right face (light brown) - right slope
+                    trackCtx.fillStyle = '#D2B48C';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                    trackCtx.lineTo(endX, jumpBottom);
+                    trackCtx.lineTo(endX, jumpTop);
+                    trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                    
+                    // Bottom face (lightest brown)
+                    trackCtx.fillStyle = '#F4E4BC';
+                    trackCtx.beginPath();
+                    trackCtx.moveTo(startX, jumpBottom);
+                    trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
+                    trackCtx.lineTo(endX, jumpBottom);
+                    trackCtx.closePath();
+                    trackCtx.fill();
+                }
                 
-                // Right face (light brown) - right slope
-                trackCtx.fillStyle = '#D2B48C';
-                trackCtx.beginPath();
-                trackCtx.moveTo(startX + rampWidth / 2, jumpBottom - maxHeight);
-                trackCtx.lineTo(endX, jumpBottom);
-                trackCtx.lineTo(endX, jumpTop);
-                trackCtx.lineTo(startX + rampWidth / 2, jumpTop - maxHeight);
-                trackCtx.closePath();
-                trackCtx.fill();
-                
-                // Bottom face (lightest brown)
-                trackCtx.fillStyle = '#F4E4BC';
-                trackCtx.beginPath();
-                trackCtx.moveTo(startX, jumpBottom);
-                trackCtx.lineTo(startX + rampWidth / 2, jumpBottom - maxHeight);
-                trackCtx.lineTo(endX, jumpBottom);
-                trackCtx.closePath();
-                trackCtx.fill();
-                
-                // Outline
+                // Outline for both types
                 trackCtx.strokeStyle = '#8B4513';
                 trackCtx.lineWidth = 2;
                 trackCtx.stroke();
