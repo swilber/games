@@ -477,8 +477,17 @@ async function createDirtbikeGame(settings, callbacks = null) {
         player.currentLap = 1;
         
         // Reset opponents
-        for (let opponent of opponents) {
-            opponent.lane = Math.floor(Math.random() * 4); // Reset to random lane
+        const availableLanes = [0, 1, 2, 3];
+        for (let i = 0; i < opponents.length; i++) {
+            const opponent = opponents[i];
+            // Remove player's lane from available lanes
+            const playerLaneIndex = availableLanes.indexOf(2);
+            if (playerLaneIndex > -1) {
+                availableLanes.splice(playerLaneIndex, 1);
+            }
+            // Assign random lane from remaining available lanes
+            const randomIndex = Math.floor(Math.random() * availableLanes.length);
+            opponent.lane = availableLanes.splice(randomIndex, 1)[0];
             opponent.position = 0;
             opponent.speed = 0;
             opponent.crashed = false;
