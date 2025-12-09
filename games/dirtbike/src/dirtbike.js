@@ -1286,28 +1286,34 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Countdown
         if (!raceStarted) {
-            // Race number display
-            ctx.fillStyle = '#0066FF';
+            // Calculate animation scale (starts big, shrinks over 1 second)
+            const animationProgress = countdownTimer; // 0 to 1 over each second
+            const scale = 1.5 - (animationProgress * 0.5); // 1.5 to 1.0
+            
+            // Race number display (giant white)
+            ctx.fillStyle = '#FFFFFF';
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            ctx.font = 'bold 36px monospace';
+            ctx.lineWidth = 6;
+            ctx.font = 'bold 120px monospace';
             const raceText = `Race ${currentLevel}`;
             const raceWidth = ctx.measureText(raceText).width;
             const raceX = (canvas.width - raceWidth) / 2;
-            ctx.strokeText(raceText, raceX, 150);
-            ctx.fillText(raceText, raceX, 150);
+            ctx.strokeText(raceText, raceX, 120);
+            ctx.fillText(raceText, raceX, 120);
             
-            // Countdown display (bigger)
-            ctx.fillStyle = '#FF0000';
+            // Countdown display (giant animated white)
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2 + 50);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = '#FFFFFF';
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 4;
-            ctx.font = 'bold 72px monospace';
+            ctx.lineWidth = 8;
+            ctx.font = 'bold 200px monospace';
             const text = countdown > 0 ? countdown.toString() : 'GO!';
             const textWidth = ctx.measureText(text).width;
-            const x = (canvas.width - textWidth) / 2;
-            const y = canvas.height / 2;
-            ctx.strokeText(text, x, y);
-            ctx.fillText(text, x, y);
+            ctx.strokeText(text, -textWidth / 2, 0);
+            ctx.fillText(text, -textWidth / 2, 0);
+            ctx.restore();
         }
         
         // Instructions at bottom
