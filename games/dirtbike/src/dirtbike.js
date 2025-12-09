@@ -235,6 +235,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         jumping: false,
         jumpHeight: 0,
         jumpVelocity: 0,
+        horizontalVelocity: 0,
         rotation: 0,
         rotateForward: false,
         crashed: false,
@@ -465,7 +466,11 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         player.speed *= 0.98; // Natural deceleration
         player.speed = Math.max(0, Math.min(player.maxSpeed, player.speed));
-        player.position += player.speed;
+        
+        // Only apply normal speed when not jumping (horizontal velocity handles airborne movement)
+        if (!player.jumping) {
+            player.position += player.speed;
+        }
         
         // Update jump cooldown
         if (player.jumpCooldown > 0) {
@@ -474,8 +479,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Jumping physics
         if (player.jumping) {
-            player.jumpVelocity -= 0.8; // Gravity
-            player.jumpHeight += player.jumpVelocity;
+            // Use terrain following physics instead of hardcoded gravity
+            // (gravity is handled in updateTerrainFollowing)
             
             // Rotation while jumping
             if (player.rotateForward) {
@@ -616,18 +621,23 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     function updateTerrainFollowing() {
         const terrainHeight = getTerrainHeight(player.position);
-        const gravity = 0.2;
+        const gravity = 0.15;
         
         if (player.jumping) {
             // Apply gravity and physics while airborne
             player.jumpVelocity -= gravity;
             player.jumpHeight += player.jumpVelocity;
             
+            // Use horizontal velocity instead of normal speed while jumping
+            player.position += player.horizontalVelocity;
+            player.horizontalVelocity *= 0.99; // Very slight air resistance
+            
             // Check if landed back on terrain
             if (player.jumpHeight <= terrainHeight) {
                 player.jumpHeight = terrainHeight;
                 player.jumping = false;
                 player.jumpVelocity = 0;
+                player.horizontalVelocity = 0; // Reset horizontal velocity on landing
                 
                 // Check landing angle for crash
                 const normalizedRotation = ((player.rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
@@ -660,19 +670,24 @@ async function createDirtbikeGame(settings, callbacks = null) {
             // Calculate slope we just came from
             const upwardSlope = currentTerrain - pastHeight;
             
-            // Launch if we're at a hill peak with sufficient speed and momentum
-            if (isAtPeak && player.speed > 5 && upwardSlope > 3) {
-                // Launch with momentum based on speed and slope
-                const momentum = player.speed * 0.8;
-                const slopeBonus = Math.min(upwardSlope * 0.3, 5);
+            // Launch if we're at a hill peak with sufficient velocity (any slope)
+            if (isAtPeak && player.speed > 4 && upwardSlope > 1) {
+                // Calculate slope angle for launch direction
+                const slopeAngle = Math.atan2(upwardSlope, lookBehind);
+                const launchSpeed = player.speed * 0.8; // Back to original
                 
+                // Launch along slope direction
                 player.jumping = true;
-                player.jumpVelocity = momentum + slopeBonus;
+                player.jumpVelocity = launchSpeed * Math.sin(slopeAngle); // Vertical component
+                player.horizontalVelocity = launchSpeed * Math.cos(slopeAngle); // Horizontal component
+                
                 if (player.throttle) {
-                    player.jumpVelocity += 4; // Throttle boost
+                    // Throttle boost in slope direction
+                    player.jumpVelocity += 2 * Math.sin(slopeAngle);
+                    player.horizontalVelocity += 2 * Math.cos(slopeAngle);
                 }
                 player.jumpHeight = terrainHeight;
-                console.log(`Launching! Speed: ${player.speed}, Slope: ${upwardSlope}, Velocity: ${player.jumpVelocity}`);
+                console.log(`Launching! Angle: ${slopeAngle.toFixed(2)}, Vertical: ${player.jumpVelocity.toFixed(2)}, Horizontal: ${player.horizontalVelocity.toFixed(2)}`);
             } else {
                 // Follow terrain
                 player.jumpHeight = terrainHeight;
