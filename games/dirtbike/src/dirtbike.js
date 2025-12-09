@@ -408,14 +408,66 @@ async function createDirtbikeGame(settings, callbacks = null) {
             }
         }
         
+        // Generate plateau hills (trapezoidal)
+        const plateauCount = 1 + currentLevel; // 2-4 plateaus depending on level
+        for (let p = 0; p < plateauCount; p++) {
+            let attempts = 0;
+            let hillPlaced = false;
+            
+            while (!hillPlaced && attempts < 50) {
+                const plateauWidth = 80 + Math.random() * 120; // 80-200px total width
+                const plateauHeight = 25 + Math.random() * 35; // 25-60px high
+                const hillStart = Math.floor(Math.random() * (singleLapPoints - plateauWidth / resolution));
+                const hillEnd = hillStart + Math.floor(plateauWidth / resolution);
+                
+                // Check for overlap with existing hills
+                let overlaps = false;
+                for (let existingHill of hills) {
+                    if (!(hillEnd < existingHill.start || hillStart > existingHill.end)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+                
+                if (!overlaps && hillEnd < singleLapPoints) {
+                    hills.push({ 
+                        start: hillStart, 
+                        end: hillEnd, 
+                        height: plateauHeight,
+                        type: 'plateau'
+                    });
+                    hillPlaced = true;
+                }
+                attempts++;
+            }
+        }
+        
         // Add hills to base terrain
         for (let hill of hills) {
             const hillWidth = hill.end - hill.start;
             for (let i = 0; i < hillWidth && hill.start + i < singleLapPoints; i++) {
                 const progress = i / (hillWidth - 1);
-                const height = progress <= 0.5 ? 
-                    hill.height * (progress * 2) : 
-                    hill.height * (2 - progress * 2);
+                let height;
+                
+                if (hill.type === 'plateau') {
+                    // Trapezoidal plateau: ramp up, flat top, ramp down
+                    if (progress < 0.25) {
+                        // Ramp up (first 25%)
+                        height = hill.height * (progress * 4);
+                    } else if (progress < 0.75) {
+                        // Flat top (middle 50%)
+                        height = hill.height;
+                    } else {
+                        // Ramp down (last 25%)
+                        height = hill.height * (4 - progress * 4);
+                    }
+                } else {
+                    // Regular triangular hill
+                    height = progress <= 0.5 ? 
+                        hill.height * (progress * 2) : 
+                        hill.height * (2 - progress * 2);
+                }
+                
                 baseTerrain[hill.start + i] = height;
             }
         }
