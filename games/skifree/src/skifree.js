@@ -149,13 +149,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
         const maxSpeed = 4; // Much slower max speed
         const baseSpeed = 1; // Much slower base speed
         
-        // Friction-based movement system
+        // Friction-based movement system with direction-specific max speeds
         const directions = [
-            { targetVx: -1, targetVy: 0, friction: 0.85, maxSpeed: 1 },     // 0: left (high friction)
-            { targetVx: -0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.5 }, // 1: left-down (medium friction)
-            { targetVx: 0, targetVy: 1.5, friction: 0.96, maxSpeed: 2 },    // 2: down (low friction)
-            { targetVx: 0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.5 },  // 3: right-down (medium friction)
-            { targetVx: 1, targetVy: 0, friction: 0.85, maxSpeed: 1 }       // 4: right (high friction)
+            { targetVx: -1, targetVy: 0, friction: 0.85, maxSpeed: 0.8 },    // 0: left (slowest)
+            { targetVx: -0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.2 }, // 1: left-down 
+            { targetVx: 0, targetVy: 1.5, friction: 0.96, maxSpeed: 1.8 },  // 2: down (fastest)
+            { targetVx: 0.7, targetVy: 1, friction: 0.92, maxSpeed: 1.2 },  // 3: right-down
+            { targetVx: 1, targetVy: 0, friction: 0.85, maxSpeed: 0.8 }     // 4: right (slowest)
         ];
         
         const direction = directions[player.skiDirection];
@@ -169,7 +169,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.vx += (direction.targetVx - player.vx) * accel;
         player.vy += (direction.targetVy - player.vy) * accel;
         
-        // Apply speed limits
+        // Apply direction-specific speed limits
         const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         if (currentSpeed > direction.maxSpeed) {
             player.vx = (player.vx / currentSpeed) * direction.maxSpeed;
