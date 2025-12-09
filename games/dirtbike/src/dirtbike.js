@@ -1286,9 +1286,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Countdown
         if (!raceStarted) {
-            // Calculate animation scale (starts big, shrinks over 1 second)
+            // Calculate animation scale (starts big, shrinks to almost nothing)
             const animationProgress = countdownTimer; // 0 to 1 over each second
-            const scale = 1.5 - (animationProgress * 0.5); // 1.5 to 1.0
+            const scale = 1.5 - (animationProgress * 1.4); // 1.5 to 0.1
             
             // Race number display (giant white)
             ctx.fillStyle = '#FFFFFF';
