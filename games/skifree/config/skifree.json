@@ -1,0 +1,42 @@
+{
+  "name": "SkiFree",
+  "description": "Classic skiing game - avoid obstacles and outrun the Yeti!",
+  "difficulty": {
+    "speed": {
+      "base": 3,
+      "multiplier": 1.5,
+      "min": 2,
+      "max": 8,
+      "formula": "base + difficulty * multiplier"
+    },
+    "obstacleFrequency": {
+      "base": 0.02,
+      "multiplier": 0.01,
+      "min": 0.01,
+      "max": 0.05,
+      "formula": "base + difficulty * multiplier"
+    }
+  },
+  "gameplay": {
+    "speed": 3,
+    "lives": 3,
+    "scoreTarget": 2000,
+    "yetiSpeed": 6,
+    "jumpPower": 15
+  },
+  "physics": {
+    "canvasWidth": 800,
+    "canvasHeight": 600,
+    "gravity": 0.8,
+    "friction": 0.95,
+    "maxSpeed": 12
+  },
+  "visual": {
+    "backgroundColor": "#ffffff",
+    "snowColor": "#f0f8ff",
+    "treeColor": "#228b22",
+    "rockColor": "#696969",
+    "playerColor": "#ff0000",
+    "yetiColor": "#8b4513"
+  }
+}

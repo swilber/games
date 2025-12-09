@@ -90,11 +90,17 @@
       "id": 15,
       "order": 15,
       "enabled": true,
-      "type": "tetris"
+      "type": "skifree"
     },
     {
       "id": 16,
       "order": 16,
+      "enabled": true,
+      "type": "tetris"
+    },
+    {
+      "id": 17,
+      "order": 17,
       "enabled": true,
       "type": "dirtbike"
     }

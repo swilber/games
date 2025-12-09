@@ -1215,6 +1215,8 @@ async function createGameWithCallbacks(gameType, settings) {
             return await createTetrisGame(settings, gameCallbacks);
         case 'dirtbike':
             return await createDirtbikeGame(settings, gameCallbacks);
+        case 'skifree':
+            return await createSkiFreeGame(settings, gameCallbacks);
         case 'breakout':
             return await createBreakoutGame(settings, gameCallbacks);
         case 'asteroids':
@@ -1287,6 +1289,7 @@ async function initializeLevel() {
         case 'fake':
         case 'tetris':
         case 'dirtbike':
+        case 'skifree':
         case 'breakout':
         case 'asteroids':
         case 'spaceinvaders':
