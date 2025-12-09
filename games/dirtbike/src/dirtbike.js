@@ -413,12 +413,13 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Check if coasting is complete (bike has stopped)
         if (coastingToStop && player.speed < 0.1) {
-            gameWon = true;
+            gameWon = finalPosition === 1; // Only won if finished in 1st place
             gameRunning = false;
-            if (callbacks?.onGameComplete) {
+            if (callbacks?.onGameComplete && finalPosition === 1) {
+                // Only go to question screen if player won
                 callbacks.onGameComplete('dirtbike', { 
                     completed: true,
-                    position: getPlayerPosition()
+                    position: finalPosition
                 });
             }
         }
