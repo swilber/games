@@ -629,8 +629,15 @@ async function createDirtbikeGame(settings, callbacks = null) {
         if (player.jumping) return; // No collision while jumping
         
         for (let slick of oilSlicks) {
-            // Only check current lane - don't include transition target
-            if (slick.lane === player.lane) {
+            // Determine which lane the player is actually in based on transition progress
+            let currentLane = player.lane;
+            if (player.laneTransition > 0.5) {
+                // More than halfway through transition, use target lane
+                currentLane = player.targetLane;
+            }
+            
+            // Only check if player is in the slick's lane
+            if (slick.lane === currentLane) {
                 const playerTrackPos = player.position % trackLength;
                 const slickTrackPos = slick.x % trackLength;
                 const distance = Math.abs(slickTrackPos - playerTrackPos);
