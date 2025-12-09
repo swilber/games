@@ -556,6 +556,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
         updatePlayer();
         updateOpponents();
         
+        // Update camera (always follow player, even during crash)
+        trackPosition = player.position;
+        
         // Update lap display timer
         if (showLapDisplay) {
             lapDisplayTimer -= 1/60;
@@ -723,9 +726,6 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Update terrain following
         updateTerrainFollowing();
-        
-        // Update camera (follow player through full track)
-        trackPosition = player.position;
     }
     
     function updateOpponents() {
