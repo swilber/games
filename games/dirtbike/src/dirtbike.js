@@ -478,6 +478,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         
         // Reset opponents
         for (let opponent of opponents) {
+            opponent.lane = Math.floor(Math.random() * 4); // Reset to random lane
             opponent.position = 0;
             opponent.speed = 0;
             opponent.crashed = false;
