@@ -29,13 +29,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
     canvas.height = skiFreeConfig.physics?.canvasHeight || 600;
     const ctx = canvas.getContext('2d');
     
-    // Player object
+    // Player object with physics properties
     const player = {
         x: canvas.width / 2,
         y: 50, // Start at top of screen
         vx: 0,
         vy: 0,
-        speed: 0,
+        mass: 70, // kg (skier + equipment)
         skiDirection: 2, // 0=left, 1=left-down, 2=down, 3=right-down, 4=right
         jumping: false,
         jumpHeight: 0,
@@ -45,6 +45,12 @@ async function createSkiFreeGame(settings, callbacks = null) {
         onLift: false,
         liftProgress: 0
     };
+    
+    // Physics constants
+    const GRAVITY = 9.81; // m/s² (scaled for game)
+    const SLOPE_ANGLE = 30 * Math.PI / 180; // 30 degrees in radians
+    const TIME_SCALE = 0.016; // 60fps time step
+    const PIXEL_TO_METER = 0.1; // Scale factor
     
     // Game objects arrays
     const obstacles = [];
@@ -145,35 +151,57 @@ async function createSkiFreeGame(settings, callbacks = null) {
             return;
         }
         
-        // Apply gravity and movement - skiing downhill (toward bottom of screen)
-        const maxSpeed = 4; // Much slower max speed
-        const baseSpeed = 1; // Much slower base speed
+        // Physics constants for 30-degree slope
+        const GRAVITY = 9.81; // m/s²
+        const SLOPE_ANGLE = 30 * Math.PI / 180; // 30 degrees in radians
+        const TIME_STEP = 1/60; // 60fps
+        const FRICTION_COEFFICIENT = 0.8; // Much higher snow friction
+        const AIR_RESISTANCE = 0.1;
         
-        // Friction-based movement system with direction-specific max speeds
-        const directions = [
-            { targetVx: -0.4, targetVy: 0, friction: 0.85, maxSpeed: 0.4 },      // 0: left (sideways)
-            { targetVx: -0.42, targetVy: 0.42, friction: 0.92, maxSpeed: 0.6 }, // 1: left-down (45° angle)
-            { targetVx: 0, targetVy: 0.9, friction: 0.96, maxSpeed: 0.9 },      // 2: down (fastest)
-            { targetVx: 0.42, targetVy: 0.42, friction: 0.92, maxSpeed: 0.6 },  // 3: right-down (45° angle)
-            { targetVx: 0.4, targetVy: 0, friction: 0.85, maxSpeed: 0.4 }       // 4: right (sideways)
+        // Gravity components on 30-degree slope
+        const GRAVITY_DOWN_SLOPE = GRAVITY * Math.sin(SLOPE_ANGLE); // Force down the slope
+        const GRAVITY_NORMAL = GRAVITY * Math.cos(SLOPE_ANGLE); // Normal force
+        
+        // Vertical velocity from gravity (always accelerating down slope)
+        player.vy += GRAVITY_DOWN_SLOPE * TIME_STEP;
+        
+        // Horizontal velocity from ski direction and kinetic energy transfer
+        const skiDirections = [
+            { angle: -Math.PI/3, turnForce: 0.8 },    // Hard left
+            { angle: -Math.PI/6, turnForce: 0.4 },    // Slight left  
+            { angle: 0, turnForce: 0 },               // Straight
+            { angle: Math.PI/6, turnForce: 0.4 },     // Slight right
+            { angle: Math.PI/3, turnForce: 0.8 }      // Hard right
         ];
         
-        const direction = directions[player.skiDirection];
+        const currentDirection = skiDirections[player.skiDirection];
         
-        // Apply friction to current velocity
-        player.vx *= direction.friction;
-        player.vy *= direction.friction;
+        // Convert vertical velocity to horizontal through turning
+        const velocityMagnitude = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+        const energyTransfer = velocityMagnitude * currentDirection.turnForce * TIME_STEP;
         
-        // Add acceleration toward target velocity
-        const accel = 0.1;
-        player.vx += (direction.targetVx - player.vx) * accel;
-        player.vy += (direction.targetVy - player.vy) * accel;
+        // Apply turning force
+        player.vx += Math.sin(currentDirection.angle) * energyTransfer;
         
-        // Apply direction-specific speed limits
+        // Friction forces
+        const frictionForce = FRICTION_COEFFICIENT * GRAVITY_NORMAL * player.mass;
+        const frictionAccelX = -Math.sign(player.vx) * frictionForce / player.mass * TIME_STEP;
+        const frictionAccelY = -Math.sign(player.vy) * frictionForce / player.mass * TIME_STEP;
+        
+        // Air resistance (proportional to velocity squared)
+        const airResistanceX = -AIR_RESISTANCE * player.vx * Math.abs(player.vx);
+        const airResistanceY = -AIR_RESISTANCE * player.vy * Math.abs(player.vy);
+        
+        // Apply forces
+        player.vx += frictionAccelX + airResistanceX * TIME_STEP;
+        player.vy += frictionAccelY + airResistanceY * TIME_STEP;
+        
+        // Limit maximum speeds for game balance
+        const maxSpeed = 15;
         const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-        if (currentSpeed > direction.maxSpeed) {
-            player.vx = (player.vx / currentSpeed) * direction.maxSpeed;
-            player.vy = (player.vy / currentSpeed) * direction.maxSpeed;
+        if (currentSpeed > maxSpeed) {
+            player.vx = (player.vx / currentSpeed) * maxSpeed;
+            player.vy = (player.vy / currentSpeed) * maxSpeed;
         }
         
         // Apply movement
@@ -181,7 +209,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.y += player.vy;
         
         // Calculate speed for scoring
-        player.speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+        player.speed = currentSpeed;
         
         // Keep player on screen vertically
         if (player.y > canvas.height - 50) {
@@ -191,9 +219,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
             player.y = 50;
         }
         
-        // Handle jumping
+        // Handle jumping physics with real gravity
         if (player.jumping) {
-            player.jumpVelocity -= skiFreeConfig.physics?.gravity || 0.8;
+            player.jumpVelocity -= GRAVITY * TIME_STEP; // Real gravity for jumps
             player.jumpHeight += player.jumpVelocity;
             
             if (player.jumpHeight <= 0) {
@@ -203,11 +231,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         }
         
-        // Apply horizontal movement with physics
-        player.vx *= skiFreeConfig.physics?.friction || 0.95;
-        player.x += player.vx;
-        
-        // Keep player on screen
+        // Keep player on screen horizontally
         player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
         
         // Update distance and scroll (only count downhill movement)
