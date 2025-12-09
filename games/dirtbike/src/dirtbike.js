@@ -1037,12 +1037,12 @@ async function createDirtbikeGame(settings, callbacks = null) {
             const pastHeight = getTerrainHeight(opponent.position - lookBehind);
             const currentTerrain = terrainHeight;
             
+            const upwardSlope = currentTerrain - pastHeight;
             const wasGoingUp = currentTerrain > pastHeight;
             const willGoDown = futureHeight < currentTerrain;
             const willStayFlat = Math.abs(futureHeight - currentTerrain) < 2; // Within 2 pixels is considered flat
             const isAtPeak = wasGoingUp && willGoDown;
             const isAtPlateauEdge = wasGoingUp && willStayFlat && upwardSlope > 3; // Plateau transition with decent slope
-            const upwardSlope = currentTerrain - pastHeight;
             
             // Launch if at hill peak OR plateau edge with sufficient velocity
             if ((isAtPeak || isAtPlateauEdge) && opponent.speed > 4 && upwardSlope > 1) {
