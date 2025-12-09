@@ -226,9 +226,9 @@ async function createDirtbikeGame(settings, callbacks = null) {
             if (terrain[i] === 0 && rampStart !== -1) {
                 rampEnd = i - 1; // End of ramp
                 
-                // Draw complete ramp
-                const startX = rampStart * 2;
-                const endX = rampEnd * 2;
+                // Draw complete ramp (account for player screen position)
+                const startX = rampStart * 2 + 400;
+                const endX = rampEnd * 2 + 400;
                 const rampWidth = endX - startX;
                 const maxHeight = Math.max(...terrain.slice(rampStart, rampEnd + 1));
                 
@@ -669,8 +669,8 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Update terrain following
         updateTerrainFollowing();
         
-        // Update camera (repeat track visually)
-        trackPosition = player.position % trackLength;
+        // Update camera (follow player through full track)
+        trackPosition = player.position;
     }
     
     function updateOpponents() {
@@ -1151,7 +1151,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
     
     function renderOpponents() {
         for (let opponent of opponents) {
-            const screenX = (opponent.position % trackLength) - trackPosition + 400;
+            const screenX = opponent.position - trackPosition + 400;
             
             if (screenX > -50 && screenX < canvas.width + 50) {
                 const laneY = lanes[opponent.lane].y;
