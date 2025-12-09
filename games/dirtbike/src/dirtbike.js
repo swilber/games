@@ -386,7 +386,7 @@ async function createDirtbikeGame(settings, callbacks = null) {
         // Add hills to terrain
         for (let hill of hills) {
             const hillWidth = hill.end - hill.start;
-            for (let i = 0; i < hillWidth && hill.start + i < trackPoints; i++) {
+            for (let i = 0; i < hillWidth && hill.start + i < totalTrackPoints; i++) {
                 const progress = i / (hillWidth - 1);
                 const height = progress <= 0.5 ? 
                     hill.height * (progress * 2) : 
