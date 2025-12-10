@@ -149,7 +149,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     }
     
     // Player's absolute position on the map
-    let playerMapY = 100; // Start near top of map to ski downwards
+    let playerMapY = 0; // Start at very top of map to ski the full distance down
     
     function generateTerrain() {
         // No longer needed - map is pregenerated
