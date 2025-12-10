@@ -42,6 +42,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         jumpVelocity: 0,
         crashed: false,
         crashTimer: 0,
+        precrashVx: 0, // Store velocity before crash
+        precrashVy: 0,
         onLift: false,
         liftProgress: 0
     };
@@ -159,9 +161,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (player.crashed) {
             player.crashTimer += 1/60;
             if (player.crashTimer > 2) {
+                // Restore pre-crash velocity and direction
+                player.vx = player.precrashVx;
+                player.vy = player.precrashVy;
                 player.crashed = false;
                 player.crashTimer = 0;
-                player.speed = 0;
             }
             return;
         }
@@ -368,6 +372,12 @@ async function createSkiFreeGame(settings, callbacks = null) {
             if (!player.jumping && !player.crashed &&
                 Math.abs(player.x - obstacles[i].x) < obstacles[i].width &&
                 Math.abs(player.y - obstacles[i].y) < obstacles[i].height) {
+                // Store velocity before crash
+                player.precrashVx = player.vx;
+                player.precrashVy = player.vy;
+                // Immediately stop
+                player.vx = 0;
+                player.vy = 0;
                 player.crashed = true;
                 player.speed = 0;
             }
@@ -388,6 +398,12 @@ async function createSkiFreeGame(settings, callbacks = null) {
             if (!player.jumping && !player.crashed &&
                 Math.abs(player.x - skier.x) < 20 &&
                 Math.abs(player.y - skier.y) < 20) {
+                // Store velocity before crash
+                player.precrashVx = player.vx;
+                player.precrashVy = player.vy;
+                // Immediately stop
+                player.vx = 0;
+                player.vy = 0;
                 player.crashed = true;
                 player.speed = 0;
             }
