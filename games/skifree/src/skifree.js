@@ -60,7 +60,15 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const jumps = [];
     const slalomFlags = [];
     const skiLifts = [];
-    const yeti = { x: canvas.width / 2, y: canvas.height + 200, active: false };
+    const yeti = { 
+        x: canvas.width / 2, 
+        y: -100, // Start above screen
+        active: false,
+        chaseTimer: 0,
+        maxChaseTime: 10, // 10 seconds of chasing
+        cooldownTimer: 0,
+        maxCooldown: 30 // 30 seconds before can appear again
+    };
     
     // Terrain scroll offset
     let scrollY = 0;
@@ -225,7 +233,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.vy *= damping;
         
         // Apply max speed limit
-        const maxSpeed = 15;
+        const maxSpeed = 30;
         const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         
         if (currentSpeed > maxSpeed) {
@@ -269,22 +277,36 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Update distance based on map position
         distance = playerMapY; // Distance is how far down the mountain we've gone
         
-        // Start yeti chase after certain distance
-        if (distance > 2000 && !yetiChasing) {
-            yetiChasing = true;
-            yeti.active = true;
-        }
+        // Yeti activation is now handled in updateYeti function
     }
     
     function updateYeti() {
-        if (!yeti.active) return;
+        // Handle yeti cooldown (when not active)
+        if (!yeti.active) {
+            yeti.cooldownTimer += 1/60;
+            
+            // Start yeti chase after certain distance and cooldown
+            if (distance > 2000 && yeti.cooldownTimer >= yeti.maxCooldown) {
+                yeti.active = true;
+                yeti.chaseTimer = 0;
+                yeti.x = player.x; // Start above player
+                yeti.y = -100; // Start above screen
+                yetiChasing = true;
+            }
+            return;
+        }
         
-        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 6;
+        // Yeti is active - chase the player
+        yeti.chaseTimer += 1/60;
         
-        // Yeti chases player
+        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 25;
+        
+        // Yeti chases player horizontally
         const dx = player.x - yeti.x;
         yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.1, 3);
-        yeti.y -= yetiSpeed; // Yeti moves upward (chasing from below)
+        
+        // Yeti moves down the screen (chasing from above)
+        yeti.y += yetiSpeed;
         
         // Check if yeti caught player
         if (Math.abs(yeti.x - player.x) < 30 && Math.abs(yeti.y - player.y) < 30) {
@@ -298,11 +320,14 @@ async function createSkiFreeGame(settings, callbacks = null) {
                     caughtByYeti: true
                 });
             }
+            return;
         }
         
-        // Reset yeti position if it goes off screen
-        if (yeti.y < -100) {
-            yeti.y = canvas.height + 100; // Reset to bottom of screen
+        // Yeti gives up after chase time or goes off bottom of screen
+        if (yeti.chaseTimer >= yeti.maxChaseTime || yeti.y > canvas.height + 100) {
+            yeti.active = false;
+            yeti.cooldownTimer = 0;
+            yetiChasing = false;
         }
     }
     
