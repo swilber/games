@@ -63,70 +63,96 @@ async function createSkiFreeGame(settings, callbacks = null) {
     // Terrain scroll offset
     let scrollY = 0;
     
-    function generateTerrain() {
-        // Generate trees
-        if (Math.random() < (skiFreeConfig.gameplay?.obstacleFrequency || 0.02)) {
-            obstacles.push({
-                type: 'tree',
-                x: Math.random() * canvas.width,
-                y: canvas.height + 50, // Start below screen
-                width: 20,
-                height: 40
-            });
-        }
-        
-        // Generate rocks
-        if (Math.random() < 0.015) {
-            obstacles.push({
-                type: 'rock',
-                x: Math.random() * canvas.width,
-                y: canvas.height + 50, // Start below screen
-                width: 15,
-                height: 15
-            });
+    // Pregenerated map data
+    const mapHeight = 10000; // Total map height in pixels
+    const pregeneratedObstacles = [];
+    const pregeneratedSkiers = [];
+    const pregeneratedJumps = [];
+    const pregeneratedFlags = [];
+    const pregeneratedLifts = [];
+    
+    function pregenerateMap() {
+        // Generate obstacles across entire map
+        for (let y = 0; y < mapHeight; y += 50) {
+            // Trees
+            if (Math.random() < 0.3) {
+                pregeneratedObstacles.push({
+                    type: 'tree',
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    width: 20,
+                    height: 40
+                });
+            }
+            
+            // Rocks
+            if (Math.random() < 0.2) {
+                pregeneratedObstacles.push({
+                    type: 'rock',
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    width: 15,
+                    height: 15
+                });
+            }
         }
         
         // Generate other skiers
-        if (Math.random() < 0.008) {
-            otherSkiers.push({
-                x: Math.random() * canvas.width,
-                y: canvas.height + 50, // Start below screen
-                vx: (Math.random() - 0.5) * 2,
-                vy: -2 - Math.random() * 2, // Move upward (toward top of screen)
-                color: ['#0000ff', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 3)]
-            });
+        for (let y = 0; y < mapHeight; y += 200) {
+            if (Math.random() < 0.4) {
+                pregeneratedSkiers.push({
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: 2 + Math.random() * 2,
+                    color: ['#0000ff', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 3)]
+                });
+            }
         }
         
         // Generate jumps
-        if (Math.random() < 0.005) {
-            jumps.push({
-                x: Math.random() * (canvas.width - 60),
-                y: canvas.height + 50, // Start below screen
-                width: 60,
-                height: 20
-            });
+        for (let y = 0; y < mapHeight; y += 300) {
+            if (Math.random() < 0.3) {
+                pregeneratedJumps.push({
+                    x: Math.random() * (canvas.width - 60),
+                    y: y,
+                    width: 60,
+                    height: 20
+                });
+            }
         }
         
         // Generate slalom flags
-        if (Math.random() < 0.01) {
-            slalomFlags.push({
-                x: Math.random() * canvas.width,
-                y: canvas.height + 50, // Start below screen
-                collected: false,
-                color: Math.random() > 0.5 ? '#ff0000' : '#0000ff'
-            });
+        for (let y = 0; y < mapHeight; y += 150) {
+            if (Math.random() < 0.4) {
+                pregeneratedFlags.push({
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    collected: false,
+                    color: Math.random() > 0.5 ? '#ff0000' : '#0000ff'
+                });
+            }
         }
         
-        // Generate ski lifts occasionally
-        if (Math.random() < 0.002) {
-            skiLifts.push({
-                x: Math.random() * (canvas.width - 100),
-                y: canvas.height + 50, // Start below screen
-                width: 100,
-                height: 30,
-                active: true
-            });
+        // Generate ski lifts
+        for (let y = 0; y < mapHeight; y += 800) {
+            if (Math.random() < 0.5) {
+                pregeneratedLifts.push({
+                    x: Math.random() * (canvas.width - 100),
+                    y: y,
+                    width: 100,
+                    height: 30,
+                    active: true
+                });
+            }
         }
+    }
+    
+    // Player's absolute position on the map
+    let playerMapY = 100; // Start near top of map to ski downwards
+    
+    function generateTerrain() {
+        // No longer needed - map is pregenerated
     }
     
     function updatePlayer() {
@@ -183,11 +209,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Simple velocity damping instead of complex friction
         const dampingFactors = [
-            0.85, // Hard left (high damping - sideways)
-            0.92, // Left-down (medium damping - diagonal)
-            0.96, // Straight down (low damping - with slope)
-            0.92, // Right-down (medium damping - diagonal)
-            0.85  // Hard right (high damping - sideways)
+            0.95, // Hard left (light damping - sideways)
+            0.98, // Left-down (very light damping - diagonal)
+            0.99, // Straight down (minimal damping - with slope)
+            0.98, // Right-down (very light damping - diagonal)
+            0.95  // Hard right (light damping - sideways)
         ];
         
         const damping = dampingFactors[player.skiDirection];
@@ -195,14 +221,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.vy *= damping;
         
         // Apply max speed limit
-        const maxSpeed = 3;
-        const maxYVelocity = 0.7;
-        
-        // Cap Y velocity separately
-        if (player.vy > maxYVelocity) {
-            player.vy = maxYVelocity;
-        }
-        
+        const maxSpeed = 15;
         const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         
         if (currentSpeed > maxSpeed) {
@@ -213,6 +232,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Apply movement with velocity scaling
         player.x += player.vx * 0.3;
         player.y += player.vy * 0.3;
+        
+        // Update absolute map position
+        playerMapY += player.vy * 0.3; // Moving down the map when vy is positive
         
         // Calculate speed for scoring
         player.speed = currentSpeed;
@@ -281,16 +303,68 @@ async function createSkiFreeGame(settings, callbacks = null) {
     }
     
     function updateObstacles() {
-        // Update and remove off-screen obstacles
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            obstacles[i].y -= Math.max(0, player.vy * 0.3); // Move based on current player velocity
-            
-            if (obstacles[i].y < -50) { // Remove when off top of screen
-                obstacles.splice(i, 1);
-                continue;
+        // Populate visible objects from pregenerated map
+        obstacles.length = 0;
+        otherSkiers.length = 0;
+        jumps.length = 0;
+        slalomFlags.length = 0;
+        skiLifts.length = 0;
+        
+        const screenTop = playerMapY - canvas.height / 2;
+        const screenBottom = playerMapY + canvas.height / 2;
+        
+        // Add visible obstacles
+        pregeneratedObstacles.forEach(obstacle => {
+            if (obstacle.y >= screenTop && obstacle.y <= screenBottom) {
+                obstacles.push({
+                    ...obstacle,
+                    y: obstacle.y - playerMapY + player.y
+                });
             }
-            
-            // Check collision with player
+        });
+        
+        // Add visible skiers
+        pregeneratedSkiers.forEach(skier => {
+            if (skier.y >= screenTop && skier.y <= screenBottom) {
+                otherSkiers.push({
+                    ...skier,
+                    y: skier.y - playerMapY + player.y
+                });
+            }
+        });
+        
+        // Add visible jumps
+        pregeneratedJumps.forEach(jump => {
+            if (jump.y >= screenTop && jump.y <= screenBottom) {
+                jumps.push({
+                    ...jump,
+                    y: jump.y - playerMapY + player.y
+                });
+            }
+        });
+        
+        // Add visible flags
+        pregeneratedFlags.forEach(flag => {
+            if (flag.y >= screenTop && flag.y <= screenBottom) {
+                slalomFlags.push({
+                    ...flag,
+                    y: flag.y - playerMapY + player.y
+                });
+            }
+        });
+        
+        // Add visible lifts
+        pregeneratedLifts.forEach(lift => {
+            if (lift.y >= screenTop && lift.y <= screenBottom) {
+                skiLifts.push({
+                    ...lift,
+                    y: lift.y - playerMapY + player.y
+                });
+            }
+        });
+        
+        // Check collisions with obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
             if (!player.jumping && !player.crashed &&
                 Math.abs(player.x - obstacles[i].x) < obstacles[i].width &&
                 Math.abs(player.y - obstacles[i].y) < obstacles[i].height) {
@@ -574,6 +648,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
     // Set up game
     document.addEventListener('keydown', keyDownHandler);
     gameArea.appendChild(canvas);
+    
+    // Initialize pregenerated map
+    pregenerateMap();
     
     // Start game loop
     gameRunning = true;
