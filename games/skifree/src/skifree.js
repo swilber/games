@@ -32,7 +32,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     // Player object with physics properties
     const player = {
         x: canvas.width / 2,
-        y: 50, // Start at top of screen
+        y: canvas.height / 3, // Fixed at 1/3 down from top
         vx: 0,
         vy: 0,
         mass: 70, // kg (skier + equipment)
@@ -233,9 +233,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
             player.vy = (player.vy / currentSpeed) * maxSpeed;
         }
         
-        // Apply movement with velocity scaling
+        // Apply movement with velocity scaling (only horizontal movement)
         player.x += player.vx * 0.3;
-        player.y += player.vy * 0.3;
+        // Player Y stays fixed at canvas.height / 3
         
         // Update absolute map position
         playerMapY += player.vy * 0.3; // Moving down the map when vy is positive
@@ -266,8 +266,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Keep player on screen horizontally
         player.x = Math.max(10, Math.min(canvas.width - 10, player.x));
         
-        // Update distance (only count downhill movement)
-        distance += Math.max(0, player.vy * 0.3); // Scale distance to match movement
+        // Update distance based on map position
+        distance = playerMapY; // Distance is how far down the mountain we've gone
         
         // Start yeti chase after certain distance
         if (distance > 2000 && !yetiChasing) {
@@ -307,15 +307,16 @@ async function createSkiFreeGame(settings, callbacks = null) {
     }
     
     function updateObstacles() {
-        // Populate visible objects from pregenerated map
+        // Clear and repopulate visible objects (but smoothly)
         obstacles.length = 0;
         otherSkiers.length = 0;
         jumps.length = 0;
         slalomFlags.length = 0;
         skiLifts.length = 0;
         
-        const screenTop = playerMapY - canvas.height / 2;
-        const screenBottom = playerMapY + canvas.height / 2;
+        // Calculate visible range with buffer for smooth entry
+        const screenTop = playerMapY - canvas.height;
+        const screenBottom = playerMapY + canvas.height;
         
         // Add visible obstacles
         pregeneratedObstacles.forEach(obstacle => {
@@ -327,7 +328,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         });
         
-        // Add visible skiers
+        // Add visible skiers  
         pregeneratedSkiers.forEach(skier => {
             if (skier.y >= screenTop && skier.y <= screenBottom) {
                 otherSkiers.push({
@@ -577,6 +578,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         ctx.fillText(`Speed: ${Math.floor(player.speed)}`, 10, 70);
         ctx.fillText(`VX: ${player.vx.toFixed(2)}`, 10, 90);
         ctx.fillText(`VY: ${player.vy.toFixed(2)}`, 10, 110);
+        ctx.fillText(`Map Y: ${Math.floor(playerMapY)}`, 10, 130);
+        ctx.fillText(`Objects: ${obstacles.length + otherSkiers.length + jumps.length}`, 10, 150);
         
         if (player.onLift) {
             ctx.fillText('Riding Ski Lift...', canvas.width / 2 - 60, 100);
@@ -608,7 +611,6 @@ async function createSkiFreeGame(settings, callbacks = null) {
     function update() {
         if (!gameRunning) return;
         
-        generateTerrain();
         updatePlayer();
         updateObstacles();
         updateYeti();
@@ -616,9 +618,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Update score based on distance
         score += Math.floor(player.speed);
         
-        // Check win condition (survive long enough)
-        const targetScore = skiFreeConfig.gameplay?.scoreTarget || 2000;
-        if (score >= targetScore && !yetiChasing) {
+        // Check win condition (reach bottom of mountain)
+        if (playerMapY >= mapHeight - 100) {
             gameWon = true;
             gameRunning = false;
             if (callbacks?.onGameComplete) {
