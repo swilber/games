@@ -42,6 +42,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         jumpVelocity: 0,
         crashed: false,
         crashTimer: 0,
+        crashFallDistance: 0, // How far player has fallen during crash
         precrashVx: 0, // Store velocity before crash
         precrashVy: 0,
         onLift: false,
@@ -144,18 +145,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         }
         
-        // Generate ski lifts
-        for (let y = 0; y < mapHeight; y += 800) {
-            if (Math.random() < 0.5) {
-                pregeneratedLifts.push({
-                    x: Math.random() * (canvas.width - 100),
-                    y: y,
-                    width: 100,
-                    height: 30,
-                    active: true
-                });
-            }
-        }
+        // Ski lifts removed
     }
     
     // Player's absolute position on the map
@@ -168,12 +158,22 @@ async function createSkiFreeGame(settings, callbacks = null) {
     function updatePlayer() {
         if (player.crashed) {
             player.crashTimer += 1/60;
-            if (player.crashTimer > 2) {
-                // Restore pre-crash velocity and direction
-                player.vx = player.precrashVx;
-                player.vy = player.precrashVy;
+            
+            // Fall forward during first part of crash
+            if (player.crashFallDistance < 30) {
+                const fallSpeed = 15; // pixels per second
+                const fallAmount = fallSpeed * (1/60);
+                player.crashFallDistance += fallAmount;
+                playerMapY += fallAmount; // Move down the map as player falls
+            }
+            
+            if (player.crashTimer >= 2) {
+                // Reset velocity to 0 after crash
+                player.vx = 0;
+                player.vy = 0;
                 player.crashed = false;
                 player.crashTimer = 0;
+                player.crashFallDistance = 0;
             }
             return;
         }
@@ -221,11 +221,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Simple velocity damping instead of complex friction
         const dampingFactors = [
-            0.95, // Hard left (light damping - sideways)
-            0.98, // Left-down (very light damping - diagonal)
-            0.99, // Straight down (minimal damping - with slope)
-            0.98, // Right-down (very light damping - diagonal)
-            0.95  // Hard right (light damping - sideways)
+            0.98, // Hard left (minimal damping - sideways)
+            0.995, // Left-down (very minimal damping - diagonal)
+            0.999, // Straight down (almost no damping - with slope)
+            0.995, // Right-down (very minimal damping - diagonal)
+            0.98  // Hard right (minimal damping - sideways)
         ];
         
         const damping = dampingFactors[player.skiDirection];
@@ -306,7 +306,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.1, 3);
         
         // Yeti moves down the screen (chasing from above)
-        yeti.y += yetiSpeed;
+        yeti.y += yetiSpeed * 0.3; // Apply same scaling as player movement
         
         // Check if yeti caught player
         if (Math.abs(yeti.x - player.x) < 30 && Math.abs(yeti.y - player.y) < 30) {
@@ -363,6 +363,30 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         });
         
+        // Update other skier movement
+        for (let i = otherSkiers.length - 1; i >= 0; i--) {
+            const skier = otherSkiers[i];
+            
+            // Move skiers around
+            skier.x += skier.vx;
+            skier.y += skier.vy;
+            
+            // Keep skiers on screen horizontally
+            if (skier.x < 0 || skier.x > canvas.width) {
+                skier.vx = -skier.vx; // Reverse direction
+            }
+            
+            // Vary their movement occasionally
+            if (Math.random() < 0.02) {
+                skier.vx += (Math.random() - 0.5) * 0.5;
+                skier.vy += (Math.random() - 0.5) * 0.5;
+                
+                // Keep reasonable speeds
+                skier.vx = Math.max(-3, Math.min(3, skier.vx));
+                skier.vy = Math.max(-2, Math.min(4, skier.vy));
+            }
+        }
+        
         // Add visible jumps
         pregeneratedJumps.forEach(jump => {
             if (jump.y >= screenTop && jump.y <= screenBottom) {
@@ -383,15 +407,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         });
         
-        // Add visible lifts
-        pregeneratedLifts.forEach(lift => {
-            if (lift.y >= screenTop && lift.y <= screenBottom) {
-                skiLifts.push({
-                    ...lift,
-                    y: lift.y - playerMapY + player.y
-                });
-            }
-        });
+        // Ski lifts removed from game
         
         // Check collisions with obstacles
         for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -401,10 +417,10 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 // Store velocity before crash
                 player.precrashVx = player.vx;
                 player.precrashVy = player.vy;
-                // Immediately stop
+                player.crashed = true;
+                // Immediately stop after storing velocity
                 player.vx = 0;
                 player.vy = 0;
-                player.crashed = true;
                 player.speed = 0;
             }
         }
@@ -427,10 +443,10 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 // Store velocity before crash
                 player.precrashVx = player.vx;
                 player.precrashVy = player.vy;
-                // Immediately stop
+                player.crashed = true;
+                // Immediately stop after storing velocity
                 player.vx = 0;
                 player.vy = 0;
-                player.crashed = true;
                 player.speed = 0;
             }
         }
@@ -449,7 +465,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 player.x > jumps[i].x && player.x < jumps[i].x + jumps[i].width &&
                 player.y > jumps[i].y && player.y < jumps[i].y + jumps[i].height) {
                 player.jumping = true;
-                player.jumpVelocity = skiFreeConfig.gameplay?.jumpPower || 15;
+                // Jump velocity proportional to current speed (much lower than before)
+                const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+                player.jumpVelocity = Math.min(currentSpeed * 0.3, 5); // Max jump of 5, proportional to speed
                 score += 50; // Bonus for jumping
             }
         }
@@ -605,6 +623,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         ctx.fillText(`VY: ${player.vy.toFixed(2)}`, 10, 110);
         ctx.fillText(`Map Y: ${Math.floor(playerMapY)}`, 10, 130);
         ctx.fillText(`Objects: ${obstacles.length + otherSkiers.length + jumps.length}`, 10, 150);
+        ctx.fillText(`Crashed: ${player.crashed} Timer: ${player.crashTimer.toFixed(1)} VX: ${player.vx.toFixed(1)} VY: ${player.vy.toFixed(1)}`, 10, 170);
         
         if (player.onLift) {
             ctx.fillText('Riding Ski Lift...', canvas.width / 2 - 60, 100);
