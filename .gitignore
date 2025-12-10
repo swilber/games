@@ -1,2 +1,4 @@
 questions.json
 encrypt-questions.js
+# SkiFree temporary files
+games/skifree/tmp/
