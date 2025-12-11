@@ -846,15 +846,15 @@ async function createPacmanGame(settings, callbacks = null) {
             initializeLevel();
             
             // Reset maze dots
-            for (let y = 0; y < maze.length; y++) {
-                for (let x = 0; x < maze[y].length; x++) {
-                    if (maze[y][x] === 3) {
+            for (let y = 0; y < game.maze.length; y++) {
+                for (let x = 0; x < game.maze[y].length; x++) {
+                    if (game.maze[y][x] === 3) {
                         // Restore dots and power pellets
                         if ((x === 3 && y === 3) || (x === 26 && y === 3) || 
                             (x === 3 && y === 17) || (x === 26 && y === 17)) {
-                            maze[y][x] = 2; // Power pellet
+                            game.maze[y][x] = 2; // Power pellet
                         } else if (y === 1 || y === 4 || y === 15 || y === 17 || y === 21) {
-                            maze[y][x] = 0; // Regular dot
+                            game.maze[y][x] = 0; // Regular dot
                         }
                     }
                 }
