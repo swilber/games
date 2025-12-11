@@ -304,10 +304,12 @@ class PhysicsSystem {
                         
                         if (input.left) {
                             physics.vx = Math.max(physics.vx - 0.5, -this.game.config.player.moveSpeed);
-                            playerComp.facingRight = false;
+                            const playerComp = entity.get('player');
+                            if (playerComp) playerComp.facingRight = false;
                         } else if (input.right) {
                             physics.vx = Math.min(physics.vx + 0.5, this.game.config.player.moveSpeed);
-                            playerComp.facingRight = true;
+                            const playerComp = entity.get('player');
+                            if (playerComp) playerComp.facingRight = true;
                         } else {
                             physics.vx *= 0.8; // Apply friction when no input
                         }
