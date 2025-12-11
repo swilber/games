@@ -115,6 +115,28 @@ async function createSkiFreeGame(settings, callbacks = null) {
                     height: 15
                 });
             }
+            
+            // Snow bumps (small jumps)
+            if (Math.random() < 0.15) {
+                pregeneratedObstacles.push({
+                    type: 'snowbump',
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    width: 25,
+                    height: 8
+                });
+            }
+            
+            // Moguls (speed bumps)
+            if (Math.random() < 0.1) {
+                pregeneratedObstacles.push({
+                    type: 'mogul',
+                    x: Math.random() * canvas.width,
+                    y: y,
+                    width: 30,
+                    height: 12
+                });
+            }
         }
         
         // Generate other skiers
@@ -484,14 +506,26 @@ async function createSkiFreeGame(settings, callbacks = null) {
             if (!player.jumping && !player.crashed &&
                 Math.abs(player.x - obstacles[i].x) < obstacles[i].width &&
                 Math.abs(player.y - obstacles[i].y) < obstacles[i].height) {
-                // Store velocity before crash
-                player.precrashVx = player.vx;
-                player.precrashVy = player.vy;
-                player.crashed = true;
-                // Immediately stop after storing velocity
-                player.vx = 0;
-                player.vy = 0;
-                player.speed = 0;
+                
+                if (obstacles[i].type === 'snowbump') {
+                    // Snow bump gives small jump
+                    player.jumping = true;
+                    player.jumpVelocity = 1.5; // Small jump
+                    score += 10; // Small bonus
+                } else if (obstacles[i].type === 'mogul') {
+                    // Mogul slows player down (less dramatic)
+                    player.vx *= 0.8; // Reduce horizontal speed slightly
+                    player.vy *= 0.9; // Reduce vertical speed slightly
+                    score += 5; // Small bonus for navigating mogul
+                } else {
+                    // Trees and rocks cause crashes
+                    player.precrashVx = player.vx;
+                    player.precrashVy = player.vy;
+                    player.crashed = true;
+                    player.vx = 0;
+                    player.vy = 0;
+                    player.speed = 0;
+                }
             }
         }
         
@@ -650,6 +684,35 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.fillStyle = '#555555';
                 ctx.fillRect(obstacle.x - 3, obstacle.y + 3, 2, 2);
                 ctx.fillRect(obstacle.x + 1, obstacle.y + 6, 3, 2);
+                
+            } else if (obstacle.type === 'snowbump') {
+                // Draw snow bump (single light gray half oval)
+                ctx.strokeStyle = '#C0C0C0'; // Light gray
+                ctx.lineWidth = 2;
+                ctx.save();
+                ctx.scale(2, 1); // Make twice as wide as tall
+                ctx.beginPath();
+                ctx.arc(obstacle.x / 2, obstacle.y + 4, 6, Math.PI, 0); // Top half of oval
+                ctx.stroke();
+                ctx.restore();
+                
+            } else if (obstacle.type === 'mogul') {
+                // Draw mogul (several small light gray half ovals)
+                ctx.strokeStyle = '#C0C0C0'; // Light gray
+                ctx.lineWidth = 2;
+                ctx.save();
+                ctx.scale(2, 1); // Make twice as wide as tall
+                ctx.beginPath();
+                // Main bump
+                ctx.arc(obstacle.x / 2, obstacle.y + 6, 5, Math.PI, 0);
+                // Left smaller bump
+                ctx.arc((obstacle.x - 12) / 2, obstacle.y + 8, 3, Math.PI, 0);
+                // Right smaller bump
+                ctx.arc((obstacle.x + 12) / 2, obstacle.y + 8, 3, Math.PI, 0);
+                // Center smaller bump
+                ctx.arc(obstacle.x / 2, obstacle.y + 10, 2, Math.PI, 0);
+                ctx.stroke();
+                ctx.restore();
             }
         });
         
