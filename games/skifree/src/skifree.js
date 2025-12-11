@@ -356,15 +356,15 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Yeti is active - chase the player
         yeti.chaseTimer += 1/60;
         
-        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 8;
+        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 5.25;
         
-        // Yeti chases player horizontally
+        // Yeti chases player horizontally (slower)
         const dx = player.x - yeti.x;
-        yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.1, 3);
+        yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.05, 1.5);
         
         // Yeti moves down the screen (chasing from above)
         if (!yeti.celebrating) {
-            yeti.y += yetiSpeed * 0.3; // Apply same scaling as player movement
+            yeti.y += yetiSpeed * 0.2; // Slower vertical movement
         }
         
         // Check if yeti caught player
