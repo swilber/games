@@ -443,7 +443,14 @@ async function createSkiFreeGame(settings, callbacks = null) {
                         shirtColor: generateColor(1, 2, 3),
                         pantsColor: generateColor(4, 5, 6),
                         hatColor: generateColor(7, 8, 9),
-                        skinColor: skinColors[Math.floor(random(10) * skinColors.length)]
+                        skinColor: skinColors[Math.floor(random(10) * skinColors.length)],
+                        // Skiing mechanics
+                        skiDirection: 3, // Start straight down
+                        jumping: false,
+                        jumpHeight: 0,
+                        jumpVelocity: 0,
+                        crashed: false,
+                        crashTimer: 0
                     });
                 }
             }
@@ -454,9 +461,54 @@ async function createSkiFreeGame(settings, callbacks = null) {
         for (let i = activeSkiers.length - 1; i >= 0; i--) {
             const skier = activeSkiers[i];
             
+            // Handle crashed skiers
+            if (skier.crashed) {
+                skier.crashTimer += 1/60;
+                if (skier.crashTimer > 2) {
+                    skier.crashed = false;
+                    skier.crashTimer = 0;
+                    skier.vx = 0;
+                    skier.vy = 0;
+                }
+                continue;
+            }
+            
+            // Handle jumping physics
+            if (skier.jumping) {
+                skier.jumpVelocity -= 2.0 * (1/60); // Gravity
+                skier.jumpHeight += skier.jumpVelocity;
+                
+                if (skier.jumpHeight <= 0) {
+                    skier.jumpHeight = 0;
+                    skier.jumping = false;
+                    skier.jumpVelocity = 0;
+                }
+            }
+            
+            // AI skiing physics (simplified version of player physics)
+            const skiAngles = [-90, -60, -30, 0, 30, 60, 90];
+            const angle = skiAngles[skier.skiDirection] * Math.PI / 180;
+            
+            // Apply gravity and directional force
+            skier.vy += 2.0 * (1/60); // Gravity down slope
+            skier.vx += Math.sin(-angle) * 3.0 * (1/60); // Directional force
+            
+            // Apply damping
+            const dampingFactors = [0.98, 0.985, 0.999, 0.985, 0.98];
+            const damping = dampingFactors[skier.skiDirection] || 0.99;
+            skier.vx *= damping;
+            skier.vy *= damping;
+            
+            // Limit speed
+            const currentSpeed = Math.sqrt(skier.vx * skier.vx + skier.vy * skier.vy);
+            if (currentSpeed > 15) {
+                skier.vx = (skier.vx / currentSpeed) * 15;
+                skier.vy = (skier.vy / currentSpeed) * 15;
+            }
+            
             // Move skiers
             skier.x += skier.vx * 0.3;
-            skier.mapY += skier.vy * 0.3; // Move down the map
+            skier.mapY += skier.vy * 0.3;
             
             // Update screen position
             skier.y = skier.mapY - playerMapY + player.y;
@@ -466,11 +518,33 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 skier.vx = -skier.vx;
             }
             
-            // Simple AI: occasionally change direction
-            if (Math.random() < 0.01) {
-                skier.vx += (Math.random() - 0.5) * 1;
-                skier.vx = Math.max(-2, Math.min(2, skier.vx));
+            // AI decision making
+            if (Math.random() < 0.02) {
+                // Change ski direction occasionally
+                const directionChange = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+                skier.skiDirection = Math.max(0, Math.min(6, skier.skiDirection + directionChange));
             }
+            
+            // Check collisions with obstacles
+            obstacles.forEach(obstacle => {
+                if (!skier.jumping && !skier.crashed &&
+                    Math.abs(skier.x - obstacle.x) < obstacle.width &&
+                    Math.abs(skier.y - obstacle.y) < obstacle.height) {
+                    
+                    if (obstacle.type === 'snowbump') {
+                        skier.jumping = true;
+                        skier.jumpVelocity = 1.5;
+                    } else if (obstacle.type === 'mogul') {
+                        skier.vx *= 0.8;
+                        skier.vy *= 0.9;
+                    } else {
+                        // Trees and rocks cause crashes
+                        skier.crashed = true;
+                        skier.vx = 0;
+                        skier.vy = 0;
+                    }
+                }
+            });
             
             // Remove skiers that are too far away
             if (skier.y < -200 || skier.y > canvas.height + 200) {
@@ -719,89 +793,119 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Draw other skiers
         otherSkiers.forEach(skier => {
             ctx.save();
-            ctx.translate(skier.x, skier.y);
+            ctx.translate(skier.x, skier.y - (skier.jumpHeight || 0));
+            ctx.scale(1.3, 1.3); // Scale up to match player size
             
-            // Use permanent color properties (set when skier was created)
+            // Draw shadow if jumping
+            if (skier.jumpHeight > 0) {
+                ctx.save();
+                ctx.translate(0, skier.jumpHeight / 1.3); // Adjust for scale
+                ctx.fillStyle = 'rgba(128, 128, 128, 0.4)';
+                const shadowSize = 6 + (skier.jumpHeight * 0.1);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, shadowSize, shadowSize * 0.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // Use permanent color properties
             const isGirl = skier.isGirl;
             const shirtColor = skier.shirtColor;
             const pantsColor = skier.pantsColor;
             const hatColor = skier.hatColor;
             const skinColor = skier.skinColor;
+            const direction = skier.skiDirection || 3;
             
-            // Draw skis with curved tips
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-4, 8, 2, 12);
-            ctx.fillRect(2, 8, 2, 12);
-            // Curved tips
-            ctx.beginPath();
-            ctx.arc(-3, 8, 1, Math.PI, 0);
-            ctx.arc(3, 8, 1, Math.PI, 0);
-            ctx.fill();
-            
-            // Draw ski boots (green)
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(-4, 6, 3, 3);
-            ctx.fillRect(1, 6, 3, 3);
-            
-            // Draw legs (colored pants)
-            ctx.fillStyle = pantsColor;
-            ctx.fillRect(-3, 2, 2, 6);
-            ctx.fillRect(1, 2, 2, 6);
-            
-            // Draw body (colored shirt)
-            ctx.fillStyle = shirtColor;
-            ctx.fillRect(-4, -8, 8, 10);
-            
-            // Draw arms (skin color)
-            ctx.fillStyle = skinColor;
-            ctx.fillRect(-7, -6, 3, 2);
-            ctx.fillRect(4, -6, 3, 2);
-            
-            // Draw head (skin color)
-            ctx.fillStyle = skinColor;
-            ctx.beginPath();
-            ctx.arc(0, -12, 4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw hat (different for boys/girls)
-            ctx.fillStyle = hatColor;
-            if (isGirl) {
-                // Girl: Colored hat with pom-pom
-                ctx.beginPath();
-                ctx.arc(0, -16, 3, 0, Math.PI * 2);
-                ctx.fill();
-                // Pom-pom
-                ctx.beginPath();
-                ctx.arc(0, -19, 2, 0, Math.PI * 2);
-                ctx.fill();
+            if (skier.crashed) {
+                // Draw crashed skier (fallen over)
+                ctx.fillStyle = shirtColor;
+                ctx.fillRect(-8, -5, 16, 10);
+                ctx.fillStyle = skinColor;
+                ctx.fillRect(-6, -8, 12, 6);
             } else {
-                // Boy: Colored hat with tail
+                // Draw skis with direction
+                const skiAngles = [-90, -60, -30, 0, 30, 60, 90];
+                const angle = skiAngles[direction] * Math.PI / 180;
+                
+                ctx.fillStyle = '#8B4513';
+                ctx.save();
+                ctx.translate(0, 8);
+                ctx.rotate(-angle);
+                ctx.fillRect(-3, -6, 1.5, 12);
+                ctx.fillRect(1.5, -6, 1.5, 12);
+                // Curved tips
                 ctx.beginPath();
-                ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                ctx.arc(-2.25, -6, 0.75, Math.PI, 0);
+                ctx.arc(2.25, -6, 0.75, Math.PI, 0);
                 ctx.fill();
-                // Hat tail
-                ctx.fillRect(-5, -18, 5, 2);
+                ctx.restore();
+                
+                // Draw ski boots
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(-3, 6, 2, 3);
+                ctx.fillRect(1, 6, 2, 3);
+                
+                // Draw legs
+                ctx.fillStyle = pantsColor;
+                ctx.fillRect(-2, 2, 1.5, 5);
+                ctx.fillRect(0.5, 2, 1.5, 5);
+                
+                // Draw body and directional appearance
+                if (direction <= 1) { // Left facing
+                    ctx.fillStyle = shirtColor;
+                    ctx.fillRect(-5, -6, 6, 8);
+                    ctx.fillStyle = skinColor;
+                    ctx.fillRect(-6, -4, 3, 1.5);
+                    ctx.fillRect(-1, -4, 2, 1.5);
+                    ctx.beginPath();
+                    ctx.arc(-1.5, -9, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (direction >= 5) { // Right facing
+                    ctx.fillStyle = shirtColor;
+                    ctx.fillRect(-1, -6, 6, 8);
+                    ctx.fillStyle = skinColor;
+                    ctx.fillRect(3, -4, 3, 1.5);
+                    ctx.fillRect(-1, -4, 2, 1.5);
+                    ctx.beginPath();
+                    ctx.arc(1.5, -9, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else { // Forward facing
+                    ctx.fillStyle = shirtColor;
+                    ctx.fillRect(-3, -6, 6, 8);
+                    ctx.fillStyle = skinColor;
+                    ctx.fillRect(-5, -4, 3, 1.5);
+                    ctx.fillRect(2, -4, 3, 1.5);
+                    ctx.beginPath();
+                    ctx.arc(0, -9, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw hat
+                ctx.fillStyle = hatColor;
+                if (isGirl) {
+                    ctx.beginPath();
+                    ctx.arc(0, -12, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(0, -14, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, -12, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(-4, -13, 4, 1.5);
+                    ctx.beginPath();
+                    ctx.arc(-4, -12.25, 0.75, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw goggles
+                ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(-5, -17, 1, 0, Math.PI * 2);
+                ctx.arc(-1.5, -9, 1, 0, Math.PI * 2);
+                ctx.arc(1.5, -9, 1, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
-            // Draw goggles
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.arc(-2, -12, 1.5, 0, Math.PI * 2);
-            ctx.arc(2, -12, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw ski poles
-            ctx.strokeStyle = '#666666';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-5, -4);
-            ctx.lineTo(-8, 4);
-            ctx.moveTo(5, -4);
-            ctx.lineTo(8, 4);
-            ctx.stroke();
             
             ctx.restore();
         });
