@@ -576,7 +576,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
         ctx.textAlign = 'left';
         ctx.fillText(`SCORE: ${score.toString().padStart(6, '0')}`, 20, 30);
         ctx.fillText(`LIVES: ${lives}`, 20, canvas.height - 20);
-        ctx.fillText(`LEVEL: ${currentLevel}`, canvas.width - 150, 30);
+        ctx.fillText(`LEVEL: ${currentLevel}/${mergedSettings.levels || 5}`, canvas.width - 150, 30);
         ctx.fillText(`SPEED: ${currentSpeedMultiplier.toFixed(1)}x`, canvas.width - 150, 55);
         
         // Game state overlays
@@ -587,7 +587,7 @@ async function createSpaceInvadersGame(settings, callbacks = null) {
             ctx.fillStyle = '#00FF00';
             ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText(`LEVEL ${currentLevel}`, canvas.width/2, canvas.height/2 - 40);
+            ctx.fillText(`LEVEL ${currentLevel}/${mergedSettings.levels || 5}`, canvas.width/2, canvas.height/2 - 40);
             
             ctx.fillStyle = '#FFFFFF';
             ctx.font = retroFont;

@@ -626,7 +626,7 @@ async function createAsteroidsGame(settings, callbacks = null) {
         ctx.textAlign = 'left';
         ctx.fillText(`SCORE: ${score.toString().padStart(8, '0')}`, 20, 30);
         ctx.fillText(`LIVES: ${lives}`, 20, 60);
-        ctx.fillText(`LEVEL: ${currentLevel}`, 20, canvas.height - 20);
+        ctx.fillText(`LEVEL: ${currentLevel}/${mergedSettings.levels || 5}`, 20, canvas.height - 20);
         
         // Power-up indicators
         let powerUpY = 90;
@@ -650,7 +650,7 @@ async function createAsteroidsGame(settings, callbacks = null) {
             ctx.fillStyle = '#FFFF00';
             ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText(`LEVEL ${currentLevel}`, canvas.width/2, canvas.height/2 - 40);
+            ctx.fillText(`LEVEL ${currentLevel}/${mergedSettings.levels || 5}`, canvas.width/2, canvas.height/2 - 40);
             
             ctx.fillStyle = '#00FFFF';
             ctx.font = retroFont;
