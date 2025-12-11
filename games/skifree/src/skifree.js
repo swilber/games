@@ -61,6 +61,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const jumps = [];
     const slalomFlags = [];
     const skiLifts = [];
+    const activeSkiers = []; // Persistent skiers with AI
     const yeti = { 
         x: canvas.width / 2, 
         y: -100, // Start above screen
@@ -122,8 +123,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 pregeneratedSkiers.push({
                     x: Math.random() * canvas.width,
                     y: y,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: 2 + Math.random() * 2,
+                    vx: (Math.random() - 0.5) * 2, // Small horizontal movement
+                    vy: 10, // Skiing downhill at speed 10
                     color: ['#0000ff', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 3)]
                 });
             }
@@ -366,39 +367,69 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         });
         
-        // Add visible skiers  
-        pregeneratedSkiers.forEach(skier => {
-            if (skier.y >= screenTop && skier.y <= screenBottom) {
-                otherSkiers.push({
-                    ...skier,
-                    y: skier.y - playerMapY + player.y
-                });
-            }
+        // Handle persistent skiers
+        spawnSkiersFromMap();
+        updateActiveSkiers();
+        
+        // Copy active skiers to otherSkiers for collision detection
+        activeSkiers.forEach(skier => {
+            otherSkiers.push(skier);
         });
         
-        // Update other skier movement
-        for (let i = otherSkiers.length - 1; i >= 0; i--) {
-            const skier = otherSkiers[i];
+    function spawnSkiersFromMap() {
+        const screenTop = playerMapY - canvas.height;
+        const screenBottom = playerMapY + canvas.height;
+        
+        // Check for new skiers entering the area
+        pregeneratedSkiers.forEach(skier => {
+            if (skier.y >= screenTop && skier.y <= screenBottom) {
+                // Check if this exact skier is already active (use unique ID based on position)
+                const skierId = `${skier.x}_${skier.y}`;
+                const exists = activeSkiers.some(active => active.id === skierId);
+                
+                if (!exists) {
+                    activeSkiers.push({
+                        id: skierId,
+                        x: skier.x,
+                        y: skier.y - playerMapY + player.y,
+                        mapY: skier.y,
+                        vx: skier.vx,
+                        vy: skier.vy,
+                        color: skier.color
+                    });
+                }
+            }
+        });
+    }
+    
+    function updateActiveSkiers() {
+        for (let i = activeSkiers.length - 1; i >= 0; i--) {
+            const skier = activeSkiers[i];
             
-            // Move skiers around
-            skier.x += skier.vx;
-            skier.y += skier.vy;
+            // Move skiers
+            skier.x += skier.vx * 0.3;
+            skier.mapY += skier.vy * 0.3; // Move down the map
+            
+            // Update screen position
+            skier.y = skier.mapY - playerMapY + player.y;
             
             // Keep skiers on screen horizontally
             if (skier.x < 0 || skier.x > canvas.width) {
-                skier.vx = -skier.vx; // Reverse direction
+                skier.vx = -skier.vx;
             }
             
-            // Vary their movement occasionally
-            if (Math.random() < 0.02) {
-                skier.vx += (Math.random() - 0.5) * 0.5;
-                skier.vy += (Math.random() - 0.5) * 0.5;
-                
-                // Keep reasonable speeds
-                skier.vx = Math.max(-3, Math.min(3, skier.vx));
-                skier.vy = Math.max(-2, Math.min(4, skier.vy));
+            // Simple AI: occasionally change direction
+            if (Math.random() < 0.01) {
+                skier.vx += (Math.random() - 0.5) * 1;
+                skier.vx = Math.max(-2, Math.min(2, skier.vx));
+            }
+            
+            // Remove skiers that are too far away
+            if (skier.y < -200 || skier.y > canvas.height + 200) {
+                activeSkiers.splice(i, 1);
             }
         }
+    }
         
         // Add visible jumps
         pregeneratedJumps.forEach(jump => {
