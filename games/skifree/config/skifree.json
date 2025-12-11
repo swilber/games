@@ -22,7 +22,7 @@
     "lives": 3,
     "scoreTarget": 2000,
     "yetiEnabled": true,
-    "yetiSpeed": 5.25,
+    "yetiSpeed": 7,
     "jumpPower": 15
   },
   "physics": {

@@ -65,6 +65,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const yeti = { 
         x: canvas.width / 2, 
         y: -100, // Start above screen
+        mapY: 0, // Add map coordinate tracking
         active: false,
         chaseTimer: 0,
         maxChaseTime: 10, // 10 seconds of chasing
@@ -179,12 +180,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
         }
         
-        // Generate yetis in bottom half of map
-        const bottomHalf = mapHeight / 2;
-        for (let i = 0; i < 3; i++) { // 3 yetis on the mountain
+        // Generate yetis between half and 3/4 down the map
+        const halfWay = mapHeight / 2;
+        const threeQuarters = mapHeight * 0.75;
+        for (let i = 0; i < 1; i++) { // 1 yeti on the mountain
             pregeneratedYetis.push({
                 x: Math.random() * canvas.width,
-                y: bottomHalf + Math.random() * bottomHalf, // Random position in bottom half
+                y: halfWay + Math.random() * (threeQuarters - halfWay), // Random position between 1/2 and 3/4
                 active: false,
                 triggered: false,
                 chaseTimer: 0,
@@ -342,29 +344,37 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (!yeti.active) {
             yeti.cooldownTimer += 1/60;
             
-            // Start yeti chase after certain distance and cooldown
-            if (distance > 2000 && yeti.cooldownTimer >= yeti.maxCooldown) {
-                yeti.active = true;
-                yeti.chaseTimer = 0;
-                yeti.x = player.x; // Start above player
-                yeti.y = -100; // Start above screen
-                yetiChasing = true;
-            }
+            // Check for pregenerated yetis that should activate
+            pregeneratedYetis.forEach(preYeti => {
+                if (!preYeti.triggered && 
+                    playerMapY >= preYeti.y) { // Activate as soon as player passes yeti
+                    
+                    // Start chasing from this pregenerated yeti
+                    preYeti.triggered = true;
+                    yeti.active = true;
+                    yeti.chaseTimer = 0;
+                    yeti.x = preYeti.x;
+                    yeti.mapY = preYeti.y;
+                    yeti.y = yeti.mapY - playerMapY + player.y;
+                    yetiChasing = true;
+                }
+            });
             return;
         }
         
         // Yeti is active - chase the player
         yeti.chaseTimer += 1/60;
         
-        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 5.25;
+        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 7;
         
-        // Yeti chases player horizontally (slower)
+        // Yeti chases player horizontally (more aggressive)
         const dx = player.x - yeti.x;
-        yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.05, 1.5);
+        yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.15, 4);
         
         // Yeti moves down the screen (chasing from above)
         if (!yeti.celebrating) {
-            yeti.y += yetiSpeed * 0.2; // Slower vertical movement
+            yeti.mapY += yetiSpeed; // Move at fixed speed in map coordinates
+            yeti.y = yeti.mapY - playerMapY + player.y; // Convert to screen coordinates
         }
         
         // Check if yeti caught player
@@ -1289,6 +1299,56 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
         ctx.restore();
         
+        // Draw waiting pregenerated yetis
+        const screenTop = playerMapY - canvas.height;
+        const screenBottom = playerMapY + canvas.height;
+        
+        pregeneratedYetis.forEach(preYeti => {
+            if (!preYeti.triggered && preYeti.y >= screenTop && preYeti.y <= screenBottom) {
+                const yetiScreenY = preYeti.y - playerMapY + player.y;
+                const yetiScale = 0.5;
+                
+                // Draw waiting yeti (slightly transparent)
+                ctx.save();
+                ctx.globalAlpha = 0.8;
+                
+                // Draw yeti body (gray)
+                ctx.fillStyle = '#808080';
+                ctx.fillRect(preYeti.x - 15 * yetiScale, yetiScreenY - 20 * yetiScale, 30 * yetiScale, 40 * yetiScale);
+                
+                // Draw yeti head
+                ctx.fillStyle = '#808080';
+                ctx.beginPath();
+                ctx.arc(preYeti.x, yetiScreenY - 25 * yetiScale, 12 * yetiScale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw eyes (red and menacing)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(preYeti.x - 5 * yetiScale, yetiScreenY - 28 * yetiScale, 2 * yetiScale, 0, Math.PI * 2);
+                ctx.arc(preYeti.x + 5 * yetiScale, yetiScreenY - 28 * yetiScale, 2 * yetiScale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw basic limbs (waiting pose)
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 4 * yetiScale;
+                ctx.beginPath();
+                // Arms at sides
+                ctx.moveTo(preYeti.x - 15 * yetiScale, yetiScreenY - 10 * yetiScale);
+                ctx.lineTo(preYeti.x - 20 * yetiScale, yetiScreenY + 5 * yetiScale);
+                ctx.moveTo(preYeti.x + 15 * yetiScale, yetiScreenY - 10 * yetiScale);
+                ctx.lineTo(preYeti.x + 20 * yetiScale, yetiScreenY + 5 * yetiScale);
+                // Legs
+                ctx.moveTo(preYeti.x - 8 * yetiScale, yetiScreenY + 20 * yetiScale);
+                ctx.lineTo(preYeti.x - 12 * yetiScale, yetiScreenY + 35 * yetiScale);
+                ctx.moveTo(preYeti.x + 8 * yetiScale, yetiScreenY + 20 * yetiScale);
+                ctx.lineTo(preYeti.x + 12 * yetiScale, yetiScreenY + 35 * yetiScale);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        });
+        
         // Draw yeti
         if (yeti.active || yeti.celebrating) {
             const yetiScale = 0.5; // Scale factor for yeti size
@@ -1515,6 +1575,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         yeti.cooldownTimer = 0;
         yeti.x = canvas.width / 2;
         yeti.y = -100;
+        yeti.mapY = 0;
         
         // Reset game state
         playerMapY = 0;
