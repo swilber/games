@@ -743,12 +743,26 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.closePath();
                 ctx.fill();
                 
-                // Draw decorations (ornaments)
+                // Draw decorations (ornaments) spread across tree layers
                 ctx.fillStyle = '#FF0000';
                 ctx.beginPath();
-                ctx.arc(obstacle.x - 5, obstacle.y + 8, 2, 0, Math.PI * 2);
-                ctx.arc(obstacle.x + 3, obstacle.y + 12, 2, 0, Math.PI * 2);
-                ctx.arc(obstacle.x - 2, obstacle.y + 18, 2, 0, Math.PI * 2);
+                // Bottom layer ornaments
+                ctx.arc(obstacle.x - 8, obstacle.y + 20, 2, 0, Math.PI * 2);
+                ctx.arc(obstacle.x + 6, obstacle.y + 22, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#0000FF';
+                ctx.beginPath();
+                // Middle layer ornaments  
+                ctx.arc(obstacle.x - 6, obstacle.y + 12, 2, 0, Math.PI * 2);
+                ctx.arc(obstacle.x + 4, obstacle.y + 14, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                // Top layer ornaments
+                ctx.arc(obstacle.x - 3, obstacle.y + 6, 1.5, 0, Math.PI * 2);
+                ctx.arc(obstacle.x + 2, obstacle.y + 8, 1.5, 0, Math.PI * 2);
                 ctx.fill();
                 
                 // Draw star on top
