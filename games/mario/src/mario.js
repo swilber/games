@@ -189,6 +189,7 @@ class Input {
         this.right = false;
         this.jump = false;
         this.shoot = false;
+        this.run = false;
     }
 }
 
@@ -1018,13 +1019,15 @@ class PlayerInputSystem {
         input.right = this.game.keys['ArrowRight'];
         input.jump = this.game.keys['ArrowUp'] || this.game.keys['Space'];
         input.shoot = this.game.keys['KeyX'] || this.game.keys['KeyZ'];
+        input.run = this.game.keys['ShiftLeft'] || this.game.keys['ShiftRight'];
         
         // Handle movement
+        const moveSpeed = input.run ? this.game.config.player.moveSpeed * 1.5 : this.game.config.player.moveSpeed;
         if (input.left) {
-            physics.vx = Math.max(physics.vx - 0.5, -this.game.config.player.moveSpeed);
+            physics.vx = Math.max(physics.vx - 0.5, -moveSpeed);
             playerComp.facingRight = false;
         } else if (input.right) {
-            physics.vx = Math.min(physics.vx + 0.5, this.game.config.player.moveSpeed);
+            physics.vx = Math.min(physics.vx + 0.5, moveSpeed);
             playerComp.facingRight = true;
         } else {
             physics.vx *= 0.8;
@@ -1032,7 +1035,8 @@ class PlayerInputSystem {
         
         // Handle jumping
         if (input.jump && physics.onGround) {
-            physics.vy = -this.game.config.player.jumpHeight;
+            const jumpHeight = input.run ? this.game.config.player.jumpHeight * 1.2 : this.game.config.player.jumpHeight;
+            physics.vy = -jumpHeight;
             physics.onGround = false;
         }
         
@@ -4849,7 +4853,7 @@ async function createMarioGame(settings, callbacks = null) {
     
     function handleKeyDown(e) {
         // Only handle game-related keys
-        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR'];
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR', 'ShiftLeft', 'ShiftRight'];
         if (!gameKeys.includes(e.code)) return;
         
         game.keys[e.code] = true;
@@ -4869,7 +4873,7 @@ async function createMarioGame(settings, callbacks = null) {
     
     function handleKeyUp(e) {
         // Only handle game-related keys
-        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR'];
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyX', 'KeyZ', 'KeyR', 'ShiftLeft', 'ShiftRight'];
         if (!gameKeys.includes(e.code)) return;
         
         game.keys[e.code] = false;
