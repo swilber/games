@@ -3250,9 +3250,9 @@ async function createMarioGame(settings, callbacks = null) {
             // Create different level end objects based on theme (will be determined at runtime)
             return { 
                 x, 
-                y: groundY - 32, // 32 pixels tall for toadstool
-                width: 20, 
-                height: 32,
+                y: groundY - 150, // Flag pole extends upward from ground
+                width: 35, 
+                height: 150, // Back to original height
                 type: 'level_end' // Generic type, rendering will depend on theme
             };
         },
