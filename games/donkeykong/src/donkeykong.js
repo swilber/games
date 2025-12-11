@@ -1809,8 +1809,15 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         }
         
         if (!game.gameRunning && e.key === 'r') {
-            // Restart game
-            location.reload();
+            // Restart game - reset to level 1
+            if (callbacks?.onGameComplete) {
+                callbacks.onGameComplete('donkeykong', { 
+                    completed: false, 
+                    score: game.score,
+                    level: game.currentLevel,
+                    restart: true
+                });
+            }
             return;
         }
         
