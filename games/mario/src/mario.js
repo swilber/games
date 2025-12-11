@@ -4112,8 +4112,11 @@ async function createMarioGame(settings, callbacks = null) {
     }
     
     async function nextLevel() {
-        game.levelsCompleted++;
-        if (game.levelsCompleted >= game.levelsToWin) {
+        // Progress to next level first
+        game.currentLevel++;
+        game.levelsCompleted = game.currentLevel - 1; // Keep levelsCompleted in sync
+        
+        if (game.currentLevel > game.levelsToWin) {
             game.won = true;
             // Use callback if provided, otherwise fallback to global functions
             if (callbacks?.onGameComplete) {
@@ -4126,7 +4129,6 @@ async function createMarioGame(settings, callbacks = null) {
             }
         } else {
             // Progress to next level while preserving Mario's state
-            game.currentLevel = game.levelsCompleted + 1;
             await initializeLevel(true); // Await the async function
         }
     }
@@ -4137,7 +4139,7 @@ async function createMarioGame(settings, callbacks = null) {
         
         const playerTransform = playerEntity.get('transform');
         
-        if (game.flag && playerTransform.x + playerTransform.width > game.flag.x) {
+        if (game.flag && playerTransform.x + playerTransform.width > game.flag.x && !game.levelEndTriggered) {
             // Start level end animation (placeholder for now)
             game.levelEndTriggered = true;
             await nextLevel();
