@@ -392,6 +392,22 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 const exists = activeSkiers.some(active => active.id === skierId);
                 
                 if (!exists) {
+                    // Generate random colors once when skier is created
+                    const seed = skier.x + skier.y * 1000;
+                    const random = (offset) => {
+                        const x = Math.sin(seed + offset) * 10000;
+                        return (x - Math.floor(x));
+                    };
+                    
+                    const generateColor = (r, g, b) => {
+                        const red = Math.floor(random(r) * 180 + 20);
+                        const green = Math.floor(random(g) * 180 + 20);
+                        const blue = Math.floor(random(b) * 180 + 20);
+                        return `rgb(${red}, ${green}, ${blue})`;
+                    };
+                    
+                    const skinColors = ['#FFB6C1', '#FDBCB4', '#D2B48C', '#DEB887', '#F5DEB3', '#FFDBAC'];
+                    
                     activeSkiers.push({
                         id: skierId,
                         x: skier.x,
@@ -399,7 +415,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
                         mapY: skier.y,
                         vx: skier.vx,
                         vy: skier.vy,
-                        color: skier.color
+                        color: skier.color,
+                        // Permanent color properties
+                        isGirl: random(100) > 0.5,
+                        shirtColor: generateColor(1, 2, 3),
+                        pantsColor: generateColor(4, 5, 6),
+                        hatColor: generateColor(7, 8, 9),
+                        skinColor: skinColors[Math.floor(random(10) * skinColors.length)]
                     });
                 }
             }
@@ -636,30 +658,12 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.save();
             ctx.translate(skier.x, skier.y);
             
-            // Generate random colors (avoiding white/light colors)
-            // Use skier position as seed for consistent colors per skier
-            const seed = skier.x + skier.mapY * 1000;
-            const random = (offset) => {
-                const x = Math.sin(seed + offset) * 10000;
-                return (x - Math.floor(x));
-            };
-            
-            // Generate colors with minimum darkness to avoid white
-            const generateColor = (r, g, b) => {
-                const red = Math.floor(random(r) * 180 + 20); // 20-200 range
-                const green = Math.floor(random(g) * 180 + 20);
-                const blue = Math.floor(random(b) * 180 + 20);
-                return `rgb(${red}, ${green}, ${blue})`;
-            };
-            
-            const isGirl = random(100) > 0.5;
-            const shirtColor = generateColor(1, 2, 3);
-            const pantsColor = generateColor(4, 5, 6);
-            const hatColor = generateColor(7, 8, 9);
-            
-            // Skin colors (limited range for realism)
-            const skinColors = ['#FFB6C1', '#FDBCB4', '#D2B48C', '#DEB887', '#F5DEB3', '#FFDBAC'];
-            const skinColor = skinColors[Math.floor(random(10) * skinColors.length)];
+            // Use permanent color properties (set when skier was created)
+            const isGirl = skier.isGirl;
+            const shirtColor = skier.shirtColor;
+            const pantsColor = skier.pantsColor;
+            const hatColor = skier.hatColor;
+            const skinColor = skier.skinColor;
             
             // Draw skis with curved tips
             ctx.fillStyle = '#8B4513';
