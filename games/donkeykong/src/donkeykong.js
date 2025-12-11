@@ -1829,8 +1829,8 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         });
     }
     
-    // Controls
-    document.addEventListener('keydown', (e) => {
+    // Controls - create named functions for proper cleanup
+    const keyDownHandler = (e) => {
         if (e.key === 'Escape') {
             // Return to level selection if unlock all levels is enabled
             const unlockAllLevels = dkConfig.unlockAllLevels || settings?.unlockAllLevels || false;
@@ -1871,12 +1871,15 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         }
         
         e.preventDefault();
-    });
+    };
     
-    document.addEventListener('keyup', (e) => {
+    const keyUpHandler = (e) => {
         game.keys[e.key] = false;
         e.preventDefault();
-    });
+    };
+    
+    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener('keyup', keyUpHandler);
     
     // Initialize
     await loadLevel();
@@ -1894,6 +1897,9 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 clearInterval(game.gameInterval);
             }
             game.gameRunning = false;
+            // Remove event listeners to prevent interference with other games
+            document.removeEventListener('keydown', keyDownHandler);
+            document.removeEventListener('keyup', keyUpHandler);
         }
     };
 }
