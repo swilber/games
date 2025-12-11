@@ -1459,17 +1459,34 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.stroke();
         }
         
-        // Draw UI
+        // Draw Win32-style header bar
+        ctx.fillStyle = '#C0C0C0'; // Classic Win32 gray
+        ctx.fillRect(0, 0, canvas.width, 25);
+        
+        // Draw header border (3D effect)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(canvas.width, 0);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, 25);
+        ctx.stroke();
+        
+        ctx.strokeStyle = '#808080';
+        ctx.beginPath();
+        ctx.moveTo(0, 24);
+        ctx.lineTo(canvas.width, 24);
+        ctx.moveTo(canvas.width - 1, 0);
+        ctx.lineTo(canvas.width - 1, 25);
+        ctx.stroke();
+        
+        // Draw stats in header bar
         ctx.fillStyle = '#000000';
-        ctx.font = '16px Arial';
-        ctx.fillText(`Score: ${score}`, 10, 30);
-        ctx.fillText(`Distance: ${Math.floor(distance)}m`, 10, 50);
-        ctx.fillText(`Speed: ${Math.floor(player.speed)}`, 10, 70);
-        ctx.fillText(`VX: ${player.vx.toFixed(2)}`, 10, 90);
-        ctx.fillText(`VY: ${player.vy.toFixed(2)}`, 10, 110);
-        ctx.fillText(`Map Y: ${Math.floor(playerMapY)}`, 10, 130);
-        ctx.fillText(`Objects: ${obstacles.length + otherSkiers.length + jumps.length}`, 10, 150);
-        ctx.fillText(`Crashed: ${player.crashed} Timer: ${player.crashTimer.toFixed(1)} VX: ${player.vx.toFixed(1)} VY: ${player.vy.toFixed(1)}`, 10, 170);
+        ctx.font = '12px Arial';
+        ctx.fillText(`Score: ${score}`, 10, 16);
+        ctx.fillText(`Distance: ${Math.floor(distance)}m`, 120, 16);
+        ctx.fillText(`Speed: ${Math.floor(player.speed)}`, 250, 16);
         
         if (player.onLift) {
             ctx.fillText('Riding Ski Lift...', canvas.width / 2 - 60, 100);
