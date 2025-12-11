@@ -69,7 +69,9 @@ async function createSkiFreeGame(settings, callbacks = null) {
         chaseTimer: 0,
         maxChaseTime: 10, // 10 seconds of chasing
         cooldownTimer: 0,
-        maxCooldown: 30 // 30 seconds before can appear again
+        maxCooldown: 30, // 30 seconds before can appear again
+        celebrating: false,
+        celebrationTimer: 0
     };
     
     // Terrain scroll offset
@@ -82,6 +84,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const pregeneratedJumps = [];
     const pregeneratedFlags = [];
     const pregeneratedLifts = [];
+    const pregeneratedYetis = []; // Yetis placed on map
     
     // Finish line at bottom of mountain
     const finishLine = {
@@ -100,8 +103,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
                     type: 'tree',
                     x: Math.random() * canvas.width,
                     y: y,
-                    width: 20,
-                    height: 40
+                    width: 12,
+                    height: 25
                 });
             }
             
@@ -174,6 +177,20 @@ async function createSkiFreeGame(settings, callbacks = null) {
                     color: Math.random() > 0.5 ? '#ff0000' : '#0000ff'
                 });
             }
+        }
+        
+        // Generate yetis in bottom half of map
+        const bottomHalf = mapHeight / 2;
+        for (let i = 0; i < 3; i++) { // 3 yetis on the mountain
+            pregeneratedYetis.push({
+                x: Math.random() * canvas.width,
+                y: bottomHalf + Math.random() * bottomHalf, // Random position in bottom half
+                active: false,
+                triggered: false,
+                chaseTimer: 0,
+                maxChaseTime: 10,
+                id: i
+            });
         }
         
         // Ski lifts removed
@@ -339,27 +356,26 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Yeti is active - chase the player
         yeti.chaseTimer += 1/60;
         
-        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 25;
+        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 8;
         
         // Yeti chases player horizontally
         const dx = player.x - yeti.x;
         yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.1, 3);
         
         // Yeti moves down the screen (chasing from above)
-        yeti.y += yetiSpeed * 0.3; // Apply same scaling as player movement
+        if (!yeti.celebrating) {
+            yeti.y += yetiSpeed * 0.3; // Apply same scaling as player movement
+        }
         
         // Check if yeti caught player
         if (Math.abs(yeti.x - player.x) < 30 && Math.abs(yeti.y - player.y) < 30) {
             // Game over - yeti caught player
-            gameRunning = false;
-            if (callbacks?.onGameComplete) {
-                callbacks.onGameComplete('skifree', { 
-                    completed: false, 
-                    score: score,
-                    distance: Math.floor(distance),
-                    caughtByYeti: true
-                });
-            }
+            yeti.celebrating = true;
+            yeti.celebrationTimer = 0;
+            yeti.vx = 0; // Stop yeti movement
+            yeti.vy = 0;
+            player.caughtByYeti = true;
+            player.headless = true;
             return;
         }
         
@@ -1045,6 +1061,29 @@ async function createSkiFreeGame(settings, callbacks = null) {
             
             // Draw player facing the direction of movement
             if (direction <= 1) { // Facing left (-90° to -60°)
+                // Draw blood behind body when headless
+                if (player.headless) {
+                    const time = Date.now() * 0.01;
+                    // Draw blood spurting from neck
+                    ctx.fillStyle = '#CC0000';
+                    for (let i = 0; i < 5; i++) {
+                        const spurtHeight = 4 + Math.sin(time * 3 + i) * 8;
+                        const spurtX = -2 + (i - 2) * 2 + Math.sin(time * 2 + i) * 2;
+                        ctx.beginPath();
+                        ctx.arc(spurtX, -8 - spurtHeight, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Draw growing blood pool under body
+                    if (!player.bloodPoolFrames) player.bloodPoolFrames = 0;
+                    player.bloodPoolFrames++;
+                    const poolSize = Math.min(8 + (player.bloodPoolFrames * 0.2), 26);
+                    ctx.fillStyle = '#990000';
+                    ctx.beginPath();
+                    ctx.ellipse(-2, 4, poolSize, poolSize * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
                 // Draw body (royal blue shirt)
                 ctx.fillStyle = '#4169E1';
                 ctx.fillRect(-6, -8, 8, 12);
@@ -1055,27 +1094,29 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.fillRect(-2, -5, 3, 2);  // Right arm
                 
                 // Draw head (profile left)
-                ctx.fillStyle = '#FFB6C1';
-                ctx.beginPath();
-                ctx.arc(-2, -12, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw ski hat (santa style)
-                ctx.fillStyle = '#FF0000';
-                ctx.beginPath();
-                ctx.arc(-2, -16, 3, 0, Math.PI * 2);
-                ctx.fill();
-                // Hat tail
-                ctx.fillRect(-8, -18, 6, 2);
-                ctx.beginPath();
-                ctx.arc(-8, -17, 1, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw goggles (side view)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(-4, -12, 1.5, 0, Math.PI * 2);
-                ctx.fill();
+                if (!player.headless) {
+                    ctx.fillStyle = '#FFB6C1';
+                    ctx.beginPath();
+                    ctx.arc(-2, -12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw ski hat (santa style)
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.arc(-2, -16, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Hat tail
+                    ctx.fillRect(-8, -18, 6, 2);
+                    ctx.beginPath();
+                    ctx.arc(-8, -17, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw goggles (side view)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(-4, -12, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 
                 // Draw ski poles in hands
                 ctx.strokeStyle = '#666666';
@@ -1088,6 +1129,29 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.stroke();
                 
             } else if (direction >= 5) { // Facing right (60° to 90°)
+                // Draw blood behind body when headless
+                if (player.headless) {
+                    const time = Date.now() * 0.01;
+                    // Draw blood spurting from neck
+                    ctx.fillStyle = '#CC0000';
+                    for (let i = 0; i < 5; i++) {
+                        const spurtHeight = 4 + Math.sin(time * 3 + i) * 8;
+                        const spurtX = 2 + (i - 2) * 2 + Math.sin(time * 2 + i) * 2;
+                        ctx.beginPath();
+                        ctx.arc(spurtX, -8 - spurtHeight, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Draw growing blood pool under body
+                    if (!player.bloodPoolFrames) player.bloodPoolFrames = 0;
+                    player.bloodPoolFrames++;
+                    const poolSize = Math.min(8 + (player.bloodPoolFrames * 0.2), 26);
+                    ctx.fillStyle = '#990000';
+                    ctx.beginPath();
+                    ctx.ellipse(2, 4, poolSize, poolSize * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
                 // Draw body (royal blue shirt)
                 ctx.fillStyle = '#4169E1';
                 ctx.fillRect(-2, -8, 8, 12);
@@ -1098,27 +1162,29 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.fillRect(-1, -5, 3, 2); // Left arm
                 
                 // Draw head (profile right)
-                ctx.fillStyle = '#FFB6C1';
-                ctx.beginPath();
-                ctx.arc(2, -12, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw ski hat (santa style)
-                ctx.fillStyle = '#FF0000';
-                ctx.beginPath();
-                ctx.arc(2, -16, 3, 0, Math.PI * 2);
-                ctx.fill();
-                // Hat tail
-                ctx.fillRect(2, -18, 6, 2);
-                ctx.beginPath();
-                ctx.arc(8, -17, 1, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw goggles (side view)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(4, -12, 1.5, 0, Math.PI * 2);
-                ctx.fill();
+                if (!player.headless) {
+                    ctx.fillStyle = '#FFB6C1';
+                    ctx.beginPath();
+                    ctx.arc(2, -12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw ski hat (santa style)
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.arc(2, -16, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Hat tail
+                    ctx.fillRect(2, -18, 6, 2);
+                    ctx.beginPath();
+                    ctx.arc(8, -17, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw goggles (side view)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(4, -12, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 
                 // Draw ski poles in hands
                 ctx.strokeStyle = '#666666';
@@ -1131,6 +1197,29 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.stroke();
                 
             } else { // Facing forward/down (center directions)
+                // Draw blood behind body when headless
+                if (player.headless) {
+                    const time = Date.now() * 0.01;
+                    // Draw blood spurting from neck
+                    ctx.fillStyle = '#CC0000';
+                    for (let i = 0; i < 5; i++) {
+                        const spurtHeight = 4 + Math.sin(time * 3 + i) * 8;
+                        const spurtX = (i - 2) * 2 + Math.sin(time * 2 + i) * 2;
+                        ctx.beginPath();
+                        ctx.arc(spurtX, -8 - spurtHeight, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Draw growing blood pool under body
+                    if (!player.bloodPoolFrames) player.bloodPoolFrames = 0;
+                    player.bloodPoolFrames++;
+                    const poolSize = Math.min(8 + (player.bloodPoolFrames * 0.2), 26);
+                    ctx.fillStyle = '#990000';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 4, poolSize, poolSize * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
                 // Draw body (royal blue shirt)
                 ctx.fillStyle = '#4169E1';
                 ctx.fillRect(-4, -8, 8, 12);
@@ -1141,35 +1230,37 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 ctx.fillRect(4, -6, 4, 2);  // Right arm
                 
                 // Draw head (front view)
-                ctx.fillStyle = '#FFB6C1';
-                ctx.beginPath();
-                ctx.arc(0, -12, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw ski hat (santa style)
-                ctx.fillStyle = '#FF0000';
-                ctx.beginPath();
-                ctx.arc(0, -16, 3, 0, Math.PI * 2);
-                ctx.fill();
-                // Hat tail (hanging to side)
-                ctx.fillRect(-6, -18, 6, 2);
-                ctx.beginPath();
-                ctx.arc(-6, -17, 1, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw goggles (front view)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(-2, -12, 1.5, 0, Math.PI * 2);
-                ctx.arc(2, -12, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw goggle strap
-                ctx.strokeStyle = '#333333';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(0, -12, 4, Math.PI * 0.8, Math.PI * 0.2);
-                ctx.stroke();
+                if (!player.headless) {
+                    ctx.fillStyle = '#FFB6C1';
+                    ctx.beginPath();
+                    ctx.arc(0, -12, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw ski hat (santa style)
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Hat tail (hanging to side)
+                    ctx.fillRect(-6, -18, 6, 2);
+                    ctx.beginPath();
+                    ctx.arc(-6, -17, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw goggles (front view)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(-2, -12, 1.5, 0, Math.PI * 2);
+                    ctx.arc(2, -12, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw goggle strap
+                    ctx.strokeStyle = '#333333';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(0, -12, 4, Math.PI * 0.8, Math.PI * 0.2);
+                    ctx.stroke();
+                }
                 
                 // Draw ski poles in hands
                 ctx.strokeStyle = '#666666';
@@ -1185,75 +1276,106 @@ async function createSkiFreeGame(settings, callbacks = null) {
         ctx.restore();
         
         // Draw yeti
-        if (yeti.active) {
+        if (yeti.active || yeti.celebrating) {
+            const yetiScale = 0.5; // Scale factor for yeti size
+            
+            // Celebration animation
+            let jumpOffset = 0;
+            let armOffset = 0;
+            if (yeti.celebrating) {
+                yeti.celebrationTimer += 1/60;
+                jumpOffset = Math.sin(yeti.celebrationTimer * 8) * 10; // Jump up and down
+                armOffset = Math.sin(yeti.celebrationTimer * 6) * 15; // Wave arms
+            }
+            
             // Draw yeti body (gray)
             ctx.fillStyle = '#808080';
-            ctx.fillRect(yeti.x - 15, yeti.y - 20, 30, 40);
+            ctx.fillRect(yeti.x - 15 * yetiScale, yeti.y - 20 * yetiScale + jumpOffset, 30 * yetiScale, 40 * yetiScale);
             
             // Draw yeti head
             ctx.fillStyle = '#808080';
             ctx.beginPath();
-            ctx.arc(yeti.x, yeti.y - 25, 12, 0, Math.PI * 2);
+            ctx.arc(yeti.x, yeti.y - 25 * yetiScale + jumpOffset, 12 * yetiScale, 0, Math.PI * 2);
             ctx.fill();
             
             // Draw eyes (red and menacing)
             ctx.fillStyle = '#FF0000';
             ctx.beginPath();
-            ctx.arc(yeti.x - 5, yeti.y - 28, 2, 0, Math.PI * 2);
-            ctx.arc(yeti.x + 5, yeti.y - 28, 2, 0, Math.PI * 2);
+            ctx.arc(yeti.x - 5 * yetiScale, yeti.y - 28 * yetiScale + jumpOffset, 2 * yetiScale, 0, Math.PI * 2);
+            ctx.arc(yeti.x + 5 * yetiScale, yeti.y - 28 * yetiScale + jumpOffset, 2 * yetiScale, 0, Math.PI * 2);
             ctx.fill();
             
-            // Draw sharp teeth
+            // Draw sharp teeth (bigger smile when celebrating)
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            // Upper teeth
-            ctx.moveTo(yeti.x - 4, yeti.y - 20);
-            ctx.lineTo(yeti.x - 2, yeti.y - 16);
-            ctx.lineTo(yeti.x, yeti.y - 20);
-            ctx.lineTo(yeti.x + 2, yeti.y - 16);
-            ctx.lineTo(yeti.x + 4, yeti.y - 20);
+            const smileWidth = yeti.celebrating ? 6 : 4;
+            ctx.moveTo(yeti.x - smileWidth * yetiScale, yeti.y - 20 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x - 2 * yetiScale, yeti.y - 16 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x, yeti.y - 20 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x + 2 * yetiScale, yeti.y - 16 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x + smileWidth * yetiScale, yeti.y - 20 * yetiScale + jumpOffset);
             ctx.fill();
             
-            // Draw stick arms (bent)
+            // Draw stick arms (raised when celebrating)
             ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 4 * yetiScale;
             ctx.beginPath();
-            // Left arm
-            ctx.moveTo(yeti.x - 15, yeti.y - 10);
-            ctx.lineTo(yeti.x - 25, yeti.y - 5);
-            ctx.lineTo(yeti.x - 30, yeti.y + 5);
-            // Right arm
-            ctx.moveTo(yeti.x + 15, yeti.y - 10);
-            ctx.lineTo(yeti.x + 25, yeti.y - 5);
-            ctx.lineTo(yeti.x + 30, yeti.y + 5);
+            if (yeti.celebrating) {
+                // Arms raised over head
+                ctx.moveTo(yeti.x - 15 * yetiScale, yeti.y - 10 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x - 20 * yetiScale, yeti.y - 30 * yetiScale + jumpOffset + armOffset);
+                ctx.lineTo(yeti.x - 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset + armOffset);
+                ctx.moveTo(yeti.x + 15 * yetiScale, yeti.y - 10 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x + 20 * yetiScale, yeti.y - 30 * yetiScale + jumpOffset - armOffset);
+                ctx.lineTo(yeti.x + 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset - armOffset);
+            } else {
+                // Normal arms
+                ctx.moveTo(yeti.x - 15 * yetiScale, yeti.y - 10 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x - 25 * yetiScale, yeti.y - 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x - 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+                ctx.moveTo(yeti.x + 15 * yetiScale, yeti.y - 10 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x + 25 * yetiScale, yeti.y - 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x + 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+            }
             ctx.stroke();
             
             // Draw stick legs (bent)
             ctx.beginPath();
             // Left leg
-            ctx.moveTo(yeti.x - 8, yeti.y + 20);
-            ctx.lineTo(yeti.x - 15, yeti.y + 35);
-            ctx.lineTo(yeti.x - 20, yeti.y + 45);
+            ctx.moveTo(yeti.x - 8 * yetiScale, yeti.y + 20 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x - 15 * yetiScale, yeti.y + 35 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x - 20 * yetiScale, yeti.y + 45 * yetiScale + jumpOffset);
             // Right leg
-            ctx.moveTo(yeti.x + 8, yeti.y + 20);
-            ctx.lineTo(yeti.x + 15, yeti.y + 35);
-            ctx.lineTo(yeti.x + 20, yeti.y + 45);
+            ctx.moveTo(yeti.x + 8 * yetiScale, yeti.y + 20 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x + 15 * yetiScale, yeti.y + 35 * yetiScale + jumpOffset);
+            ctx.lineTo(yeti.x + 20 * yetiScale, yeti.y + 45 * yetiScale + jumpOffset);
             ctx.stroke();
             
             // Draw claws on hands
             ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * yetiScale;
             ctx.beginPath();
-            // Left claws
-            ctx.moveTo(yeti.x - 30, yeti.y + 5);
-            ctx.lineTo(yeti.x - 33, yeti.y + 2);
-            ctx.moveTo(yeti.x - 30, yeti.y + 5);
-            ctx.lineTo(yeti.x - 33, yeti.y + 8);
-            // Right claws
-            ctx.moveTo(yeti.x + 30, yeti.y + 5);
-            ctx.lineTo(yeti.x + 33, yeti.y + 2);
-            ctx.moveTo(yeti.x + 30, yeti.y + 5);
-            ctx.lineTo(yeti.x + 33, yeti.y + 8);
+            if (yeti.celebrating) {
+                // Claws on raised hands
+                ctx.moveTo(yeti.x - 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset + armOffset);
+                ctx.lineTo(yeti.x - 17 * yetiScale, yeti.y - 42 * yetiScale + jumpOffset + armOffset);
+                ctx.moveTo(yeti.x - 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset + armOffset);
+                ctx.lineTo(yeti.x - 17 * yetiScale, yeti.y - 38 * yetiScale + jumpOffset + armOffset);
+                ctx.moveTo(yeti.x + 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset - armOffset);
+                ctx.lineTo(yeti.x + 17 * yetiScale, yeti.y - 42 * yetiScale + jumpOffset - armOffset);
+                ctx.moveTo(yeti.x + 15 * yetiScale, yeti.y - 40 * yetiScale + jumpOffset - armOffset);
+                ctx.lineTo(yeti.x + 17 * yetiScale, yeti.y - 38 * yetiScale + jumpOffset - armOffset);
+            } else {
+                // Normal claws
+                ctx.moveTo(yeti.x - 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x - 33 * yetiScale, yeti.y + 2 * yetiScale + jumpOffset);
+                ctx.moveTo(yeti.x - 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x - 33 * yetiScale, yeti.y + 8 * yetiScale + jumpOffset);
+                ctx.moveTo(yeti.x + 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x + 33 * yetiScale, yeti.y + 2 * yetiScale + jumpOffset);
+                ctx.moveTo(yeti.x + 30 * yetiScale, yeti.y + 5 * yetiScale + jumpOffset);
+                ctx.lineTo(yeti.x + 33 * yetiScale, yeti.y + 8 * yetiScale + jumpOffset);
+            }
             ctx.stroke();
         }
         
@@ -1278,6 +1400,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.fillText('YETI IS CHASING YOU!', canvas.width / 2 - 80, 120);
         }
         
+        if (player.caughtByYeti) {
+            ctx.fillStyle = '#FF0000';
+            ctx.font = '24px Arial';
+            ctx.fillText('YOU WERE EATEN!', canvas.width / 2 - 80, canvas.height / 2 - 20);
+            ctx.fillText('Press R to Restart', canvas.width / 2 - 80, canvas.height / 2 + 20);
+        }
+        
         // Instructions
         if (!gameStarted) {
             ctx.fillStyle = '#000000';
@@ -1296,11 +1425,47 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
     }
     
-    function update() {
-        if (!gameRunning) return;
+    function resetGame() {
+        // Reset player
+        player.x = canvas.width / 2;
+        player.y = canvas.height / 3;
+        player.vx = 0;
+        player.vy = 0;
+        player.speed = 0;
+        player.skiDirection = 3;
+        player.jumping = false;
+        player.jumpVelocity = 0;
+        player.crashed = false;
+        player.crashTimer = 0;
+        player.caughtByYeti = false;
+        player.headless = false;
+        player.bloodPoolFrames = 0;
         
-        updatePlayer();
-        updateObstacles();
+        // Reset yeti
+        yeti.active = false;
+        yeti.celebrating = false;
+        yeti.celebrationTimer = 0;
+        yeti.chaseTimer = 0;
+        yeti.cooldownTimer = 0;
+        yeti.x = canvas.width / 2;
+        yeti.y = -100;
+        
+        // Reset game state
+        playerMapY = 0;
+        score = 0;
+        distance = 0;
+        yetiChasing = false;
+        gameRunning = true;
+        gameStarted = true;
+    }
+    
+    function update() {
+        if (!gameRunning && !player.caughtByYeti) return;
+        
+        if (!player.caughtByYeti) {
+            updatePlayer();
+            updateObstacles();
+        }
         updateYeti();
         
         // Update score based on distance
@@ -1321,8 +1486,16 @@ async function createSkiFreeGame(settings, callbacks = null) {
     }
     
     function handleKeyDown(e) {
-        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyR'];
         if (!gameKeys.includes(e.code)) return;
+        
+        if (player.caughtByYeti && e.code === 'KeyR') {
+            // Restart game
+            resetGame();
+            return;
+        }
+        
+        if (!gameKeys.slice(0, 4).includes(e.code)) return;
         
         if (!gameStarted) {
             gameStarted = true;
