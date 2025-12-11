@@ -4080,8 +4080,11 @@ async function createMarioGame(settings, callbacks = null) {
                 playerComp.score = marioState.score;
                 playerComp.powerState = marioState.powerState;
                 
-                // Update transform size based on power state
+                // Update transform size based on power state and reset position to start
                 const transform = playerEntity.get('transform');
+                transform.x = 50; // Reset to start position
+                transform.y = 300; // Reset to start position
+                
                 if (marioState.powerState === 'small') {
                     transform.width = game.config.rendering.playerSmallWidth;
                     transform.height = game.config.rendering.playerSmallHeight;
@@ -4091,6 +4094,9 @@ async function createMarioGame(settings, callbacks = null) {
                     // Adjust Y position so big Mario doesn't spawn in ground
                     transform.y -= (game.config.rendering.playerBigHeight - game.config.rendering.playerSmallHeight);
                 }
+                
+                // Reset camera to start
+                game.camera.x = 0;
             }
         }
         
@@ -4133,11 +4139,16 @@ async function createMarioGame(settings, callbacks = null) {
     }
     
     async function nextLevel() {
+        console.log('nextLevel called, current level:', game.currentLevel);
+        
         // Progress to next level first
         game.currentLevel++;
         game.levelsCompleted = game.currentLevel - 1; // Keep levelsCompleted in sync
         
+        // Don't reset levelEndTriggered here - let it be reset when new level loads
+        
         if (game.currentLevel > game.levelsToWin) {
+            console.log('Game won!');
             game.won = true;
             // Use callback if provided, otherwise fallback to global functions
             if (callbacks?.onGameComplete) {
@@ -4149,8 +4160,11 @@ async function createMarioGame(settings, callbacks = null) {
                 showQuestion();
             }
         } else {
+            console.log('Progressing to level:', game.currentLevel);
             // Progress to next level while preserving Mario's state
             await initializeLevel(true); // Await the async function
+            // Reset levelEndTriggered after level is loaded
+            game.levelEndTriggered = false;
         }
     }
     
@@ -4160,8 +4174,14 @@ async function createMarioGame(settings, callbacks = null) {
         
         const playerTransform = playerEntity.get('transform');
         
+        // Debug logging
+        if (game.flag) {
+            console.log('Flag position:', game.flag.x, 'Player position:', playerTransform.x + playerTransform.width, 'Level end triggered:', game.levelEndTriggered);
+        }
+        
         if (game.flag && playerTransform.x + playerTransform.width > game.flag.x && !game.levelEndTriggered) {
             // Start level end animation (placeholder for now)
+            console.log('Level end triggered!');
             game.levelEndTriggered = true;
             await nextLevel();
         }
