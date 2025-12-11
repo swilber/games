@@ -13,7 +13,8 @@
     "levelsToWin": 5,
     "totalLanes": 12,
     "carSpawnDivisor": 100,
-    "logSpawnDivisor": 40
+    "logSpawnDivisor": 40,
+    "lives": 3
   },
   "physics": {
     "frogMoveSpeed": 25,

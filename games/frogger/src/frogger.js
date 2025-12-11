@@ -71,6 +71,10 @@ async function createFroggerGame(settings, callbacks = null) {
         currentLevel: 0,
         levelsCompleted: 0,
         levelsToWin: froggerConfig.gameplay?.levelsToWin || settings?.levelsToWin || 5,
+        lives: froggerConfig.gameplay?.lives || 3,
+        maxLives: froggerConfig.gameplay?.lives || 3,
+        lifeLostMessage: false,
+        lifeLostTimer: 0,
         laneTypes: levelLayouts[0],
         baseCarSpeed: froggerConfig.gameplay?.carSpeed || settings?.carSpeed || 2,
         baseCarDensity: froggerConfig.gameplay?.carDensity || settings?.carDensity || 0.3
@@ -111,6 +115,22 @@ async function createFroggerGame(settings, callbacks = null) {
         game.laneTypes = levelLayouts[game.currentLevel];
         console.log(`Frogger: Moving to level ${game.currentLevel + 1}`);
         resetLevel();
+    }
+    
+    function loseLife() {
+        game.lives--;
+        if (game.lives <= 0) {
+            game.gameOver = true;
+        } else {
+            // Show life lost message
+            game.lifeLostMessage = true;
+            game.lifeLostTimer = 0;
+            
+            // Reset frog position but keep level progress
+            game.frog.x = canvas.width / 2;
+            game.frog.y = canvas.height - laneHeight / 2;
+            game.onLog = false;
+        }
     }
     
     function resetLevel() {
@@ -202,7 +222,7 @@ async function createFroggerGame(settings, callbacks = null) {
                 game.frog.x + game.frog.size > car.x &&
                 game.frog.y < car.y + car.height/2 &&
                 game.frog.y + game.frog.size > car.y - car.height/2) {
-                game.gameOver = true;
+                loseLife();
             }
         });
         
@@ -210,12 +230,12 @@ async function createFroggerGame(settings, callbacks = null) {
         const frogVisualLane = getVisualLaneFromY(game.frog.y);
         
         if (getLaneType(frogVisualLane) === 2 && !game.onLog) {
-            game.gameOver = true;
+            loseLife();
         }
         
         // Check boundaries
         if (game.frog.x < 0 || game.frog.x > canvas.width) {
-            game.gameOver = true;
+            loseLife();
         }
         
         // Check win condition
@@ -280,13 +300,22 @@ async function createFroggerGame(settings, callbacks = null) {
         ctx.fillRect(game.frog.x, game.frog.y - game.frog.size/2, game.frog.size, game.frog.size);
         
         // Draw UI
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(45, 51, 100, 20);
-        ctx.fillStyle = '#fff';
         ctx.font = '16px Arial';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, 55, 53);
+        
+        // Lives box (left side)
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(10, 10, 80, 25);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`Lives: ${game.lives}`, 15, 15);
+        
+        // Level box (right side)
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(canvas.width - 120, 10, 110, 25);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`Level: ${game.levelsCompleted + 1}/${game.levelsToWin}`, canvas.width - 115, 15);
+        
         ctx.textBaseline = 'alphabetic'; // Reset to default
         
         if (game.won) {
@@ -311,6 +340,24 @@ async function createFroggerGame(settings, callbacks = null) {
             ctx.fillText('Cross roads, ride logs across water', canvas.width/2, canvas.height/2 - 20);
             ctx.fillText('Press arrow keys to move', canvas.width/2, canvas.height/2 + 10);
             ctx.fillText('Reach the top to win!', canvas.width/2, canvas.height/2 + 40);
+        }
+        
+        if (game.lifeLostMessage) {
+            game.lifeLostTimer++;
+            if (game.lifeLostTimer > 120) { // Show for 2 seconds at 60fps
+                game.lifeLostMessage = false;
+                game.lifeLostTimer = 0;
+            }
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('LIFE LOST!', canvas.width/2, canvas.height/2 - 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '18px Arial';
+            ctx.fillText(`${game.lives} lives remaining`, canvas.width/2, canvas.height/2 + 20);
         }
         
         if (game.gameOver) {
@@ -349,14 +396,17 @@ async function createFroggerGame(settings, callbacks = null) {
         
         if (game.gameOver) {
             if (e.code === 'KeyR') {
-                // Reset to current level
+                // Reset entire game
                 game.frog = { x: canvas.width / 2, y: canvas.height - laneHeight / 2, size: 18 };
                 game.cars = [];
                 game.logs = [];
                 game.onLog = false;
                 game.gameOver = false;
                 game.gameStarted = false;
-                // Keep level progression and lane types
+                game.currentLevel = 0;
+                game.levelsCompleted = 0;
+                game.lives = game.maxLives;
+                game.laneTypes = levelLayouts[0];
                 if (!gameRunning) {
                     gameRunning = true;
                     gameInterval = setInterval(gameLoop, 16);
