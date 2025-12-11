@@ -23,6 +23,26 @@ async function createSkiFreeGame(settings, callbacks = null) {
     let yetiChasing = false;
     let yetiDistance = 1000;
     
+    // Level system
+    let currentLevel = 1;
+    const maxLevels = skiFreeConfig.gameplay?.maxLevels || 2;
+    let levelStartTime = 0;
+    let showLevelText = false;
+    
+    // Level configurations - difficulty scaling
+    const levelConfigs = {
+        1: { yetiSpeed: 5, treeChance: 0.25, rockChance: 0.15 }, // Easy
+        2: { yetiSpeed: 7, treeChance: 0.3, rockChance: 0.2 }, // Current level
+        3: { yetiSpeed: 6, treeChance: 0.35, rockChance: 0.25 }, // Medium
+        4: { yetiSpeed: 6.5, treeChance: 0.4, rockChance: 0.3 }, // Hard
+        5: { yetiSpeed: 7, treeChance: 0.45, rockChance: 0.35 }  // Very Hard
+    };
+    
+    // Get current level config
+    function getCurrentLevelConfig() {
+        return levelConfigs[Math.min(currentLevel, Object.keys(levelConfigs).length)];
+    }
+    
     // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = skiFreeConfig.physics?.canvasWidth || 800;
@@ -97,9 +117,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
     
     function pregenerateMap() {
         // Generate obstacles across entire map
+        const levelConfig = getCurrentLevelConfig();
+        
         for (let y = 0; y < mapHeight; y += 50) {
-            // Trees
-            if (Math.random() < 0.3) {
+            // Trees - density based on level
+            if (Math.random() < levelConfig.treeChance) {
                 pregeneratedObstacles.push({
                     type: 'tree',
                     x: Math.random() * canvas.width,
@@ -109,8 +131,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 });
             }
             
-            // Rocks
-            if (Math.random() < 0.2) {
+            // Rocks - density based on level
+            if (Math.random() < levelConfig.rockChance) {
                 pregeneratedObstacles.push({
                     type: 'rock',
                     x: Math.random() * canvas.width,
@@ -367,7 +389,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Yeti is active - chase the player
         yeti.chaseTimer += 1/60;
         
-        const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 7;
+        const levelConfig = getCurrentLevelConfig();
+        const yetiSpeed = levelConfig.yetiSpeed;
         
         // Yeti moves directly toward player (can go uphill/downhill)
         if (!yeti.celebrating) {
@@ -1484,9 +1507,10 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Draw stats in header bar
         ctx.fillStyle = '#000000';
         ctx.font = '12px Arial';
-        ctx.fillText(`Score: ${score}`, 10, 16);
-        ctx.fillText(`Distance: ${Math.floor(distance)}m`, 120, 16);
-        ctx.fillText(`Speed: ${Math.floor(player.speed)}`, 250, 16);
+        ctx.fillText(`Level: ${currentLevel}/${maxLevels}`, 10, 16);
+        ctx.fillText(`Score: ${score}`, 120, 16);
+        ctx.fillText(`Distance: ${Math.floor(distance)}m`, 230, 16);
+        ctx.fillText(`Speed: ${Math.floor(player.speed)}`, 360, 16);
         
         if (player.onLift) {
             ctx.fillText('Riding Ski Lift...', canvas.width / 2 - 60, 100);
@@ -1559,6 +1583,30 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.textAlign = 'left';
         }
         
+        // Show disappearing level text
+        if (showLevelText) {
+            const elapsed = Date.now() - levelStartTime;
+            if (elapsed < 3000) { // Show for 3 seconds
+                const alpha = Math.max(0, 1 - (elapsed - 2000) / 1000); // Fade out in last second
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                const levelText = `Level ${currentLevel}`;
+                const textX = canvas.width / 2;
+                const textY = canvas.height / 2 - 100;
+                ctx.strokeText(levelText, textX, textY);
+                ctx.fillText(levelText, textX, textY);
+                ctx.textAlign = 'left';
+                ctx.restore();
+            } else {
+                showLevelText = false;
+            }
+        }
+        
         // Instructions
         if (!gameStarted || player.skiDirection === 6) { // Show until player moves from stationary position
             ctx.fillStyle = '#000000';
@@ -1567,11 +1615,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.fillText('Hit jumps for bonus points', canvas.width / 2 - 100, canvas.height / 2 + 25);
         }
         
-        if (gameWon) {
-            ctx.fillStyle = '#00FF00';
-            ctx.font = '32px Arial';
-            ctx.fillText('YOU SURVIVED!', canvas.width / 2 - 100, canvas.height / 2);
-        }
+        // Game won text removed - level progression handles completion
     }
     
     function resetGame() {
@@ -1625,14 +1669,71 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (playerMapY >= mapHeight - 100) {
             gameWon = true;
             gameRunning = false;
-            if (callbacks?.onGameComplete) {
-                callbacks.onGameComplete('skifree', { 
-                    completed: true, 
-                    score: score,
-                    distance: Math.floor(distance)
-                });
+            
+            // Check for level progression
+            if (currentLevel < maxLevels) {
+                // Advance to next level
+                currentLevel++;
+                resetForNextLevel();
+            } else {
+                // Completed all levels
+                if (callbacks?.onGameComplete) {
+                    callbacks.onGameComplete('skifree', { 
+                        completed: true, 
+                        score: score,
+                        distance: Math.floor(distance),
+                        allLevelsComplete: true,
+                        level: currentLevel
+                    });
+                }
             }
         }
+    }
+    
+    function resetForNextLevel() {
+        // Reset player position and state
+        player.x = canvas.width / 2;
+        player.vx = 0;
+        player.vy = 0;
+        player.speed = 0;
+        player.skiDirection = 6;
+        player.jumping = false;
+        player.jumpVelocity = 0;
+        player.crashed = false;
+        player.crashTimer = 0;
+        player.caughtByYeti = false;
+        player.headless = false;
+        player.bloodPoolFrames = 0;
+        
+        // Reset yeti
+        yeti.active = false;
+        yeti.celebrating = false;
+        yeti.celebrationTimer = 0;
+        yeti.chaseTimer = 0;
+        yeti.cooldownTimer = 0;
+        yeti.x = canvas.width / 2;
+        yeti.y = -100;
+        yeti.mapY = 0;
+        
+        // Reset game state
+        playerMapY = 0;
+        score = 0;
+        distance = 0;
+        yetiChasing = false;
+        gameRunning = true;
+        gameStarted = true;
+        
+        // Show level text
+        showLevelText = true;
+        levelStartTime = Date.now();
+        
+        // Regenerate map with new level difficulty
+        pregenerateMap();
+    }
+    
+    function resetToLevel1() {
+        currentLevel = 1;
+        resetForNextLevel();
     }
     
     function handleKeyDown(e) {
@@ -1640,8 +1741,8 @@ async function createSkiFreeGame(settings, callbacks = null) {
         if (!gameKeys.includes(e.code)) return;
         
         if (player.caughtByYeti && e.code === 'KeyR') {
-            // Restart game
-            resetGame();
+            // Restart game - go back to level 1
+            resetToLevel1();
             return;
         }
         

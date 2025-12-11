@@ -23,7 +23,8 @@
     "scoreTarget": 2000,
     "yetiEnabled": true,
     "yetiSpeed": 7,
-    "jumpPower": 15
+    "jumpPower": 15,
+    "maxLevels": 2
   },
   "physics": {
     "canvasWidth": 800,
