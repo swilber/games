@@ -41,7 +41,7 @@
   },
   "player": {
     "jumpHeight": 13,
-    "moveSpeed": 4,
+    "moveSpeed": 2,
     "lives": 3,
     "invincibilityTime": 120
   },

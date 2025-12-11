@@ -1,22 +1,61 @@
 # Q Session Log
-Last Updated: 2025-12-06T00:38:46.242-07:00
+Last Updated: 2025-12-11T14:06:48.072-07:00
 
 ## PURPOSE
 Track recent commands and context to recover from context window overflows.
 
 ## CURRENT SESSION SUMMARY
-- **Working on**: Complete Excitebike-style dirt bike racing game with authentic mechanics
-- **Latest changes**: 
-  - **FIXED**: Oil slick collision detection during lane transitions to prevent cross-lane effects
-  - **IMPLEMENTED**: Transition-aware lane detection using 50% threshold for accurate collision
-  - **ELIMINATED**: False oil slick slowdowns when player is in adjacent lanes
-  - **ENHANCED**: Precise collision detection based on visual player position during transitions
-  - **COMMITTED**: Complete oil slick collision fix (commit 519e5a4)
-  - **Previous**: Game completion logic to only advance winners to question screen
-  - **Previous**: Final position storage to prevent placement changes after finish
-  - **Previous**: Rotation control fixes and configurable opponent crash frequency
+- **Working on**: Mario enemy collision bug - enemies getting stuck in corners with higher gravity
+- **Status**: **PARTIALLY IDENTIFIED** - Complex architectural issue requiring refactoring
+- **Root Causes Identified**:
+  - **Boundary interference**: Enemies spawned beyond valid boundaries (x>3180) trigger immediate direction reversal
+  - **System conflicts**: Multiple collision systems (wall, ground, boundary) override each other's decisions
+  - **Execution order**: AI system changes direction, but other systems immediately reverse it
+  - **Gravity correlation**: Higher gravity increases simultaneous collision frequency
+- **Architecture Issues**: Collision detection has overlapping responsibilities and unclear separation of concerns
 
-## LAP SYSTEM IMPLEMENTATION DETAILS
+## ENEMY COLLISION DEBUGGING FINDINGS
+- **Wall collision detection**: ✅ WORKS - Physics system properly detects wall hits and marks `ai.hitWall`
+- **AI direction changes**: ✅ WORKS - AI system properly changes direction when handling wall collisions
+- **Boundary checks**: ❌ INTERFERES - Enemies at x=3400+ exceed boundary limit (3180), causing immediate reversal
+- **Ground collision**: ❌ INTERFERES - Simultaneous ground+wall collisions cause system conflicts
+- **System execution**: ❌ CONFLICTS - Multiple systems modify AI direction in same frame
+
+## TECHNICAL DETAILS DISCOVERED
+- **Collision Priority**: Wall collisions now prioritized over ground collisions to reduce interference
+- **Boundary Limits**: Right boundary at x=3180 for 20px wide enemies, but enemies spawn at x=3400+
+- **Collision Cooldown**: 10-frame cooldown prevents immediate re-collision detection
+- **Debug Logging**: Comprehensive frame-by-frame tracking revealed system interaction patterns
+- **Gravity Impact**: Higher gravity increases collision frequency, exposing timing issues
+
+## ARCHITECTURAL IMPROVEMENTS MADE
+- **Physics/AI Separation**: Physics detects collisions, AI makes direction decisions (proper separation)
+- **Wall Collision Priority**: Wall collisions processed before ground collisions to prevent interference
+- **Collision Buffering**: 5px buffer added to prevent immediate re-collision after wall bounce
+- **System Ordering**: AI system runs after physics but conflicts with boundary/pit detection systems
+
+## RECOMMENDED SOLUTION
+The enemy collision issue requires **architectural refactoring**:
+1. **Consolidate collision systems** - Single collision system with clear priorities
+2. **Fix enemy spawn positions** - Ensure enemies spawn within valid boundaries
+3. **Simplify AI logic** - Remove conflicting direction change systems
+4. **Clear system responsibilities** - One system per concern (physics, AI, boundaries)
+
+## PREVIOUS CHANGES
+- **Level display improvements**: Added "n/m" format to Asteroids and Space Invaders games (commit 706a210)
+- **Enemy collision architecture**: Separated physics detection from AI decisions
+- **Debug infrastructure**: Comprehensive logging system for collision debugging
+- **Collision prioritization**: Wall collisions prioritized over ground collisions
+
+## ACTIVE CONTEXT
+- **Working directory**: /Users/P2176038/Desktop/greg
+- **Current branch**: main
+- **Project**: Mario enemy collision debugging - architectural complexity identified
+- **Status**: Issue partially solved, requires refactoring for complete fix
+- **Next**: Consider architectural refactoring or accept current collision behavior
+
+## RECOVERY INSTRUCTIONS
+If context overflows, user was debugging Mario enemy collision issue. Problem identified as architectural - multiple collision systems interfere with each other. Enemies get stuck due to boundary checks overriding wall collision direction changes. Wall collision detection works, but system conflicts prevent proper enemy movement. Requires collision system refactoring for complete solution.
 - **Track Structure**: `totalTrackLength = trackLength * lapsRequired` (6000 pixels for 3 laps)
 - **Lap Calculation**: `Math.floor(player.position / trackLength) + 1` for current lap
 - **Lap Markers**: Yellow vertical lines at positions `lap * trackLength + 400`
