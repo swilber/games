@@ -1415,10 +1415,62 @@ async function createSkiFreeGame(settings, callbacks = null) {
         }
         
         if (player.caughtByYeti) {
-            ctx.fillStyle = '#FF0000';
+            // Draw bloody "YOU WERE EATEN!" text
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2 - 20;
+            
+            // Large black text with blood red outline
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            
+            // Draw red outline (thicker on bottom)
+            ctx.strokeStyle = '#CC0000';
+            ctx.lineWidth = 6;
+            ctx.strokeText('YOU WERE EATEN!', centerX, centerY);
+            
+            // Draw thicker red bottom edge
+            ctx.strokeStyle = '#990000';
+            ctx.lineWidth = 8;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, centerY - 10, canvas.width, 20);
+            ctx.clip();
+            ctx.strokeText('YOU WERE EATEN!', centerX, centerY);
+            ctx.restore();
+            
+            // Draw black text on top
+            ctx.fillStyle = '#000000';
+            ctx.fillText('YOU WERE EATEN!', centerX, centerY);
+            
+            // Draw blood drips connected to text
+            const time = Date.now() * 0.003;
+            ctx.fillStyle = '#CC0000';
+            const dripPositions = [-150, -110, -70, -30, 10, 50, 90, 130, 170]; // Moved 10px left
+            
+            for (let i = 0; i < dripPositions.length; i++) {
+                const x = centerX + dripPositions[i];
+                const dripLength = 20 + Math.sin(time + i * 2) * 15;
+                const startY = centerY - 5; // Start higher, behind the thick red bottom
+                
+                // Draw drip shape
+                ctx.beginPath();
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x - 2, startY + dripLength * 0.7);
+                ctx.lineTo(x, startY + dripLength);
+                ctx.lineTo(x + 2, startY + dripLength * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw drip bulb at bottom
+                ctx.beginPath();
+                ctx.arc(x, startY + dripLength, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Regular restart text
             ctx.font = '24px Arial';
-            ctx.fillText('YOU WERE EATEN!', canvas.width / 2 - 80, canvas.height / 2 - 20);
-            ctx.fillText('Press R to Restart', canvas.width / 2 - 80, canvas.height / 2 + 20);
+            ctx.fillStyle = '#FF0000';
+            ctx.fillText('Press R to Restart', centerX, centerY + 80);
         }
         
         // Instructions
