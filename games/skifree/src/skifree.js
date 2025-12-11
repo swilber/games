@@ -745,7 +745,16 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Draw jumps
         jumps.forEach(jump => {
-            ctx.fillStyle = '#FFFFFF';
+            // Create rainbow gradient from red (top) to purple (bottom)
+            const gradient = ctx.createLinearGradient(jump.x, jump.y, jump.x, jump.y + jump.height);
+            gradient.addColorStop(0, '#FF0000');    // Red at top
+            gradient.addColorStop(0.2, '#FF8000');  // Orange
+            gradient.addColorStop(0.4, '#FFFF00');  // Yellow
+            gradient.addColorStop(0.6, '#00FF00');  // Green
+            gradient.addColorStop(0.8, '#0000FF');  // Blue
+            gradient.addColorStop(1, '#8000FF');    // Purple at bottom
+            
+            ctx.fillStyle = gradient;
             ctx.fillRect(jump.x, jump.y, jump.width, jump.height);
             ctx.strokeStyle = '#000000';
             ctx.strokeRect(jump.x, jump.y, jump.width, jump.height);
@@ -754,9 +763,23 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Draw slalom flags
         slalomFlags.forEach(flag => {
             if (!flag.collected) {
+                // Draw pole (black)
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(flag.x - 1, flag.y - 40, 2, 40);
+                
+                // Draw triangular flag
                 ctx.fillStyle = flag.color;
-                ctx.fillRect(flag.x - 2, flag.y - 30, 4, 30);
-                ctx.fillRect(flag.x, flag.y - 25, 20, 15);
+                ctx.beginPath();
+                ctx.moveTo(flag.x + 1, flag.y - 35); // Top of pole
+                ctx.lineTo(flag.x + 25, flag.y - 30); // Right point
+                ctx.lineTo(flag.x + 1, flag.y - 20); // Bottom of pole
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add flag outline
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             }
         });
         
