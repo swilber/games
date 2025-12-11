@@ -36,8 +36,8 @@
     }
   },
   "gameplay": {
-    "baseSequenceLength": 4,
-    "levels": 5,
+    "baseSequenceLength": 1,
+    "levels": 8,
     "showSpeed": 600,
     "gridSize": 9
   },
