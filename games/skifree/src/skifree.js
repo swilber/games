@@ -36,7 +36,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         vx: 0,
         vy: 0,
         mass: 70, // kg (skier + equipment)
-        skiDirection: 2, // 0=left, 1=left-down, 2=down, 3=right-down, 4=right
+        skiDirection: 3, // 0=-90°, 1=-60°, 2=-30°, 3=0°, 4=30°, 5=60°, 6=90°
         jumping: false,
         jumpHeight: 0,
         jumpVelocity: 0,
@@ -214,11 +214,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Horizontal velocity from ski direction and kinetic energy transfer
         const skiDirections = [
-            { angle: -Math.PI/2, turnForce: 0.8 },    // Hard left (90 degrees)
-            { angle: -Math.PI/4, turnForce: 0.6 },    // Left-down (45 degrees)
-            { angle: 0, turnForce: 0 },               // Straight down
-            { angle: Math.PI/4, turnForce: 0.6 },     // Right-down (45 degrees)
-            { angle: Math.PI/2, turnForce: 0.8 }      // Hard right (90 degrees)
+            { angle: -Math.PI/2, turnForce: 0.8 },      // 0: -90° (hard left)
+            { angle: -Math.PI/3, turnForce: 0.6 },      // 1: -60° (left)
+            { angle: -Math.PI/6, turnForce: 0.4 },      // 2: -30° (slight left)
+            { angle: 0, turnForce: 0 },                 // 3: 0° (straight down)
+            { angle: Math.PI/6, turnForce: 0.4 },       // 4: 30° (slight right)
+            { angle: Math.PI/3, turnForce: 0.6 },       // 5: 60° (right)
+            { angle: Math.PI/2, turnForce: 0.8 }        // 6: 90° (hard right)
         ];
         
         const currentDirection = skiDirections[player.skiDirection];
@@ -230,11 +232,13 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         // Simple velocity damping instead of complex friction
         const dampingFactors = [
-            0.98, // Hard left (minimal damping - sideways)
-            0.995, // Left-down (very minimal damping - diagonal)
-            0.999, // Straight down (almost no damping - with slope)
-            0.995, // Right-down (very minimal damping - diagonal)
-            0.98  // Hard right (minimal damping - sideways)
+            0.98,  // -90° (hard left - high damping)
+            0.985, // -60° (left - medium-high damping)
+            0.995, // -30° (slight left - low damping)
+            0.999, // 0° (straight down - minimal damping)
+            0.995, // 30° (slight right - low damping)
+            0.985, // 60° (right - medium-high damping)
+            0.98   // 90° (hard right - high damping)
         ];
         
         const damping = dampingFactors[player.skiDirection];
@@ -656,7 +660,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             
             // Draw skis based on direction
             ctx.fillStyle = '#8B4513';
-            const skiAngles = [-45, -22.5, 0, 22.5, 45]; // Angles for each direction
+            const skiAngles = [-90, -60, -30, 0, 30, 60, 90]; // Angles for each direction
             const angle = skiAngles[player.skiDirection] * Math.PI / 180;
             
             ctx.save();
@@ -770,7 +774,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 break;
             case 'ArrowRight':
                 // Move ski direction one position to the right
-                player.skiDirection = Math.min(4, player.skiDirection + 1);
+                player.skiDirection = Math.min(6, player.skiDirection + 1);
                 break;
         }
         
