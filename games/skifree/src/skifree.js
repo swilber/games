@@ -267,7 +267,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         const currentDirection = skiDirections[player.skiDirection];
         
         // Apply directional force based on ski angle
-        const directionForce = 8.0;
+        const directionForce = skiFreeConfig.gameplay?.speed || 8.0;
         player.vx += Math.sin(currentDirection.angle) * directionForce * TIME_STEP;
         player.vy += Math.cos(currentDirection.angle) * directionForce * TIME_STEP;
         
@@ -287,7 +287,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.vy *= damping;
         
         // Apply max speed limit
-        const maxSpeed = 30;
+        const maxSpeed = skiFreeConfig.physics?.maxSpeed || 30;
         const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
         
         if (currentSpeed > maxSpeed) {

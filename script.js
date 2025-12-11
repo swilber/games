@@ -294,6 +294,8 @@ function generateConfigForm(gameType, config) {
         generateAsteroidsConfigForm(config, content);
     } else if (gameType === 'spaceinvaders') {
         generateSpaceInvadersConfigForm(config, content);
+    } else if (gameType === 'skifree') {
+        generateSkiFreeConfigForm(config, content);
     }
     // Add other games later
 }
@@ -510,6 +512,29 @@ function generateTetrisConfigForm(config, container) {
 }
 
 function generateDirtbikeConfigForm(config, container) {
+    const sections = [
+        { key: 'gameplay', title: 'Gameplay Settings' },
+        { key: 'physics', title: 'Physics Settings' },
+        { key: 'visual', title: 'Visual Settings' }
+    ];
+    
+    sections.forEach(section => {
+        if (config[section.key]) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'config-section';
+            sectionDiv.innerHTML = `<h4>${section.title}</h4>`;
+            
+            Object.entries(config[section.key]).forEach(([key, value]) => {
+                const field = createConfigField(section.key, key, value);
+                sectionDiv.appendChild(field);
+            });
+            
+            container.appendChild(sectionDiv);
+        }
+    });
+}
+
+function generateSkiFreeConfigForm(config, container) {
     const sections = [
         { key: 'gameplay', title: 'Gameplay Settings' },
         { key: 'physics', title: 'Physics Settings' },
