@@ -4038,6 +4038,8 @@ async function createMarioGame(settings, callbacks = null) {
             // Initialize position logging timer
             game.lastLogTime = Date.now();
             
+            return layout; // Return layout so caller can access startX, startY
+            
         } catch (error) {
             console.error('Failed to load map:', error);
             // Fallback to basic level
@@ -4046,6 +4048,8 @@ async function createMarioGame(settings, callbacks = null) {
             game.enemies = [];
             game.pits = [];
             game.flag = {x: 1800, y: 200, width: 35, height: 150};
+            
+            return { startX: 50, startY: 300 }; // Return fallback start position
         }
     }
     
@@ -4082,8 +4086,8 @@ async function createMarioGame(settings, callbacks = null) {
                 
                 // Update transform size based on power state and reset position to start
                 const transform = playerEntity.get('transform');
-                transform.x = 50; // Reset to start position
-                transform.y = 300; // Reset to start position
+                transform.x = result.startX || 50; // Use layout's start position
+                transform.y = result.startY || 300; // Use layout's start position
                 
                 if (marioState.powerState === 'small') {
                     transform.width = game.config.rendering.playerSmallWidth;
