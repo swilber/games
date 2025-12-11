@@ -737,8 +737,12 @@ class InteractiveSystem {
                 
                 const powerUpEntity = this.game.entityManager.create(`powerup_${Date.now()}`)
                     .add('transform', new Transform(blockTransform.x, blockTransform.y - 32, 32, 32))
-                    .add('physics', new Physics(powerupSpeed, 0))
                     .add('sprite', new Sprite('#FF0000', powerUpType));
+                
+                // Only add physics for moving powerups (not fire flowers)
+                if (powerUpType !== 'fireflower') {
+                    powerUpEntity.add('physics', new Physics(powerupSpeed, 0));
+                }
             }
             blockComp.content = null;
         }
