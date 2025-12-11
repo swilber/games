@@ -566,27 +566,177 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Draw obstacles
         obstacles.forEach(obstacle => {
             if (obstacle.type === 'tree') {
-                ctx.fillStyle = skiFreeConfig.visual?.treeColor || '#228b22';
-                // Draw simple tree
-                ctx.fillRect(obstacle.x - 5, obstacle.y, 10, 30);
+                // Draw Christmas tree trunk
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(obstacle.x - 3, obstacle.y + 25, 6, 15);
+                
+                // Draw tree layers (3 triangular sections)
+                ctx.fillStyle = '#228B22';
+                
+                // Bottom layer
                 ctx.beginPath();
-                ctx.arc(obstacle.x, obstacle.y - 5, 15, 0, Math.PI * 2);
+                ctx.moveTo(obstacle.x, obstacle.y - 10);
+                ctx.lineTo(obstacle.x - 15, obstacle.y + 25);
+                ctx.lineTo(obstacle.x + 15, obstacle.y + 25);
+                ctx.closePath();
                 ctx.fill();
+                
+                // Middle layer
+                ctx.beginPath();
+                ctx.moveTo(obstacle.x, obstacle.y - 5);
+                ctx.lineTo(obstacle.x - 12, obstacle.y + 15);
+                ctx.lineTo(obstacle.x + 12, obstacle.y + 15);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Top layer
+                ctx.beginPath();
+                ctx.moveTo(obstacle.x, obstacle.y);
+                ctx.lineTo(obstacle.x - 8, obstacle.y + 10);
+                ctx.lineTo(obstacle.x + 8, obstacle.y + 10);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw decorations (ornaments)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(obstacle.x - 5, obstacle.y + 8, 2, 0, Math.PI * 2);
+                ctx.arc(obstacle.x + 3, obstacle.y + 12, 2, 0, Math.PI * 2);
+                ctx.arc(obstacle.x - 2, obstacle.y + 18, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw star on top
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(obstacle.x, obstacle.y - 8, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
             } else if (obstacle.type === 'rock') {
-                ctx.fillStyle = skiFreeConfig.visual?.rockColor || '#696969';
+                // Draw rock sticking out of snow
+                ctx.fillStyle = '#696969';
                 ctx.beginPath();
-                ctx.arc(obstacle.x, obstacle.y, 8, 0, Math.PI * 2);
+                ctx.ellipse(obstacle.x, obstacle.y + 5, 8, 6, 0, 0, Math.PI * 2);
                 ctx.fill();
+                
+                // Add snow on top
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(obstacle.x, obstacle.y + 2, 6, 3, 0, 0, Math.PI);
+                ctx.fill();
+                
+                // Add rock texture
+                ctx.fillStyle = '#555555';
+                ctx.fillRect(obstacle.x - 3, obstacle.y + 3, 2, 2);
+                ctx.fillRect(obstacle.x + 1, obstacle.y + 6, 3, 2);
             }
         });
         
         // Draw other skiers
         otherSkiers.forEach(skier => {
-            ctx.fillStyle = skier.color;
-            ctx.fillRect(skier.x - 5, skier.y - 10, 10, 20);
-            // Skis
+            ctx.save();
+            ctx.translate(skier.x, skier.y);
+            
+            // Generate random colors (avoiding white/light colors)
+            // Use skier position as seed for consistent colors per skier
+            const seed = skier.x + skier.mapY * 1000;
+            const random = (offset) => {
+                const x = Math.sin(seed + offset) * 10000;
+                return (x - Math.floor(x));
+            };
+            
+            // Generate colors with minimum darkness to avoid white
+            const generateColor = (r, g, b) => {
+                const red = Math.floor(random(r) * 180 + 20); // 20-200 range
+                const green = Math.floor(random(g) * 180 + 20);
+                const blue = Math.floor(random(b) * 180 + 20);
+                return `rgb(${red}, ${green}, ${blue})`;
+            };
+            
+            const isGirl = random(100) > 0.5;
+            const shirtColor = generateColor(1, 2, 3);
+            const pantsColor = generateColor(4, 5, 6);
+            const hatColor = generateColor(7, 8, 9);
+            
+            // Skin colors (limited range for realism)
+            const skinColors = ['#FFB6C1', '#FDBCB4', '#D2B48C', '#DEB887', '#F5DEB3', '#FFDBAC'];
+            const skinColor = skinColors[Math.floor(random(10) * skinColors.length)];
+            
+            // Draw skis with curved tips
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(skier.x - 8, skier.y + 5, 16, 3);
+            ctx.fillRect(-4, 8, 2, 12);
+            ctx.fillRect(2, 8, 2, 12);
+            // Curved tips
+            ctx.beginPath();
+            ctx.arc(-3, 8, 1, Math.PI, 0);
+            ctx.arc(3, 8, 1, Math.PI, 0);
+            ctx.fill();
+            
+            // Draw ski boots (green)
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(-4, 6, 3, 3);
+            ctx.fillRect(1, 6, 3, 3);
+            
+            // Draw legs (colored pants)
+            ctx.fillStyle = pantsColor;
+            ctx.fillRect(-3, 2, 2, 6);
+            ctx.fillRect(1, 2, 2, 6);
+            
+            // Draw body (colored shirt)
+            ctx.fillStyle = shirtColor;
+            ctx.fillRect(-4, -8, 8, 10);
+            
+            // Draw arms (skin color)
+            ctx.fillStyle = skinColor;
+            ctx.fillRect(-7, -6, 3, 2);
+            ctx.fillRect(4, -6, 3, 2);
+            
+            // Draw head (skin color)
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(0, -12, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw hat (different for boys/girls)
+            ctx.fillStyle = hatColor;
+            if (isGirl) {
+                // Girl: Colored hat with pom-pom
+                ctx.beginPath();
+                ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Pom-pom
+                ctx.beginPath();
+                ctx.arc(0, -19, 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Boy: Colored hat with tail
+                ctx.beginPath();
+                ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Hat tail
+                ctx.fillRect(-5, -18, 5, 2);
+                ctx.beginPath();
+                ctx.arc(-5, -17, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw goggles
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-2, -12, 1.5, 0, Math.PI * 2);
+            ctx.arc(2, -12, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw ski poles
+            ctx.strokeStyle = '#666666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-5, -4);
+            ctx.lineTo(-8, 4);
+            ctx.moveTo(5, -4);
+            ctx.lineTo(8, 4);
+            ctx.stroke();
+            
+            ctx.restore();
         });
         
         // Draw jumps
@@ -650,45 +800,257 @@ async function createSkiFreeGame(settings, callbacks = null) {
         ctx.translate(player.x, player.y - player.jumpHeight);
         
         if (player.crashed) {
-            // Draw crashed player
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(-8, -5, 16, 10);
+            // Draw crashed player (fallen over)
+            ctx.fillStyle = '#4169E1'; // Royal blue shirt
+            ctx.fillRect(-8, -5, 16, 10); // Body lying down
+            ctx.fillStyle = '#FFB6C1';
+            ctx.fillRect(-6, -8, 12, 6); // Head
         } else {
-            // Draw normal player with ski direction
-            ctx.fillStyle = skiFreeConfig.visual?.playerColor || '#ff0000';
-            ctx.fillRect(-5, -10, 10, 20);
-            
-            // Draw skis based on direction
-            ctx.fillStyle = '#8B4513';
-            const skiAngles = [-90, -60, -30, 0, 30, 60, 90]; // Angles for each direction
+            const skiAngles = [-90, -60, -30, 0, 30, 60, 90];
             const angle = skiAngles[player.skiDirection] * Math.PI / 180;
+            const direction = player.skiDirection;
             
+            // Draw skis first (under player) - centered on feet with curved tips
+            ctx.fillStyle = '#8B4513';
             ctx.save();
-            ctx.rotate(angle);
-            ctx.fillRect(-12, 5, 24, 3); // Skis
+            ctx.translate(0, 10); // Move to feet position
+            ctx.rotate(-angle); // Negate angle to fix direction
+            
+            // Left ski with curved tip
+            ctx.fillRect(-4, -8, 2, 16);
+            ctx.beginPath();
+            ctx.arc(-3, -8, 1, Math.PI, 0);
+            ctx.fill();
+            
+            // Right ski with curved tip
+            ctx.fillRect(2, -8, 2, 16);
+            ctx.beginPath();
+            ctx.arc(3, -8, 1, Math.PI, 0);
+            ctx.fill();
             ctx.restore();
             
-            // Draw poles
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-8, -5);
-            ctx.lineTo(-12, 8);
-            ctx.moveTo(8, -5);
-            ctx.lineTo(12, 8);
-            ctx.stroke();
+            // Draw ski boots (green)
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(-4, 8, 3, 4);  // Left boot
+            ctx.fillRect(1, 8, 3, 4);   // Right boot
+            
+            // Draw legs (royal blue pants)
+            ctx.fillStyle = '#4169E1';
+            ctx.fillRect(-3, 4, 2, 8);  // Left leg
+            ctx.fillRect(1, 4, 2, 8);   // Right leg
+            
+            // Draw player facing the direction of movement
+            if (direction <= 1) { // Facing left (-90° to -60°)
+                // Draw body (royal blue shirt)
+                ctx.fillStyle = '#4169E1';
+                ctx.fillRect(-6, -8, 8, 12);
+                
+                // Draw pink arms
+                ctx.fillStyle = '#FFB6C1';
+                ctx.fillRect(-10, -6, 4, 2); // Left arm extended
+                ctx.fillRect(-2, -5, 3, 2);  // Right arm
+                
+                // Draw head (profile left)
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(-2, -12, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ski hat (santa style)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(-2, -16, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Hat tail
+                ctx.fillRect(-8, -18, 6, 2);
+                ctx.beginPath();
+                ctx.arc(-8, -17, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw goggles (side view)
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-4, -12, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ski poles in hands
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-8, -4);
+                ctx.lineTo(-12, 6);
+                ctx.moveTo(2, -3);
+                ctx.lineTo(6, 6);
+                ctx.stroke();
+                
+            } else if (direction >= 5) { // Facing right (60° to 90°)
+                // Draw body (royal blue shirt)
+                ctx.fillStyle = '#4169E1';
+                ctx.fillRect(-2, -8, 8, 12);
+                
+                // Draw pink arms
+                ctx.fillStyle = '#FFB6C1';
+                ctx.fillRect(6, -6, 4, 2);  // Right arm extended
+                ctx.fillRect(-1, -5, 3, 2); // Left arm
+                
+                // Draw head (profile right)
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(2, -12, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ski hat (santa style)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(2, -16, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Hat tail
+                ctx.fillRect(2, -18, 6, 2);
+                ctx.beginPath();
+                ctx.arc(8, -17, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw goggles (side view)
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(4, -12, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ski poles in hands
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-2, -3);
+                ctx.lineTo(-6, 6);
+                ctx.moveTo(8, -4);
+                ctx.lineTo(12, 6);
+                ctx.stroke();
+                
+            } else { // Facing forward/down (center directions)
+                // Draw body (royal blue shirt)
+                ctx.fillStyle = '#4169E1';
+                ctx.fillRect(-4, -8, 8, 12);
+                
+                // Draw pink arms
+                ctx.fillStyle = '#FFB6C1';
+                ctx.fillRect(-8, -6, 4, 2); // Left arm
+                ctx.fillRect(4, -6, 4, 2);  // Right arm
+                
+                // Draw head (front view)
+                ctx.fillStyle = '#FFB6C1';
+                ctx.beginPath();
+                ctx.arc(0, -12, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw ski hat (santa style)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.arc(0, -16, 3, 0, Math.PI * 2);
+                ctx.fill();
+                // Hat tail (hanging to side)
+                ctx.fillRect(-6, -18, 6, 2);
+                ctx.beginPath();
+                ctx.arc(-6, -17, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw goggles (front view)
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-2, -12, 1.5, 0, Math.PI * 2);
+                ctx.arc(2, -12, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw goggle strap
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(0, -12, 4, Math.PI * 0.8, Math.PI * 0.2);
+                ctx.stroke();
+                
+                // Draw ski poles in hands
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-6, -4);
+                ctx.lineTo(-10, 6);
+                ctx.moveTo(6, -4);
+                ctx.lineTo(10, 6);
+                ctx.stroke();
+            }
         }
         ctx.restore();
         
         // Draw yeti
         if (yeti.active) {
-            ctx.fillStyle = skiFreeConfig.visual?.yetiColor || '#8b4513';
+            // Draw yeti body (gray)
+            ctx.fillStyle = '#808080';
             ctx.fillRect(yeti.x - 15, yeti.y - 20, 30, 40);
-            // Yeti face
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(yeti.x - 8, yeti.y - 15, 3, 3);
-            ctx.fillRect(yeti.x + 5, yeti.y - 15, 3, 3);
-            ctx.fillRect(yeti.x - 3, yeti.y - 8, 6, 3);
+            
+            // Draw yeti head
+            ctx.fillStyle = '#808080';
+            ctx.beginPath();
+            ctx.arc(yeti.x, yeti.y - 25, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw eyes (red and menacing)
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(yeti.x - 5, yeti.y - 28, 2, 0, Math.PI * 2);
+            ctx.arc(yeti.x + 5, yeti.y - 28, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw sharp teeth
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            // Upper teeth
+            ctx.moveTo(yeti.x - 4, yeti.y - 20);
+            ctx.lineTo(yeti.x - 2, yeti.y - 16);
+            ctx.lineTo(yeti.x, yeti.y - 20);
+            ctx.lineTo(yeti.x + 2, yeti.y - 16);
+            ctx.lineTo(yeti.x + 4, yeti.y - 20);
+            ctx.fill();
+            
+            // Draw stick arms (bent)
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            // Left arm
+            ctx.moveTo(yeti.x - 15, yeti.y - 10);
+            ctx.lineTo(yeti.x - 25, yeti.y - 5);
+            ctx.lineTo(yeti.x - 30, yeti.y + 5);
+            // Right arm
+            ctx.moveTo(yeti.x + 15, yeti.y - 10);
+            ctx.lineTo(yeti.x + 25, yeti.y - 5);
+            ctx.lineTo(yeti.x + 30, yeti.y + 5);
+            ctx.stroke();
+            
+            // Draw stick legs (bent)
+            ctx.beginPath();
+            // Left leg
+            ctx.moveTo(yeti.x - 8, yeti.y + 20);
+            ctx.lineTo(yeti.x - 15, yeti.y + 35);
+            ctx.lineTo(yeti.x - 20, yeti.y + 45);
+            // Right leg
+            ctx.moveTo(yeti.x + 8, yeti.y + 20);
+            ctx.lineTo(yeti.x + 15, yeti.y + 35);
+            ctx.lineTo(yeti.x + 20, yeti.y + 45);
+            ctx.stroke();
+            
+            // Draw claws on hands
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Left claws
+            ctx.moveTo(yeti.x - 30, yeti.y + 5);
+            ctx.lineTo(yeti.x - 33, yeti.y + 2);
+            ctx.moveTo(yeti.x - 30, yeti.y + 5);
+            ctx.lineTo(yeti.x - 33, yeti.y + 8);
+            // Right claws
+            ctx.moveTo(yeti.x + 30, yeti.y + 5);
+            ctx.lineTo(yeti.x + 33, yeti.y + 2);
+            ctx.moveTo(yeti.x + 30, yeti.y + 5);
+            ctx.lineTo(yeti.x + 33, yeti.y + 8);
+            ctx.stroke();
         }
         
         // Draw UI
