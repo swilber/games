@@ -761,7 +761,7 @@ class PowerUpSystem {
         const playerTransform = playerEntity.get('transform');
         const playerComp = playerEntity.get('player');
         
-        const powerUps = entityManager.query('transform', 'physics', 'sprite');
+        const powerUps = entityManager.query('transform', 'sprite');
         
         powerUps.forEach(entity => {
             const sprite = entity.get('sprite');
