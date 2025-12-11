@@ -537,7 +537,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
                 player.jumping = true;
                 // Jump velocity proportional to current speed (much lower than before)
                 const currentSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-                player.jumpVelocity = Math.min(currentSpeed * 0.3, 5); // Max jump of 5, proportional to speed
+                player.jumpVelocity = Math.min(currentSpeed * 0.15, 2.5); // Reduced from 0.3 and 5 to jump half as high
                 score += 50; // Bonus for jumping
             }
         }
@@ -802,6 +802,16 @@ async function createSkiFreeGame(settings, callbacks = null) {
         // Draw player
         ctx.save();
         ctx.translate(player.x, player.y - player.jumpHeight);
+        
+        // Draw shadow on ground (gets bigger when jumping higher)
+        ctx.save();
+        ctx.translate(0, player.jumpHeight); // Move shadow back to ground level
+        ctx.fillStyle = 'rgba(128, 128, 128, 0.4)'; // Light gray shadow
+        const shadowSize = 8 + (player.jumpHeight * 0.1); // Much smaller change - only grows significantly on big jumps
+        ctx.beginPath();
+        ctx.ellipse(0, 0, shadowSize, shadowSize * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         
         if (player.crashed) {
             // Draw crashed player (fallen over)
