@@ -36,7 +36,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         vx: 0,
         vy: 0,
         mass: 70, // kg (skier + equipment)
-        skiDirection: 3, // 0=-90°, 1=-60°, 2=-30°, 3=0°, 4=30°, 5=60°, 6=90°
+        skiDirection: 6, // 0=-90°, 1=-60°, 2=-30°, 3=0°, 4=30°, 5=60°, 6=90°
         jumping: false,
         jumpHeight: 0,
         jumpVelocity: 0,
@@ -535,7 +535,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
             }
             
             // AI decision making
-            if (Math.random() < 0.02) {
+            if (Math.random() < 0.05) {
                 // Change ski direction occasionally
                 const directionChange = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
                 skier.skiDirection = Math.max(0, Math.min(6, skier.skiDirection + directionChange));
@@ -1498,7 +1498,7 @@ async function createSkiFreeGame(settings, callbacks = null) {
         player.vx = 0;
         player.vy = 0;
         player.speed = 0;
-        player.skiDirection = 3;
+        player.skiDirection = 6;
         player.jumping = false;
         player.jumpVelocity = 0;
         player.crashed = false;
