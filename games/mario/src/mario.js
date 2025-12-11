@@ -4798,8 +4798,9 @@ async function createMarioGame(settings, callbacks = null) {
             ctx.fillStyle = 'white';
             ctx.font = '24px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('Use Arrow Keys or WASD to move', canvas.width/2, canvas.height/2 - 20);
-            ctx.fillText('SPACE or UP to jump. Reach the flag!', canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText('Use Arrow Keys or WASD to move', canvas.width/2, canvas.height/2 - 40);
+            ctx.fillText('SPACE or UP to jump. Hold SHIFT to run!', canvas.width/2, canvas.height/2 - 10);
+            ctx.fillText('Reach the flag!', canvas.width/2, canvas.height/2 + 20);
         }
         
         if (game.gameOver) {
