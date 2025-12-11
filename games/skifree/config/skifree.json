@@ -30,7 +30,7 @@
     "canvasHeight": 600,
     "gravity": 0.8,
     "friction": 0.95,
-    "maxSpeed": 12
+    "maxSpeed": 30
   },
   "visual": {
     "backgroundColor": "#ffffff",

@@ -266,10 +266,12 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         const currentDirection = skiDirections[player.skiDirection];
         
-        // Apply directional force based on ski angle
-        const directionForce = skiFreeConfig.gameplay?.speed || 8.0;
-        player.vx += Math.sin(currentDirection.angle) * directionForce * TIME_STEP;
-        player.vy += Math.cos(currentDirection.angle) * directionForce * TIME_STEP;
+        // Apply directional force based on ski angle (only if not stationary)
+        if (player.skiDirection !== 6) { // Don't apply force when facing 90° (stationary)
+            const directionForce = skiFreeConfig.gameplay?.speed || 8.0;
+            player.vx += Math.sin(currentDirection.angle) * directionForce * TIME_STEP;
+            player.vy += Math.cos(currentDirection.angle) * directionForce * TIME_STEP;
+        }
         
         // Simple velocity damping instead of complex friction
         const dampingFactors = [
@@ -367,14 +369,18 @@ async function createSkiFreeGame(settings, callbacks = null) {
         
         const yetiSpeed = skiFreeConfig.gameplay?.yetiSpeed || 7;
         
-        // Yeti chases player horizontally (more aggressive)
-        const dx = player.x - yeti.x;
-        yeti.x += Math.sign(dx) * Math.min(Math.abs(dx) * 0.15, 4);
-        
-        // Yeti moves down the screen (chasing from above)
+        // Yeti moves directly toward player (can go uphill/downhill)
         if (!yeti.celebrating) {
-            yeti.mapY += yetiSpeed; // Move at fixed speed in map coordinates
-            yeti.y = yeti.mapY - playerMapY + player.y; // Convert to screen coordinates
+            const dx = player.x - yeti.x;
+            const dy = (playerMapY + (player.y - canvas.height/3)) - yeti.mapY; // Player's map position
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 0) {
+                // Move toward player at yetiSpeed
+                yeti.x += (dx / distance) * yetiSpeed * 0.8; // Horizontal movement
+                yeti.mapY += (dy / distance) * yetiSpeed; // Vertical movement in map coordinates
+                yeti.y = yeti.mapY - playerMapY + player.y; // Convert to screen coordinates
+            }
         }
         
         // Check if yeti caught player
@@ -1531,17 +1537,17 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.font = '24px Arial';
             ctx.fillStyle = '#FF0000';
             ctx.fillText('Press R to Restart', centerX, centerY + 80);
+            
+            // Reset text alignment
+            ctx.textAlign = 'left';
         }
         
         // Instructions
-        if (!gameStarted) {
+        if (!gameStarted || player.skiDirection === 6) { // Show until player moves from stationary position
             ctx.fillStyle = '#000000';
             ctx.font = '18px Arial';
             ctx.fillText('Use LEFT/RIGHT arrows to turn skis', canvas.width / 2 - 130, canvas.height / 2);
-            ctx.fillText('Ski positions: Left, Left-Down, Down, Right-Down, Right', canvas.width / 2 - 180, canvas.height / 2 + 25);
-            ctx.fillText('Avoid trees, rocks, and other skiers', canvas.width / 2 - 140, canvas.height / 2 + 50);
-            ctx.fillText('Hit jumps for bonus points', canvas.width / 2 - 100, canvas.height / 2 + 75);
-            ctx.fillText('Press any arrow key to start', canvas.width / 2 - 100, canvas.height / 2 + 100);
+            ctx.fillText('Hit jumps for bonus points', canvas.width / 2 - 100, canvas.height / 2 + 25);
         }
         
         if (gameWon) {
