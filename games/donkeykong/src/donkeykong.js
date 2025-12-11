@@ -1112,6 +1112,7 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         barrelThrowRate: 120, // Configurable: frames between barrel throws
         gameRunning: false,
         gameInterval: null,
+        gameOver: false,
         keys: {},
         score: 0,
         currentLevel: levelNum
@@ -1273,16 +1274,8 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 if (game.player.lives <= 0) {
                     // Game over
                     game.gameRunning = false;
+                    game.gameOver = true;
                     clearInterval(game.gameInterval);
-                    
-                    ctx.fillStyle = '#FF0000';
-                    ctx.font = '48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
-                    
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = '24px Arial';
-                    ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
                     return;
                 } else {
                     // Restart level - reset Mario position and clear barrels
@@ -1390,16 +1383,8 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
                 if (game.player.lives <= 0) {
                     // Game over
                     game.gameRunning = false;
+                    game.gameOver = true;
                     clearInterval(game.gameInterval);
-                    
-                    ctx.fillStyle = '#FF0000';
-                    ctx.font = '48px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
-                    
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = '24px Arial';
-                    ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 50);
                     return;
                 } else {
                     // Restart level - reset Mario position and clear enemies
@@ -1791,6 +1776,57 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
         ctx.fillText(`Lives: ${game.player.lives}`, 10, 25);
         ctx.fillText(`Level ${game.currentLevel}: ${DKLevels[game.currentLevel]?.name || 'Unknown'}`, 10, 45);
         ctx.fillText(`Score: ${game.score}`, 10, 65);
+        
+        // Display game over screen
+        if (game.gameOver) {
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '24px Arial';
+            ctx.fillText('Press R to restart from Level 1', canvas.width / 2, canvas.height / 2 + 50);
+        }
+    }
+    
+    function restartToLevel1() {
+        // Reset game state to level 1 FIRST
+        game.currentLevel = 1;
+        game.score = 0;
+        game.gameOver = false;
+        game.player.lives = 3;
+        game.player.x = 50;
+        game.player.y = 450;
+        game.player.vx = 0;
+        game.player.vy = 0;
+        game.player.onGround = false;
+        game.player.hasHammer = false;
+        game.player.hammerTimer = 0;
+        game.player.hammerSwingTimer = 0;
+        game.player.facingRight = true;
+        
+        // Clear all game objects
+        game.barrels = [];
+        game.oildrums = [];
+        game.hammers = [];
+        game.elevators = [];
+        game.collectibles = [];
+        game.fireEnemies = [];
+        
+        // Reset timers
+        game.barrelTimer = 0;
+        
+        // Reload level 1
+        loadLevel().then(() => {
+            game.gameRunning = true;
+            game.gameInterval = setInterval(gameLoop, 16);
+        }).catch(error => {
+            console.error('Error loading level:', error);
+        });
     }
     
     // Controls
@@ -1808,16 +1844,15 @@ async function createDonkeyKongLevel(levelNum, gameArea, settings, callbacks) {
             }
         }
         
-        if (!game.gameRunning && e.key === 'r') {
+        if (game.gameOver && e.key === 'r') {
             // Restart game - reset to level 1
-            if (callbacks?.onGameComplete) {
-                callbacks.onGameComplete('donkeykong', { 
-                    completed: false, 
-                    score: game.score,
-                    level: game.currentLevel,
-                    restart: true
-                });
-            }
+            createDonkeyKongLevel(1, gameArea, settings, callbacks);
+            return;
+        }
+        
+        if (!game.gameRunning && e.key === 'r') {
+            // This handles other non-game-over restart scenarios
+            restartToLevel1();
             return;
         }
         
