@@ -178,6 +178,8 @@ class Player {
         this.invincible = false;
         this.invincibleTimer = 0;
         this.shootCooldown = 0;
+        this.notification = null;
+        this.notificationTimer = 0;
     }
 }
 
@@ -790,6 +792,9 @@ class PowerUpSystem {
                     if (playerTransform.height === this.game.config.rendering.playerSmallHeight) {
                         playerTransform.y -= (this.game.config.rendering.playerBigHeight - this.game.config.rendering.playerSmallHeight);
                     }
+                    // Show notification
+                    playerComp.notification = "Press X for fireball";
+                    playerComp.notificationTimer = 120; // 2 seconds at 60fps
                 }
                 
                 // Award points based on powerup type
@@ -1051,6 +1056,12 @@ class PlayerInputSystem {
         
         // Update timers
         if (playerComp.shootCooldown > 0) playerComp.shootCooldown--;
+        if (playerComp.notificationTimer > 0) {
+            playerComp.notificationTimer--;
+            if (playerComp.notificationTimer <= 0) {
+                playerComp.notification = null;
+            }
+        }
         if (playerComp.invincible) {
             playerComp.invincibleTimer--;
             if (playerComp.invincibleTimer <= 0) {
@@ -4759,6 +4770,21 @@ async function createMarioGame(settings, callbacks = null) {
         ctx.fillText(`LIVES: ${game.player.lives}`, margin, 30);
         ctx.fillText(`SCORE: ${game.player.score}`, margin, 50);
         ctx.fillText(`LEVEL: ${game.levelsCompleted + 1}/${game.levelsToWin}`, margin, 70);
+        
+        // Show notification if active
+        const playerEntity = game.entityManager.entities.get('player');
+        if (playerEntity) {
+            const playerComp = playerEntity.get('player');
+            if (playerComp.notification && playerComp.notificationTimer > 0) {
+                ctx.fillStyle = '#FFD700'; // Gold color
+                ctx.font = '18px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(playerComp.notification, canvas.width/2, 100);
+                ctx.textAlign = 'left'; // Reset alignment
+                ctx.fillStyle = 'white'; // Reset color
+                ctx.font = '16px monospace'; // Reset font
+            }
+        }
         
         ctx.restore();
         
