@@ -82,6 +82,14 @@ async function createSkiFreeGame(settings, callbacks = null) {
     const pregeneratedFlags = [];
     const pregeneratedLifts = [];
     
+    // Finish line at bottom of mountain
+    const finishLine = {
+        x: 0,
+        y: mapHeight - 200, // 200 pixels from bottom
+        width: canvas.width,
+        height: 100
+    };
+    
     function pregenerateMap() {
         // Generate obstacles across entire map
         for (let y = 0; y < mapHeight; y += 50) {
@@ -281,6 +289,11 @@ async function createSkiFreeGame(settings, callbacks = null) {
     }
     
     function updateYeti() {
+        // Check if yeti is enabled in config
+        if (!(skiFreeConfig.gameplay?.yetiEnabled ?? true)) {
+            return; // Yeti disabled
+        }
+        
         // Handle yeti cooldown (when not active)
         if (!yeti.active) {
             yeti.cooldownTimer += 1/60;
@@ -566,6 +579,36 @@ async function createSkiFreeGame(settings, callbacks = null) {
             ctx.font = '12px Arial';
             ctx.fillText('SKI LIFT', lift.x + 20, lift.y + 20);
         });
+        
+        // Draw finish line banner if visible
+        const finishLineScreenY = finishLine.y - playerMapY + player.y;
+        if (finishLineScreenY > -100 && finishLineScreenY < canvas.height + 100) {
+            // Draw banner poles
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(50, finishLineScreenY - 50, 10, 150);
+            ctx.fillRect(canvas.width - 60, finishLineScreenY - 50, 10, 150);
+            
+            // Draw banner
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(60, finishLineScreenY, canvas.width - 120, 40);
+            
+            // Draw banner text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('FINISH LINE', canvas.width / 2, finishLineScreenY + 28);
+            ctx.textAlign = 'left';
+            
+            // Draw checkered pattern on banner
+            ctx.fillStyle = '#000000';
+            for (let x = 60; x < canvas.width - 60; x += 20) {
+                for (let y = 0; y < 40; y += 20) {
+                    if ((Math.floor(x / 20) + Math.floor(y / 20)) % 2 === 0) {
+                        ctx.fillRect(x, finishLineScreenY + y, 10, 10);
+                    }
+                }
+            }
+        }
         
         // Draw player
         ctx.save();
