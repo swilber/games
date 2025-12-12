@@ -1020,6 +1020,26 @@ Promise.all([
     config = configData;
     
     // Create levels from ordered config games and questions
+    // Map internal game names to display names
+    const gameDisplayNames = {
+        'memory': 'Memory',
+        'snake': 'Snake',
+        'flappy': 'Flappy Bird',
+        'frogger': 'Frogger',
+        'maze3d': '3D Maze',
+        'mario': 'Super Mario Bros',
+        'donkeykong': 'Donkey Kong',
+        'pacman': 'Pac-Man',
+        'fake': 'Fake Game',
+        'breakout': 'Breakout',
+        'asteroids': 'Asteroids',
+        'spaceinvaders': 'Space Invaders',
+        'punchout': 'Punch-Out!!',
+        'skifree': 'SkiFree',
+        'tetris': 'Tetris',
+        'dirtbike': 'Dirt Bike'
+    };
+
     levels = config.levels
         .filter(level => level.enabled)
         .sort((a, b) => a.order - b.order)
@@ -1027,12 +1047,14 @@ Promise.all([
             const questionData = questionsData.questions[index] || {};
             const unlockAnswer = index > 0 ? questionsData.questions[index - 1]?.answer : null;
             
+            const displayName = gameDisplayNames[configLevel.type] || configLevel.type;
+            
             return {
                 ...configLevel,
                 question: questionData.question,
                 answer: unlockAnswer, // Answer needed to unlock this level
                 showQuestion: questionData.question, // Question to show when this level is completed
-                title: `Challenge ${index + 1}: ${configLevel.type}`
+                title: `Challenge ${index + 1}: ${displayName}`
             };
         });
     
