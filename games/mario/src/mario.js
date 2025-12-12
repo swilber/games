@@ -1136,7 +1136,7 @@ class CollisionSystem {
                 if (playerPhysics.vy > 0 && playerTransform.y < transform.y) {
                     // Stomp goomba
                     entityManager.entities.delete(entity.id);
-                    playerPhysics.vy = -8;
+                    playerPhysics.vy = -3; // Reduced bounce height
                     playerComp.score += 100;
                 } else {
                     // Take damage
@@ -1343,7 +1343,7 @@ class ImprovedCollisionSystem {
                     
                     // Player bounce (only once per frame)
                     if (!playerBounced) {
-                        playerPhysics.vy = -8;
+                        playerPhysics.vy = -3; // Reduced bounce height
                         playerBounced = true;
                     }
                     const playerComp = playerEntity.get('player');
