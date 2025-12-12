@@ -627,7 +627,7 @@ function createBreakoutLevel(settings, gameArea, callbacks) {
         const levelNames = ['', 'BASIC', 'FORTRESS', 'MAZE', 'DIAMOND', 'INVADERS', 'SPIRAL', 'CHECKERBOARD'];
         const levelName = (currentLevel <= levelNames.length - 1) ? levelNames[currentLevel] : `LEVEL ${currentLevel}`;
         ctx.textAlign = 'right';
-        ctx.fillText(`LEVEL ${currentLevel}: ${levelName}`, canvas.width - 20, 30);
+        ctx.fillText(`LEVEL ${currentLevel}/${totalLevels}: ${levelName}`, canvas.width - 20, 30);
         
         // Game state overlays
         if (gameState === 'levelStart') {
@@ -637,7 +637,7 @@ function createBreakoutLevel(settings, gameArea, callbacks) {
             ctx.fillStyle = '#FFFF00';
             ctx.font = retroFontLarge;
             ctx.textAlign = 'center';
-            ctx.fillText(`LEVEL ${currentLevel}`, canvas.width/2, canvas.height/2 - 60);
+            ctx.fillText(`LEVEL ${currentLevel}/${totalLevels}`, canvas.width/2, canvas.height/2 - 60);
             
             ctx.fillStyle = '#00FFFF';
             ctx.font = retroFontMedium;
