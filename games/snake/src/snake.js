@@ -66,7 +66,8 @@ async function createSnakeGame(settings, callbacks = null) {
         ctx.fillStyle = '#fff';
         ctx.font = '16px "Courier New", monospace';
         ctx.textAlign = 'left';
-        ctx.fillText(`Level: ${currentLevel}`, 10, 25);
+        const totalLevels = snakeConfig.gameplay?.totalLevels || 3;
+        ctx.fillText(`Level: ${currentLevel}/${totalLevels}`, 10, 25);
         ctx.fillText(`Score: ${score}/${getLevelRequiredScore()}`, 10, 45);
         ctx.fillText(`Lives: ${lives}`, 10, 65);
         
