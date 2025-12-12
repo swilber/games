@@ -180,6 +180,8 @@ class Player {
         this.shootCooldown = 0;
         this.notification = null;
         this.notificationTimer = 0;
+        this.jumpStartTime = 0;
+        this.isChargingJump = false;
     }
 }
 
@@ -1035,11 +1037,27 @@ class PlayerInputSystem {
             physics.vx *= 0.8;
         }
         
-        // Handle jumping
-        if (input.jump && physics.onGround) {
-            const jumpHeight = input.run ? this.game.config.player.jumpHeight * 1.2 : this.game.config.player.jumpHeight;
-            physics.vy = -jumpHeight;
+        // Handle variable jumping
+        const currentTime = Date.now();
+        const maxJumpTime = 500; // 0.5 seconds in milliseconds
+        
+        if (input.jump && physics.onGround && !playerComp.isChargingJump) {
+            // Start jump immediately
+            const baseJumpHeight = input.run ? this.game.config.player.jumpHeight * 1.2 : this.game.config.player.jumpHeight;
+            physics.vy = -baseJumpHeight;
             physics.onGround = false;
+            playerComp.isChargingJump = true;
+            playerComp.jumpStartTime = currentTime;
+        } else if (!input.jump && playerComp.isChargingJump && physics.vy < 0) {
+            // Jump key released while still going up - cut jump short
+            physics.vy *= 0.3; // Reduce upward velocity significantly
+            playerComp.isChargingJump = false;
+        } else if (playerComp.isChargingJump && (currentTime - playerComp.jumpStartTime) >= maxJumpTime) {
+            // Max jump time reached - stop extending jump
+            playerComp.isChargingJump = false;
+        } else if (physics.onGround) {
+            // Reset charging when on ground
+            playerComp.isChargingJump = false;
         }
         
         // Handle shooting
