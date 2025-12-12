@@ -182,6 +182,7 @@ class Player {
         this.notificationTimer = 0;
         this.jumpStartTime = 0;
         this.isChargingJump = false;
+        this.jumpPressed = false;
     }
 }
 
@@ -1041,13 +1042,14 @@ class PlayerInputSystem {
         const currentTime = Date.now();
         const maxJumpTime = 500; // 0.5 seconds in milliseconds
         
-        if (input.jump && physics.onGround && !playerComp.isChargingJump) {
-            // Start jump immediately
+        if (input.jump && physics.onGround && !playerComp.jumpPressed) {
+            // Start jump immediately (only once per key press)
             const baseJumpHeight = input.run ? this.game.config.player.jumpHeight * 1.2 : this.game.config.player.jumpHeight;
             physics.vy = -baseJumpHeight;
             physics.onGround = false;
             playerComp.isChargingJump = true;
             playerComp.jumpStartTime = currentTime;
+            playerComp.jumpPressed = true;
         } else if (!input.jump && playerComp.isChargingJump && physics.vy < 0) {
             // Jump key released while still going up - cut jump short
             physics.vy *= 0.3; // Reduce upward velocity significantly
@@ -1055,8 +1057,15 @@ class PlayerInputSystem {
         } else if (playerComp.isChargingJump && (currentTime - playerComp.jumpStartTime) >= maxJumpTime) {
             // Max jump time reached - stop extending jump
             playerComp.isChargingJump = false;
-        } else if (physics.onGround) {
-            // Reset charging when on ground
+        }
+        
+        // Reset jump pressed flag when key is released
+        if (!input.jump) {
+            playerComp.jumpPressed = false;
+        }
+        
+        // Reset charging when on ground
+        if (physics.onGround) {
             playerComp.isChargingJump = false;
         }
         
