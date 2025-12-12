@@ -24,11 +24,11 @@
       "formula": "difficulty"
     },
     "jumpHeight": {
-      "value": 13,
+      "value": 6,
       "static": true
     },
     "gravity": {
-      "value": 0.8,
+      "value": 0.2,
       "static": true
     },
     "levelsToWin": {
@@ -40,7 +40,7 @@
     }
   },
   "player": {
-    "jumpHeight": 13,
+    "jumpHeight": 6,
     "moveSpeed": 2,
     "lives": 3,
     "invincibilityTime": 120
@@ -54,7 +54,7 @@
     "bowserFlameSpeed": 1.5
   },
   "physics": {
-    "gravity": 0.8,
+    "gravity": 0.2,
     "terminalVelocity": 10
   },
   "powerups": {

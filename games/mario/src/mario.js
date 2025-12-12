@@ -2274,9 +2274,9 @@ async function createMarioGame(settings, callbacks = null) {
         } catch (error) {
             console.warn('Could not load Mario config, using defaults');
             marioConfig = {
-                player: { jumpHeight: 12, moveSpeed: 2, lives: 3, invincibilityTime: 120 },
+                player: { jumpHeight: 6, moveSpeed: 2, lives: 3, invincibilityTime: 120 },
                 enemies: { goombaSpeed: 1, koopaSpeed: 0.5, parakoopaSpeed: 1, piranhaSpeed: 1, firebarRotationSpeed: 1.5, bowserFlameSpeed: 1.5 },
-                physics: { gravity: 0.8, terminalVelocity: 15 },
+                physics: { gravity: 0.2, terminalVelocity: 15 },
                 powerups: { mushroomSpeed: 1, fireflowerSpeed: 0, starSpeed: 1, coinValue: 200, mushroomValue: 1000, fireflowerValue: 1000, starValue: 1000 },
                 projectiles: { fireballSpeed: 4 },
                 debug: { invincible: false, unlockAllLevels: false },
