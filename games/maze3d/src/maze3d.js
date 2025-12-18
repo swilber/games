@@ -115,15 +115,33 @@ async function createMaze3DGame(settings, callbacks = null) {
         for (let i = 0; i < numCreatures; i++) {
             let x, y;
             let attempts = 0;
+            let validPosition = false;
             
-            // Find empty maze position
+            // Find empty maze position that's not too close to other creatures
             do {
                 x = Math.floor(Math.random() * (game.mazeSize - 2)) + 1;
                 y = Math.floor(Math.random() * (game.mazeSize - 2)) + 1;
                 attempts++;
-            } while ((game.maze[y][x] === 1 || (x === 1 && y === 1) || (x === game.mazeSize - 2 && y === game.mazeSize - 2)) && attempts < 50);
+                
+                // Check if position is valid (empty maze cell, not start/finish)
+                const isEmptyCell = game.maze[y][x] === 0;
+                const notStartPosition = !(x === 1 && y === 1);
+                const notFinishPosition = !(x === game.mazeSize - 2 && y === game.mazeSize - 2);
+                
+                if (isEmptyCell && notStartPosition && notFinishPosition) {
+                    // Check distance from existing creatures (minimum 1.5 cells apart)
+                    validPosition = true;
+                    for (let existing of game.artifacts) {
+                        const distance = Math.sqrt(Math.pow(x + 0.5 - existing.x, 2) + Math.pow(y + 0.5 - existing.y, 2));
+                        if (distance < 1.5) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                }
+            } while (!validPosition && attempts < 200);
             
-            if (attempts < 50) {
+            if (validPosition) {
                 const creatureType = creatureTypes[Math.floor(Math.random() * creatureTypes.length)];
                 game.artifacts.push({
                     type: creatureType,
