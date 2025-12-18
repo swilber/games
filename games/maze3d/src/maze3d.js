@@ -472,6 +472,74 @@ async function createMaze3DGame(settings, callbacks = null) {
             }
         }
         
+        // Draw start indicator (Maze Entrance) if visible and not blocked by walls
+        const startX = 1.5;
+        const startY = 1.5;
+        const startDistance = Math.sqrt(
+            Math.pow(game.player.x - startX, 2) + 
+            Math.pow(game.player.y - startY, 2)
+        );
+        
+        if (startDistance < 8) {
+            const startAngle = Math.atan2(startY - game.player.y, startX - game.player.x);
+            const angleDiff = startAngle - game.player.angle;
+            
+            // Normalize angle difference
+            let normalizedAngle = angleDiff;
+            while (normalizedAngle > Math.PI) normalizedAngle -= 2 * Math.PI;
+            while (normalizedAngle < -Math.PI) normalizedAngle += 2 * Math.PI;
+            
+            const fov = Math.PI / 3;
+            if (Math.abs(normalizedAngle) < fov / 2) {
+                // Check if path to start is clear
+                const steps = Math.floor(startDistance * 2);
+                let pathClear = true;
+                for (let i = 1; i < steps; i++) {
+                    const checkX = game.player.x + (startX - game.player.x) * (i / steps);
+                    const checkY = game.player.y + (startY - game.player.y) * (i / steps);
+                    if (game.maze[Math.floor(checkY)][Math.floor(checkX)] === 1) {
+                        pathClear = false;
+                        break;
+                    }
+                }
+                
+                if (pathClear) {
+                    const screenX = canvas.width / 2 + (normalizedAngle / fov) * canvas.width;
+                    const baseSize = Math.max(20, 200 / startDistance);
+                    const centerY = canvas.height / 2;
+                    const hedgeHeight = baseSize * 2.0;
+                    
+                    // Draw entrance pillars (dark green hedge material, full height from ground to top)
+                    ctx.fillStyle = '#2d5016';
+                    ctx.fillRect(screenX - baseSize * 0.6, centerY - hedgeHeight * 0.5, baseSize * 0.25, hedgeHeight);
+                    ctx.fillRect(screenX + baseSize * 0.35, centerY - hedgeHeight * 0.5, baseSize * 0.25, hedgeHeight);
+                    
+                    // Draw entrance arch (dark green hedge material, thick like pillars)
+                    ctx.strokeStyle = '#2d5016';
+                    ctx.lineWidth = baseSize * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(screenX, centerY - hedgeHeight * 0.5, baseSize * 0.35, Math.PI, 2 * Math.PI);
+                    ctx.stroke();
+                    
+                    // Draw black entrance space
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(screenX - baseSize * 0.35, centerY - hedgeHeight * 0.5, baseSize * 0.7, hedgeHeight);
+                    ctx.beginPath();
+                    ctx.arc(screenX, centerY - hedgeHeight * 0.5, baseSize * 0.35, Math.PI, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Entrance text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#2d5016';
+                    ctx.lineWidth = 1;
+                    ctx.font = `bold ${Math.max(12, baseSize * 0.25)}px "Courier New", monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.strokeText('MAZE ENTRANCE', screenX, centerY + hedgeHeight * 0.6);
+                    ctx.fillText('MAZE ENTRANCE', screenX, centerY + hedgeHeight * 0.6);
+                }
+            }
+        }
+        
         // Draw minimap (if enabled)
         if (mazeConfig.gameplay?.showMinimap !== false) {
             const mapSize = mazeConfig.visual?.minimapSize || 120;
@@ -492,6 +560,10 @@ async function createMaze3DGame(settings, callbacks = null) {
             // Draw player on minimap
             ctx.fillStyle = '#ff0';
             ctx.fillRect(10 + game.player.x * cellSize - 2, 10 + game.player.y * cellSize - 2, 4, 4);
+            
+            // Draw Maze Entrance (start) on minimap
+            ctx.fillStyle = '#2d5016';
+            ctx.fillRect(10 + 1 * cellSize, 10 + 1 * cellSize, cellSize, cellSize);
             
             // Draw Triwizard Cup on minimap
             ctx.fillStyle = '#4080ff';
