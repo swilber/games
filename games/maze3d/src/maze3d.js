@@ -903,35 +903,106 @@ async function createMaze3DGame(settings, callbacks = null) {
                             ctx.shadowBlur = 0;
                             
                         } else if (creature.type === 'dementor') {
-                            // Dementor - large floating hooded figure with tattered robes
+                            // Dementor - floating hooded figure with bent arms and skeletal hands
                             ctx.fillStyle = '#1a1a1a';
+                            ctx.shadowBlur = 0; // Remove shadow blur for all dementor elements
+                            
+                            // Dementor body - six progressively larger ovals (spread out more)
+                            // First oval (smallest)
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.7, baseSize * 0.14, baseSize * 0.2, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Second oval
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.45, baseSize * 0.16, baseSize * 0.22, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Third oval
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.2, baseSize * 0.18, baseSize * 0.24, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Fourth oval
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY + baseSize * 0.05, baseSize * 0.2, baseSize * 0.26, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Fifth oval
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY + baseSize * 0.3, baseSize * 0.22, baseSize * 0.28, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Sixth oval (largest, top half only, connects to tattered edges)
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY + baseSize * 0.65, baseSize * 0.25, baseSize * 0.3, 0, Math.PI, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Smaller hood to match skinnier body (moved higher, with shadow)
                             ctx.shadowColor = '#000000';
                             ctx.shadowBlur = 20;
-                            
-                            // Main robe
                             ctx.beginPath();
-                            ctx.ellipse(screenX, centerY, baseSize * 0.6, baseSize * 1.2, 0, 0, 2 * Math.PI);
+                            ctx.ellipse(screenX, centerY - baseSize * 1.0, baseSize * 0.25, baseSize * 0.4, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.shadowBlur = 0; // Remove shadow for subsequent elements
+                            
+                            // Bent arms coming out the sides (attached to first robe oval at widest part)
+                            ctx.strokeStyle = '#1a1a1a';
+                            ctx.lineWidth = baseSize * 0.08;
+                            // Left arm (attached to widest part of first oval)
+                            ctx.beginPath();
+                            ctx.moveTo(screenX - baseSize * 0.15, centerY - baseSize * 0.4);
+                            ctx.lineTo(screenX - baseSize * 0.6, centerY - baseSize * 0.3);
+                            ctx.lineTo(screenX - baseSize * 0.7, centerY);
+                            ctx.stroke();
+                            // Right arm (attached to widest part of first oval)
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + baseSize * 0.15, centerY - baseSize * 0.4);
+                            ctx.lineTo(screenX + baseSize * 0.6, centerY - baseSize * 0.3);
+                            ctx.lineTo(screenX + baseSize * 0.7, centerY);
+                            ctx.stroke();
+                            
+                            // Dark gray hands (simple ovals, positioned at arm ends)
+                            ctx.fillStyle = '#696969';
+                            // Left hand
+                            ctx.beginPath();
+                            ctx.ellipse(screenX - baseSize * 0.7, centerY, baseSize * 0.06, baseSize * 0.08, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            // Right hand
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.7, centerY, baseSize * 0.06, baseSize * 0.08, 0, 0, 2 * Math.PI);
                             ctx.fill();
                             
-                            // Hood
-                            ctx.beginPath();
-                            ctx.ellipse(screenX, centerY - baseSize * 0.8, baseSize * 0.4, baseSize * 0.5, 0, 0, 2 * Math.PI);
-                            ctx.fill();
-                            
-                            // Tattered edges
-                            ctx.fillStyle = '#2F2F2F';
-                            for (let i = 0; i < 8; i++) {
-                                const tatterX = screenX - baseSize * 0.5 + i * baseSize * 0.15;
-                                const tatterY = centerY + baseSize * 0.8 + Math.sin(i + Date.now() * 0.005) * baseSize * 0.1;
+                            // Tattered edges (gradient from robe color to darker gray, limited to bottom oval width, no shadow)
+                            ctx.shadowBlur = 0; // Remove shadow for tattered edges
+                            const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89]; // 24 primes
+                            const xPositions = [0.1, 0.8, 0.3, 0.9, 0.2, 0.7, 0.4, 0.6, 0.15, 0.85, 0.35, 0.75, 0.25, 0.65, 0.45, 0.55, 0.05, 0.95, 0.12, 0.88, 0.32, 0.78, 0.22, 0.68]; // Random X positions
+                            for (let i = 0; i < 24; i++) {
+                                // Limit X positions to width of bottom robe oval (baseSize * 0.25 width)
+                                const tatterX = screenX - baseSize * 0.25 + xPositions[i] * baseSize * 0.5;
+                                
+                                const baseLength = baseSize * 0.15; // Same base length for all
+                                // Use different prime number for each oval to avoid patterns
+                                const seed = creature.x * 1000 + creature.y * 100;
+                                const randomPhase = ((seed * primes[i] * 9301 + 49297) % 233280) / 233280 * Math.PI * 2;
+                                const tatterLength = baseLength + Math.sin(randomPhase + Date.now() * 0.005) * baseSize * 0.05;
+                                const tatterY = centerY + baseSize * 0.65 + tatterLength / 2; // Attached to bottom of sixth oval
+                                
+                                // Create gradient from robe color to darker gray
+                                const gradient = ctx.createLinearGradient(0, tatterY - tatterLength / 2, 0, tatterY + tatterLength / 2);
+                                gradient.addColorStop(0, '#1a1a1a'); // Robe color at top
+                                gradient.addColorStop(1, '#333333'); // Darker gray at bottom
+                                ctx.fillStyle = gradient;
+                                
                                 ctx.beginPath();
-                                ctx.ellipse(tatterX, tatterY, baseSize * 0.05, baseSize * 0.2, 0, 0, 2 * Math.PI);
+                                ctx.ellipse(tatterX, tatterY, baseSize * 0.03, tatterLength, 0, 0, 2 * Math.PI);
                                 ctx.fill();
                             }
                             
-                            // Dark void face
+                            // Dark void face (moved higher)
                             ctx.fillStyle = '#000000';
                             ctx.beginPath();
-                            ctx.ellipse(screenX, centerY - baseSize * 0.7, baseSize * 0.2, baseSize * 0.3, 0, 0, 2 * Math.PI);
+                            ctx.ellipse(screenX, centerY - baseSize * 0.9, baseSize * 0.15, baseSize * 0.2, 0, 0, 2 * Math.PI);
                             ctx.fill();
                             
                             ctx.shadowBlur = 0;
