@@ -103,6 +103,35 @@ async function createMaze3DGame(settings, callbacks = null) {
         
         // Initialize empty artifacts array (no wall artifacts, only finish indicator)
         game.artifacts = [];
+        
+        // Spawn creatures throughout the maze
+        spawnCreatures();
+    }
+    
+    function spawnCreatures() {
+        const creatureTypes = ['spider', 'sphinx', 'skrewt', 'dementor'];
+        const numCreatures = Math.floor(game.mazeSize * 0.3); // About 30% of maze size
+        
+        for (let i = 0; i < numCreatures; i++) {
+            let x, y;
+            let attempts = 0;
+            
+            // Find empty maze position
+            do {
+                x = Math.floor(Math.random() * (game.mazeSize - 2)) + 1;
+                y = Math.floor(Math.random() * (game.mazeSize - 2)) + 1;
+                attempts++;
+            } while ((game.maze[y][x] === 1 || (x === 1 && y === 1) || (x === game.mazeSize - 2 && y === game.mazeSize - 2)) && attempts < 50);
+            
+            if (attempts < 50) {
+                const creatureType = creatureTypes[Math.floor(Math.random() * creatureTypes.length)];
+                game.artifacts.push({
+                    type: creatureType,
+                    x: x + 0.5,
+                    y: y + 0.5
+                });
+            }
+        }
     }
     
     function castRay(angle) {
@@ -540,6 +569,213 @@ async function createMaze3DGame(settings, callbacks = null) {
             }
         }
         
+        // Draw creatures if visible and not blocked by walls
+        game.artifacts.forEach(creature => {
+            const creatureDistance = Math.sqrt(
+                Math.pow(game.player.x - creature.x, 2) + 
+                Math.pow(game.player.y - creature.y, 2)
+            );
+            
+            if (creatureDistance < 8) {
+                const creatureAngle = Math.atan2(creature.y - game.player.y, creature.x - game.player.x);
+                const angleDiff = creatureAngle - game.player.angle;
+                
+                // Normalize angle difference
+                let normalizedAngle = angleDiff;
+                while (normalizedAngle > Math.PI) normalizedAngle -= 2 * Math.PI;
+                while (normalizedAngle < -Math.PI) normalizedAngle += 2 * Math.PI;
+                
+                const fov = Math.PI / 3;
+                if (Math.abs(normalizedAngle) < fov / 2) {
+                    // Check if path to creature is clear
+                    const steps = Math.floor(creatureDistance * 2);
+                    let pathClear = true;
+                    for (let i = 1; i < steps; i++) {
+                        const checkX = game.player.x + (creature.x - game.player.x) * (i / steps);
+                        const checkY = game.player.y + (creature.y - game.player.y) * (i / steps);
+                        if (game.maze[Math.floor(checkY)][Math.floor(checkX)] === 1) {
+                            pathClear = false;
+                            break;
+                        }
+                    }
+                    
+                    if (pathClear) {
+                        const screenX = canvas.width / 2 + (normalizedAngle / fov) * canvas.width;
+                        const baseSize = Math.max(40, 300 / creatureDistance);
+                        const centerY = canvas.height / 2;
+                        
+                        // Draw creature based on type
+                        if (creature.type === 'spider') {
+                            // Giant spider - on ground with bent legs
+                            const groundY = centerY + baseSize * 0.4;
+                            
+                            // 8 legs - bent down to ground
+                            ctx.strokeStyle = '#1a1a1a';
+                            ctx.lineWidth = baseSize * 0.05;
+                            for (let i = 0; i < 8; i++) {
+                                const angle = (i / 4) * Math.PI - Math.PI/2;
+                                const side = i < 4 ? -1 : 1;
+                                const legStartX = screenX + Math.cos(angle) * baseSize * 0.3;
+                                const legStartY = groundY - baseSize * 0.2;
+                                const legMidX = screenX + Math.cos(angle) * baseSize * 0.8;
+                                const legMidY = groundY - baseSize * 0.4;
+                                const legEndX = screenX + Math.cos(angle) * baseSize * 1.2;
+                                const legEndY = groundY;
+                                
+                                ctx.beginPath();
+                                ctx.moveTo(legStartX, legStartY);
+                                ctx.lineTo(legMidX, legMidY);
+                                ctx.lineTo(legEndX, legEndY);
+                                ctx.stroke();
+                            }
+                            
+                            // Large circular body
+                            ctx.fillStyle = '#0a0a0a';
+                            ctx.beginPath();
+                            ctx.arc(screenX, groundY - baseSize * 0.2, baseSize * 0.3, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Small circular head
+                            ctx.fillStyle = '#1a1a1a';
+                            ctx.beginPath();
+                            ctx.arc(screenX, groundY - baseSize * 0.4, baseSize * 0.15, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Glowing red eyes on head - 2 big central, 2 smaller above/beside
+                            ctx.fillStyle = '#ff0000';
+                            ctx.shadowColor = '#ff0000';
+                            ctx.shadowBlur = 5;
+                            
+                            // Two big central eyes
+                            ctx.beginPath();
+                            ctx.arc(screenX - baseSize * 0.05, groundY - baseSize * 0.42, baseSize * 0.03, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.05, groundY - baseSize * 0.42, baseSize * 0.03, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Two smaller eyes next to and above the big ones
+                            ctx.beginPath();
+                            ctx.arc(screenX - baseSize * 0.08, groundY - baseSize * 0.45, baseSize * 0.02, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.08, groundY - baseSize * 0.45, baseSize * 0.02, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            ctx.shadowBlur = 0;
+                            
+                        } else if (creature.type === 'sphinx') {
+                            // Sphinx - large golden creature with wings and human head
+                            // Body
+                            ctx.fillStyle = '#DAA520';
+                            ctx.fillRect(screenX - baseSize * 0.5, centerY - baseSize * 0.2, baseSize, baseSize * 0.6);
+                            
+                            // Wings
+                            ctx.fillStyle = '#B8860B';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX - baseSize * 0.7, centerY, baseSize * 0.4, baseSize * 0.8, -0.3, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.7, centerY, baseSize * 0.4, baseSize * 0.8, 0.3, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Head
+                            ctx.fillStyle = '#DEB887';
+                            ctx.beginPath();
+                            ctx.arc(screenX, centerY - baseSize * 0.6, baseSize * 0.3, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Eyes
+                            ctx.fillStyle = '#000';
+                            ctx.beginPath();
+                            ctx.arc(screenX - baseSize * 0.1, centerY - baseSize * 0.65, baseSize * 0.05, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.1, centerY - baseSize * 0.65, baseSize * 0.05, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                        } else if (creature.type === 'skrewt') {
+                            // Blast-ended skrewt - on ground with segmented body
+                            const groundY = centerY + baseSize * 0.4;
+                            
+                            // Main body segments
+                            ctx.fillStyle = '#8B4513';
+                            for (let i = 0; i < 4; i++) {
+                                const segmentX = screenX - baseSize * 0.3 + i * baseSize * 0.2;
+                                ctx.beginPath();
+                                ctx.ellipse(segmentX, groundY - baseSize * 0.1, baseSize * 0.15, baseSize * 0.2, 0, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            
+                            // Legs on ground
+                            ctx.strokeStyle = '#654321';
+                            ctx.lineWidth = baseSize * 0.03;
+                            for (let i = 0; i < 6; i++) {
+                                const legX = screenX - baseSize * 0.2 + i * baseSize * 0.08;
+                                ctx.beginPath();
+                                ctx.moveTo(legX, groundY);
+                                ctx.lineTo(legX, groundY + baseSize * 0.15);
+                                ctx.stroke();
+                            }
+                            
+                            // Explosive rear with glow
+                            ctx.fillStyle = '#FF4500';
+                            ctx.shadowColor = '#FF4500';
+                            ctx.shadowBlur = 15;
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.4, groundY - baseSize * 0.1, baseSize * 0.2, baseSize * 0.25, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Flame effects
+                            ctx.fillStyle = '#FF6600';
+                            for (let i = 0; i < 3; i++) {
+                                const flameX = screenX + baseSize * 0.5 + i * baseSize * 0.1;
+                                const flameY = groundY - baseSize * 0.1 + (i - 1) * baseSize * 0.08;
+                                ctx.beginPath();
+                                ctx.ellipse(flameX, flameY, baseSize * 0.05, baseSize * 0.12, 0, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            ctx.shadowBlur = 0;
+                            
+                        } else if (creature.type === 'dementor') {
+                            // Dementor - large floating hooded figure with tattered robes
+                            ctx.fillStyle = '#1a1a1a';
+                            ctx.shadowColor = '#000000';
+                            ctx.shadowBlur = 20;
+                            
+                            // Main robe
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY, baseSize * 0.6, baseSize * 1.2, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Hood
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.8, baseSize * 0.4, baseSize * 0.5, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Tattered edges
+                            ctx.fillStyle = '#2F2F2F';
+                            for (let i = 0; i < 8; i++) {
+                                const tatterX = screenX - baseSize * 0.5 + i * baseSize * 0.15;
+                                const tatterY = centerY + baseSize * 0.8 + Math.sin(i + Date.now() * 0.005) * baseSize * 0.1;
+                                ctx.beginPath();
+                                ctx.ellipse(tatterX, tatterY, baseSize * 0.05, baseSize * 0.2, 0, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            
+                            // Dark void face
+                            ctx.fillStyle = '#000000';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.7, baseSize * 0.2, baseSize * 0.3, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+            }
+        });
+        
         // Draw minimap (if enabled)
         if (mazeConfig.gameplay?.showMinimap !== false) {
             const mapSize = mazeConfig.visual?.minimapSize || 120;
@@ -576,6 +812,10 @@ async function createMaze3DGame(settings, callbacks = null) {
                 if (artifact.type === 'torch') ctx.fillStyle = '#ff6600';
                 else if (artifact.type === 'skull') ctx.fillStyle = '#eee';
                 else if (artifact.type === 'gem') ctx.fillStyle = '#00ff88';
+                else if (artifact.type === 'spider') ctx.fillStyle = '#1a1a1a';
+                else if (artifact.type === 'sphinx') ctx.fillStyle = '#DAA520';
+                else if (artifact.type === 'skrewt') ctx.fillStyle = '#8B4513';
+                else if (artifact.type === 'dementor') ctx.fillStyle = '#2F2F2F';
                 
                 ctx.fillRect(10 + (artifact.x - 0.5) * cellSize, 10 + (artifact.y - 0.5) * cellSize, cellSize/2, cellSize/2);
             });
