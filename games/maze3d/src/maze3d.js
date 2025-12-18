@@ -695,46 +695,100 @@ async function createMaze3DGame(settings, callbacks = null) {
                             ctx.fill();
                             
                         } else if (creature.type === 'skrewt') {
-                            // Blast-ended skrewt - on ground with segmented body
+                            // Blast-ended skrewt - scorpion-like with stingers and 8 legs
                             const groundY = centerY + baseSize * 0.4;
                             
-                            // Main body segments
-                            ctx.fillStyle = '#8B4513';
-                            for (let i = 0; i < 4; i++) {
-                                const segmentX = screenX - baseSize * 0.3 + i * baseSize * 0.2;
-                                ctx.beginPath();
-                                ctx.ellipse(segmentX, groundY - baseSize * 0.1, baseSize * 0.15, baseSize * 0.2, 0, 0, 2 * Math.PI);
-                                ctx.fill();
-                            }
-                            
-                            // Legs on ground
+                            // 8 legs like spider - bent down to ground
                             ctx.strokeStyle = '#654321';
-                            ctx.lineWidth = baseSize * 0.03;
-                            for (let i = 0; i < 6; i++) {
-                                const legX = screenX - baseSize * 0.2 + i * baseSize * 0.08;
+                            ctx.lineWidth = baseSize * 0.04;
+                            for (let i = 0; i < 8; i++) {
+                                const angle = (i / 4) * Math.PI - Math.PI/2;
+                                const legStartX = screenX + Math.cos(angle) * baseSize * 0.25;
+                                const legStartY = groundY - baseSize * 0.1;
+                                const legMidX = screenX + Math.cos(angle) * baseSize * 0.6;
+                                const legMidY = groundY - baseSize * 0.3;
+                                const legEndX = screenX + Math.cos(angle) * baseSize * 0.9;
+                                const legEndY = groundY;
+                                
                                 ctx.beginPath();
-                                ctx.moveTo(legX, groundY);
-                                ctx.lineTo(legX, groundY + baseSize * 0.15);
+                                ctx.moveTo(legStartX, legStartY);
+                                ctx.lineTo(legMidX, legMidY);
+                                ctx.lineTo(legEndX, legEndY);
                                 ctx.stroke();
                             }
                             
-                            // Explosive rear with glow
+                            // Main centipede body - three overlapping circles
+                            ctx.fillStyle = '#8B4513';
+                            ctx.beginPath();
+                            ctx.arc(screenX - baseSize * 0.15, groundY - baseSize * 0.1, baseSize * 0.2, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX, groundY - baseSize * 0.1, baseSize * 0.2, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.15, groundY - baseSize * 0.1, baseSize * 0.2, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Front gigantic tail with curved stinger (top quarter oval, rotated counter-clockwise 10 degrees)
+                            ctx.strokeStyle = '#654321';
+                            ctx.lineWidth = baseSize * 0.12;
+                            ctx.beginPath();
+                            ctx.ellipse(screenX - baseSize * 0.05, groundY - baseSize * 0.1, baseSize * 0.3, baseSize * 0.7, -Math.PI/18, Math.PI, Math.PI * 1.5);
+                            ctx.stroke();
+                            
+                            // Front stinger point (adjusted for rotation)
+                            ctx.fillStyle = '#2F2F2F';
+                            ctx.beginPath();
+                            ctx.moveTo(screenX - baseSize * 0.2, groundY - baseSize * 0.75);
+                            ctx.lineTo(screenX - baseSize * 0.13, groundY - baseSize * 0.88);
+                            ctx.lineTo(screenX - baseSize * 0.27, groundY - baseSize * 0.88);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            // Back gigantic tail with curved stinger (top quarter oval, rotated clockwise 10 degrees)
+                            ctx.strokeStyle = '#8B4513';
+                            ctx.lineWidth = baseSize * 0.15;
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.05, groundY - baseSize * 0.1, baseSize * 0.3, baseSize * 0.7, Math.PI/18, Math.PI * 1.5, Math.PI * 2);
+                            ctx.stroke();
+                            
+                            // Back stinger point (adjusted for rotation)
+                            ctx.fillStyle = '#2F2F2F';
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + baseSize * 0.2, groundY - baseSize * 0.75);
+                            ctx.lineTo(screenX + baseSize * 0.13, groundY - baseSize * 0.88);
+                            ctx.lineTo(screenX + baseSize * 0.27, groundY - baseSize * 0.88);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            // Explosive flame shooting from rear
                             ctx.fillStyle = '#FF4500';
                             ctx.shadowColor = '#FF4500';
                             ctx.shadowBlur = 15;
+                            
+                            // Main flame shape
                             ctx.beginPath();
-                            ctx.ellipse(screenX + baseSize * 0.4, groundY - baseSize * 0.1, baseSize * 0.2, baseSize * 0.25, 0, 0, 2 * Math.PI);
+                            ctx.moveTo(screenX + baseSize * 0.3, groundY - baseSize * 0.1);
+                            ctx.lineTo(screenX + baseSize * 0.5, groundY - baseSize * 0.3);
+                            ctx.lineTo(screenX + baseSize * 0.55, groundY - baseSize * 0.1);
+                            ctx.lineTo(screenX + baseSize * 0.6, groundY - baseSize * 0.25);
+                            ctx.lineTo(screenX + baseSize * 0.65, groundY - baseSize * 0.05);
+                            ctx.lineTo(screenX + baseSize * 0.6, groundY + baseSize * 0.1);
+                            ctx.lineTo(screenX + baseSize * 0.5, groundY + baseSize * 0.05);
+                            ctx.lineTo(screenX + baseSize * 0.4, groundY + baseSize * 0.1);
+                            ctx.closePath();
                             ctx.fill();
                             
-                            // Flame effects
+                            // Inner flame tips
                             ctx.fillStyle = '#FF6600';
-                            for (let i = 0; i < 3; i++) {
-                                const flameX = screenX + baseSize * 0.5 + i * baseSize * 0.1;
-                                const flameY = groundY - baseSize * 0.1 + (i - 1) * baseSize * 0.08;
-                                ctx.beginPath();
-                                ctx.ellipse(flameX, flameY, baseSize * 0.05, baseSize * 0.12, 0, 0, 2 * Math.PI);
-                                ctx.fill();
-                            }
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + baseSize * 0.45, groundY - baseSize * 0.05);
+                            ctx.lineTo(screenX + baseSize * 0.55, groundY - baseSize * 0.2);
+                            ctx.lineTo(screenX + baseSize * 0.6, groundY - baseSize * 0.1);
+                            ctx.lineTo(screenX + baseSize * 0.55, groundY + baseSize * 0.05);
+                            ctx.closePath();
+                            ctx.fill();
+                            
                             ctx.shadowBlur = 0;
                             
                         } else if (creature.type === 'dementor') {
