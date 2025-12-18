@@ -101,40 +101,8 @@ async function createMaze3DGame(settings, callbacks = null) {
         game.maze[endY][endX - 1] = 0;
         game.maze[endY - 1][endX] = 0;
         
-        // Add artifacts to walls for navigation landmarks
+        // Initialize empty artifacts array (no wall artifacts, only finish indicator)
         game.artifacts = [];
-        const artifactCount = Math.floor(game.mazeSize / 2);
-        const artifactTypes = ['torch', 'skull', 'gem'];
-        
-        // Find walls that are adjacent to paths
-        const validWalls = [];
-        for (let y = 1; y < game.mazeSize - 1; y++) {
-            for (let x = 1; x < game.mazeSize - 1; x++) {
-                if (game.maze[y][x] === 1) { // This is a wall
-                    // Check if adjacent to any path
-                    const adjacentToPaths = [
-                        game.maze[y-1][x], game.maze[y+1][x],
-                        game.maze[y][x-1], game.maze[y][x+1]
-                    ].some(cell => cell === 0);
-                    
-                    if (adjacentToPaths) {
-                        validWalls.push({x, y});
-                    }
-                }
-            }
-        }
-        
-        // Place artifacts on random valid walls
-        for (let i = 0; i < Math.min(artifactCount, validWalls.length); i++) {
-            const wallIndex = Math.floor(Math.random() * validWalls.length);
-            const wall = validWalls.splice(wallIndex, 1)[0];
-            
-            game.artifacts.push({
-                x: wall.x + 0.5,
-                y: wall.y + 0.5,
-                type: artifactTypes[Math.floor(Math.random() * artifactTypes.length)]
-            });
-        }
     }
     
     function castRay(angle) {
