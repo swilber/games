@@ -156,7 +156,7 @@ function showConfigType(type) {
 
 function loadSystemConfig() {
     // Load show game names setting
-    const showGameNames = localStorage.getItem('showGameNames') !== 'false';
+    const showGameNames = localStorage.getItem('showGameNames') === 'true';
     document.getElementById('show-game-names').checked = showGameNames;
     
     // Load bypass questions setting
@@ -1091,7 +1091,7 @@ function showLevelSelect() {
     levelButtons.innerHTML = '';
     
     // Check localStorage setting for showing game names
-    const showGameTitles = localStorage.getItem('showGameNames') !== 'false';
+    const showGameTitles = localStorage.getItem('showGameNames') === 'true';
     
     levels.forEach((level, index) => {
         const button = document.createElement('button');
