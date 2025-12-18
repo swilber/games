@@ -453,31 +453,31 @@ async function createMaze3DGame(settings, callbacks = null) {
                     ctx.ellipse(screenX, centerY - gobletHeight * 0.2, gobletWidth * 1.2, gobletHeight * 0.8, 0, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Goblet bowl (egg-shaped)
+                    // Goblet bowl (bottom half only)
                     ctx.shadowBlur = 8;
                     ctx.fillStyle = `rgba(180, 200, 255, ${0.9 * pulse})`;
                     ctx.beginPath();
-                    ctx.ellipse(screenX, centerY - gobletHeight * 0.4, gobletWidth * 0.6, gobletHeight * 0.5, 0, 0, Math.PI * 2);
+                    ctx.ellipse(screenX, centerY - gobletHeight * 0.4, gobletWidth * 0.6, gobletHeight * 0.5, 0, 0, Math.PI);
                     ctx.fill();
                     
-                    // Bowl rim (darker edge)
+                    // Bowl rim (darker edge, overlapping the bowl)
                     ctx.fillStyle = `rgba(120, 150, 220, ${0.9 * pulse})`;
                     ctx.beginPath();
-                    ctx.ellipse(screenX, centerY - gobletHeight * 0.65, gobletWidth * 0.6, gobletHeight * 0.1, 0, 0, Math.PI * 2);
+                    ctx.ellipse(screenX, centerY - gobletHeight * 0.4, gobletWidth * 0.6, gobletHeight * 0.1, 0, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Silver handles (left and right)
+                    // Silver handles (left and right, elliptical and curving outward, connected to bowl)
                     ctx.strokeStyle = `rgba(200, 200, 220, ${0.8 * pulse})`;
                     ctx.lineWidth = Math.max(2, baseSize * 0.1);
                     
-                    // Left handle
+                    // Left handle (elliptical, wider than tall)
                     ctx.beginPath();
-                    ctx.arc(screenX - gobletWidth * 0.7, centerY - gobletHeight * 0.4, gobletWidth * 0.25, -Math.PI * 0.3, Math.PI * 0.3);
+                    ctx.ellipse(screenX - gobletWidth * 0.4, centerY - gobletHeight * 0.25, gobletWidth * 0.4, gobletWidth * 0.25, 0, Math.PI * 0.7, Math.PI * 1.3);
                     ctx.stroke();
                     
-                    // Right handle  
+                    // Right handle (elliptical, wider than tall)
                     ctx.beginPath();
-                    ctx.arc(screenX + gobletWidth * 0.7, centerY - gobletHeight * 0.4, gobletWidth * 0.25, Math.PI * 0.7, Math.PI * 1.3);
+                    ctx.ellipse(screenX + gobletWidth * 0.4, centerY - gobletHeight * 0.25, gobletWidth * 0.4, gobletWidth * 0.25, 0, -Math.PI * 0.3, Math.PI * 0.3);
                     ctx.stroke();
                     
                     // Goblet stem (curved)
