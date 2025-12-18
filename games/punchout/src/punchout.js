@@ -202,7 +202,6 @@ async function createPunchOutGame(settings, callbacks = null) {
     // Force update opponent name to ensure it reflects current fighter data
     opponent.name = fighters[currentFighter].name;
     
-    console.log('Opponent initialized with bodyShape:', opponent.bodyShape);
     
     // Helper function to handle player damage and knockdown
     function damagePlayer(damage) {
@@ -230,19 +229,15 @@ async function createPunchOutGame(settings, callbacks = null) {
     function handleKeyDown(e) {
         keys[e.code] = true;
         
-        // Debug logging
-        console.log('Key pressed:', e.code, 'levelComplete:', levelComplete, 'gameOver:', gameOver);
         
         // Handle restart on game over
         if (gameOver && e.code === 'KeyR') {
-            console.log('Restarting game...');
             restartGame();
             return;
         }
         
         // Handle level completion
         if (levelComplete && e.code === 'Space') {
-            console.log('Starting training animation...');
             startTrainingAnimation();
             return;
         }
@@ -385,7 +380,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         const totalFrames = 40; // Much faster animation
         const progress = Math.min(attackFrame / totalFrames, 1);
         
-        console.log('Uppercut frame:', attackFrame, 'progress:', progress);
         
         // Define keyframes for uppercut animation - VERY dramatic
         const keyframes = [
@@ -419,7 +413,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             gloveX: startFrame.gloveX + (endFrame.gloveX - startFrame.gloveX) * t
         };
         
-        console.log('Keyframe result:', result);
         return result;
     }
     function calculateArmIK(shoulderX, shoulderY, targetX, targetY, upperArmLength = 25, lowerArmLength = 20) {
@@ -561,11 +554,9 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Handle getting up animation
         if (opponent.gettingUp) {
             opponent.getUpTimer--;
-            console.log('Getting up timer:', opponent.getUpTimer);
             
             if (opponent.getUpTimer <= 0) {
                 // Successfully got back up
-                console.log('Opponent getting back up - resetting states');
                 opponent.gettingUp = false;
                 opponent.knockedDown = false;
                 opponent.stunned = false;
@@ -574,11 +565,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.tellTimer = 0;
                 opponent.walkingToPosition = true; // Walk back to fighting position
                 opponent.health = Math.min(opponent.maxHealth, opponent.health + 20);
-                console.log('States after getting up:', {
-                    gettingUp: opponent.gettingUp,
-                    knockedDown: opponent.knockedDown,
-                    health: opponent.health
-                });
             }
             // Don't return here - let the function continue to normal AI behavior
         }
@@ -587,7 +573,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp && !player.knockedDown) {
             // Handle opponent movement - walk toward fighting position
             if (opponent.walkingToPosition) {
-                console.log('DEBUG: Opponent walking - Y:', opponent.y, 'Target:', player.y - 160);
                 const targetY = player.y - 160; // Stop 160 pixels above Mac (50 pixels further back)
                 const distanceToTarget = Math.abs(opponent.y - targetY);
                 
@@ -602,7 +587,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 } else {
                     // Reached fighting position
                     opponent.walkingToPosition = false;
-                    console.log('DEBUG: Opponent reached fighting position, walkingToPosition set to false');
                 }
             }
             
@@ -725,7 +709,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             const resetTime = baseResetTime + Math.max(0, (180 - opponent.reactionTime) / 2); // Faster fighters reset quicker
             
             if (opponent.patternTimer > resetTime) {
-                console.log('Cycling pattern from', opponent.currentPattern, 'to', (opponent.currentPattern + 1) % opponent.patterns.length);
                 opponent.patternTimer = 0;
                 opponent.attacking = false;
                 opponent.tellTimer = 0;
@@ -735,25 +718,16 @@ async function createPunchOutGame(settings, callbacks = null) {
                 if (opponent.name === "Steven Wilber") {
                     opponent.vulnerableTimer = 30; // 0.5 second vulnerability window
                 }
-            } else if (opponent.patternTimer % 60 === 0) {
-                // Debug log every second to see timer progress
-                console.log('Pattern timer:', opponent.patternTimer, 'Reset time:', resetTime, 'Pattern:', pattern);
             }
         }
     }
     
     function executeOpponentAttack(pattern) {
-        console.log('Original pattern:', pattern);
-        console.log('Current pattern index:', opponent.currentPattern);
-        console.log('Available patterns:', opponent.patterns);
-        console.log('About to execute pattern:', pattern);
         
-        console.log('Final pattern:', pattern);
         
         // Set which hand to use for this attack
         switch(pattern) {
             case 'jab':
-                console.log('Executing JAB attack');
                 // Quick straight punch - left hand
                 opponent.attackHand = 'left';
                 if (!player.blocking && !player.dodging) {
@@ -763,10 +737,8 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'uppercut':
-                console.log('Executing UPPERCUT attack');
                 // Powerful uppercut - always use dominant hand (right)
                 opponent.attackHand = 'right';
-                console.log('Uppercut with dominant hand:', opponent.attackHand);
                 if (!player.blocking) {
                     const baseDamage = opponent.punchDamage || 5;
                     const multiplier = punchOutConfig.opponents?.uppercutDamageMultiplier || 2.0;
@@ -774,7 +746,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'hook':
-                console.log('Executing HOOK attack');
                 // Side punch - right hand
                 opponent.attackHand = 'right';
                 if (!player.blocking && player.dodging !== 'left') {
@@ -784,7 +755,6 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             case 'rush':
-                console.log('Executing RUSH attack');
                 // Multiple quick punches - alternating hands
                 opponent.attackHand = 'both';
                 if (!player.blocking && !player.dodging) {
@@ -794,12 +764,10 @@ async function createPunchOutGame(settings, callbacks = null) {
                 }
                 break;
             default:
-                console.log('UNKNOWN PATTERN:', pattern, 'defaulting to jab');
                 opponent.attackHand = 'left';
                 break;
         }
         
-        console.log('Attack hand set to:', opponent.attackHand);
     }
     
     function checkCollisions() {
@@ -1309,7 +1277,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Draw training animation
         if (showingTraining) {
-            console.log('About to call drawTrainingAnimation');
             drawTrainingAnimation();
         }
         
@@ -1610,15 +1577,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         const opponentCenterX = opponent.x;
         const opponentCenterY = opponent.y + stepOffset + duckOffset; // Step forward AND duck based on keyframes
-        
-        // Debug logging
-        if (opponent.knockedDown || opponent.gettingUp) {
-            console.log('Opponent states:', {
-                knockedDown: opponent.knockedDown,
-                gettingUp: opponent.gettingUp,
-                getUpTimer: opponent.getUpTimer
-            });
-        }
         
         // Draw opponent shadow
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
@@ -2166,13 +2124,11 @@ async function createPunchOutGame(settings, callbacks = null) {
             } else if (pattern === 'uppercut') {
                 // Uppercut with proper keyframe animation
                 const keyframe = getUppercutKeyframe(attackFrame);
-                console.log('Using keyframe for uppercut:', keyframe);
                 
                 // Apply keyframe values - glove position is RELATIVE to the ducked body position
                 const uppercutTargetX = opponentCenterX + keyframe.gloveX;
                 const uppercutTargetY = opponentCenterY - 50 + keyframe.gloveY; // Relative to shoulder, not screen
                 
-                console.log('Uppercut target:', uppercutTargetX, uppercutTargetY);
                 
                 // Right uppercut only (dominant hand) with keyframe-based IK
                 const rightIK = calculateArmIK(rightShoulderX, rightShoulderY, uppercutTargetX, uppercutTargetY);
@@ -2547,15 +2503,12 @@ async function createPunchOutGame(settings, callbacks = null) {
         gameWon = true;
         victoryType = 'KO'; // Regular knockout
         
-        console.log('winFight called - currentFighter:', currentFighter, 'fighters.length:', fighters.length);
         
         // Check if there are more fighters
         if (currentFighter < fighters.length - 1) {
             levelComplete = true;
-            console.log('Level complete set to true');
         } else {
             // Won all fights - complete game
-            console.log('All fights won - completing game');
             if (callbacks && callbacks.onGameComplete) {
                 callbacks.onGameComplete('punchout', { completed: true });
             }
@@ -2601,7 +2554,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.x = 400;
         opponent.y = 150; // Start at back of ring
         opponent.walkingToPosition = true;
-        console.log('DEBUG: Restart - Set walkingToPosition to true, Y to 150');
         opponent.knockedDown = false;
         opponent.knockdownTimer = 0;
         opponent.knockdownCount = 0;
@@ -2626,36 +2578,29 @@ async function createPunchOutGame(settings, callbacks = null) {
     }
     
     function startTrainingAnimation() {
-        console.log('startTrainingAnimation called');
         levelComplete = false;
         showingTraining = true;
         trainingStartTime = Date.now();
         gameRunning = true; // Keep game loop running during training
         
-        console.log('Training state set - showingTraining:', showingTraining, 'trainingStartTime:', trainingStartTime);
         
         // Restart the game loop since it may have stopped
         gameLoop();
         
         // Auto-advance after 10 seconds
         const timeoutId = setTimeout(() => {
-            console.log('Training timeout reached after 10 seconds, ending animation');
             endTrainingAnimation();
         }, 10000);
         
-        console.log('Training timeout set with ID:', timeoutId);
     }
     
     function endTrainingAnimation() {
-        console.log('endTrainingAnimation called');
         showingTraining = false;
         currentFighter++;
-        console.log('Moving to next fighter:', currentFighter);
         resetForNextFighter();
     }
     
     function drawTrainingAnimation() {
-        console.log('drawTrainingAnimation called');
         
         // Fill entire screen with sky blue background
         ctx.fillStyle = '#87CEEB';
