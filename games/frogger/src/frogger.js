@@ -144,6 +144,55 @@ async function createFroggerGame(settings, callbacks = null) {
         if (!game.laneTypes) {
             game.laneTypes = levelLayouts[game.currentLevel];
         }
+        
+        // Pre-populate screen with cars and logs if game has started
+        if (game.gameStarted) {
+            populateInitialObstacles();
+        }
+    }
+    
+    function populateInitialObstacles() {
+        for (let visualLane = 0; visualLane < totalLanes; visualLane++) {
+            const laneType = getLaneType(visualLane);
+            
+            if (laneType === 1) { // Car lanes (roads)
+                // Add 2-3 cars per lane spread across the screen
+                const carsPerLane = 2 + Math.floor(Math.random() * 2); // 2-3 cars
+                for (let i = 0; i < carsPerLane; i++) {
+                    const direction = visualLane % 2 === 0 ? 1 : -1;
+                    const spacing = canvas.width / carsPerLane;
+                    const x = (i * spacing) + (Math.random() * spacing * 0.5);
+                    const difficulty = getCurrentDifficulty();
+                    
+                    game.cars.push({
+                        x: x,
+                        y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
+                        width: 60,
+                        height: 30,
+                        speed: difficulty.carSpeed * direction,
+                        lane: visualLane
+                    });
+                }
+            } else if (laneType === 2) { // Log lanes (water)
+                // Add 1-2 logs per lane spread across the screen
+                const logsPerLane = 1 + Math.floor(Math.random() * 2); // 1-2 logs
+                for (let i = 0; i < logsPerLane; i++) {
+                    const direction = visualLane % 2 === 0 ? -1 : 1;
+                    const spacing = canvas.width / logsPerLane;
+                    const x = (i * spacing) + (Math.random() * spacing * 0.5);
+                    const difficulty = getCurrentDifficulty();
+                    
+                    game.logs.push({
+                        x: x,
+                        y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
+                        width: 100,
+                        height: 18,
+                        speed: difficulty.carSpeed * 0.6 * direction,
+                        lane: visualLane
+                    });
+                }
+            }
+        }
     }
     
     function createCar(visualLane) {
@@ -389,6 +438,8 @@ async function createFroggerGame(settings, callbacks = null) {
     function handleKeyPress(e) {
         if (!game.gameStarted) {
             game.gameStarted = true;
+            // Pre-populate screen with cars and logs when game starts
+            populateInitialObstacles();
             if (callbacks && callbacks.onGameStart) {
                 callbacks.onGameStart('frogger');
             }
