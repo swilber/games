@@ -89,6 +89,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         maxStars: punchOutConfig.gameplay?.maxStars || 3,
         blocking: false,
         dodging: null, // 'left', 'right', or null
+        dodgeTimer: 0, // Timer for dodge duration
         punching: false,
         punchType: null, // 'low', 'high', 'power', 'star'
         punchHeight: 'body', // 'body' or 'head'
@@ -275,13 +276,15 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Player controls
         switch(e.code) {
             case 'ArrowLeft':
-                if (!player.punching && !player.blocking) {
+                if (!player.punching && !player.blocking && !player.dodging) {
                     player.dodging = 'left';
+                    player.dodgeTimer = 60; // 1 second at 60fps
                 }
                 break;
             case 'ArrowRight':
-                if (!player.punching && !player.blocking) {
+                if (!player.punching && !player.blocking && !player.dodging) {
                     player.dodging = 'right';
+                    player.dodgeTimer = 60; // 1 second at 60fps
                 }
                 break;
             case 'ArrowDown':
@@ -332,10 +335,6 @@ async function createPunchOutGame(settings, callbacks = null) {
         keys[e.code] = false;
         
         switch(e.code) {
-            case 'ArrowLeft':
-            case 'ArrowRight':
-                player.dodging = null;
-                break;
             case 'ArrowDown':
                 player.blocking = false;
                 break;
@@ -512,12 +511,14 @@ async function createPunchOutGame(settings, callbacks = null) {
                 player.punchCooldown--;
             }
             
-            // Handle dodge animation
+            // Handle dodge animation and timer
             if (player.dodging) {
                 player.animationFrame++;
-                if (player.animationFrame > 20) {
+                player.dodgeTimer--;
+                if (player.dodgeTimer <= 0) {
                     player.dodging = null;
                     player.animationFrame = 0;
+                    player.dodgeTimer = 0;
                 }
             }
         }
