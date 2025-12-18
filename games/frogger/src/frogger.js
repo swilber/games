@@ -484,8 +484,51 @@ async function createFroggerGame(settings, callbacks = null) {
         });
         
         // Draw frog
-        ctx.fillStyle = game.onLog ? '#6f6' : '#4f4';
-        ctx.fillRect(game.frog.x, game.frog.y - game.frog.size/2, game.frog.size, game.frog.size);
+        const frogX = game.frog.x;
+        const frogY = game.frog.y - game.frog.size/2;
+        const frogSize = game.frog.size;
+        const frogColor = game.onLog ? '#6f6' : '#4f4'; // Brighter green on logs
+        const darkGreen = game.onLog ? '#5d5' : '#3a3';
+        
+        // Frog body (oval)
+        ctx.fillStyle = frogColor;
+        ctx.beginPath();
+        ctx.ellipse(frogX + frogSize/2, frogY + frogSize*0.6, frogSize*0.4, frogSize*0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Frog head (circle)
+        ctx.fillStyle = frogColor;
+        ctx.beginPath();
+        ctx.arc(frogX + frogSize/2, frogY + frogSize*0.3, frogSize*0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyes (two circles on top of head)
+        ctx.fillStyle = darkGreen;
+        ctx.beginPath();
+        ctx.arc(frogX + frogSize*0.35, frogY + frogSize*0.2, frogSize*0.08, 0, Math.PI * 2);
+        ctx.arc(frogX + frogSize*0.65, frogY + frogSize*0.2, frogSize*0.08, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye pupils (black dots)
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(frogX + frogSize*0.35, frogY + frogSize*0.2, frogSize*0.04, 0, Math.PI * 2);
+        ctx.arc(frogX + frogSize*0.65, frogY + frogSize*0.2, frogSize*0.04, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Front legs (small ovals)
+        ctx.fillStyle = darkGreen;
+        ctx.beginPath();
+        ctx.ellipse(frogX + frogSize*0.2, frogY + frogSize*0.7, frogSize*0.12, frogSize*0.08, 0, 0, Math.PI * 2);
+        ctx.ellipse(frogX + frogSize*0.8, frogY + frogSize*0.7, frogSize*0.12, frogSize*0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Back legs (larger ovals)
+        ctx.fillStyle = darkGreen;
+        ctx.beginPath();
+        ctx.ellipse(frogX + frogSize*0.15, frogY + frogSize*0.9, frogSize*0.15, frogSize*0.1, 0, 0, Math.PI * 2);
+        ctx.ellipse(frogX + frogSize*0.85, frogY + frogSize*0.9, frogSize*0.15, frogSize*0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
         
         // Draw UI
         ctx.font = '16px Arial';
