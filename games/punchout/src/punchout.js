@@ -188,6 +188,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         knockedDown: false,
         knockdownTimer: 0,
         knockdownCount: 0,
+        getUpCount: 0, // Count at which opponent will get up
         gettingUp: false,
         getUpTimer: 0,
         animationFrame: 0,
@@ -210,7 +211,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         // Check for knockdown
         if (player.health <= 0 && !player.knockedDown) {
             player.knockedDown = true;
-            player.knockdownTimer = 600; // 10 seconds to get up
+            player.knockdownTimer = Date.now() + 10000; // 10 seconds from now
             player.knockdownCount++;
             player.health = 1; // Keep at 1 so player doesn't die immediately
             player.y = 650; // Move Mac below the screen
@@ -463,9 +464,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Handle player knockdown state
         if (player.knockedDown && !player.gettingUp) {
-            player.knockdownTimer--;
-            
-            if (player.knockdownTimer <= 0) {
+            if (Date.now() >= player.knockdownTimer) {
                 // Player couldn't get up in time - game over
                 loseFight();
                 return;
@@ -533,11 +532,13 @@ async function createPunchOutGame(settings, callbacks = null) {
     function updateOpponent() {
         // Handle knockdown state
         if (opponent.knockedDown && !opponent.gettingUp) {
-            opponent.knockdownTimer--;
+            const timeElapsed = Date.now() - (opponent.knockdownTimer - 10000);
+            const currentCount = Math.floor(timeElapsed / 1000) + 1;
             
-            if (opponent.knockdownTimer <= 0) {
-                if (opponent.knockdownCount >= 3) {
-                    // TKO - opponent can't get up
+            // Check if opponent should get up at their predetermined count
+            if (currentCount >= opponent.getUpCount) {
+                if (opponent.getUpCount > 10 || opponent.knockdownCount >= 3) {
+                    // TKO - opponent stays down or can't get up after 3 knockdowns
                     winFight();
                     return;
                 } else {
@@ -546,6 +547,13 @@ async function createPunchOutGame(settings, callbacks = null) {
                     opponent.getUpTimer = 180; // 3 seconds to get up
                 }
             }
+            
+            // If count reaches 10 and opponent hasn't gotten up, they're out
+            if (currentCount >= 10 && !opponent.gettingUp) {
+                winFight();
+                return;
+            }
+            
             return;
         }
         
@@ -886,10 +894,32 @@ async function createPunchOutGame(settings, callbacks = null) {
                             
                             // showHitEffect(opponent.x, opponent.y - 100, "FAST TKO!", '#FFD700');
                         } else {
-                            // Normal knockdown - progressive recovery difficulty
-                            const baseTime = tkoConfig.baseGetUpTime;
-                            const penalty = (opponent.knockdownCount - 1) * tkoConfig.getUpTimeIncrease;
-                            opponent.knockdownTimer = baseTime + penalty;
+                            // Normal knockdown - determine when opponent will get up
+                            const baseTime = 10000; // 10 seconds max time
+                            opponent.knockdownTimer = Date.now() + baseTime;
+                            
+                            // Determine get-up count based on knockdown history and random chance
+                            let getUpCount;
+                            if (opponent.knockdownCount === 1) {
+                                // First knockdown: get up at count 3-6
+                                getUpCount = Math.floor(Math.random() * 4) + 3;
+                            } else if (opponent.knockdownCount === 2) {
+                                // Second knockdown: get up at count 6-9, or 10% chance to stay down
+                                if (Math.random() < 0.1) {
+                                    getUpCount = 11; // Stay down (count goes to 10)
+                                } else {
+                                    getUpCount = Math.floor(Math.random() * 4) + 6;
+                                }
+                            } else {
+                                // Third knockdown: 50% chance to stay down
+                                if (Math.random() < 0.5) {
+                                    getUpCount = 11; // Stay down
+                                } else {
+                                    getUpCount = Math.floor(Math.random() * 2) + 8; // Get up at 8-9
+                                }
+                            }
+                            
+                            opponent.getUpCount = getUpCount;
                             
                             // Move opponent to back of ring when knocked down
                             opponent.y = 150; // Back of the ring
@@ -942,7 +972,7 @@ async function createPunchOutGame(settings, callbacks = null) {
                 // Check for player knockdown
                 if (player.health <= 0) {
                     player.knockedDown = true;
-                    player.knockdownTimer = 600; // 10 seconds to get up
+                    player.knockdownTimer = Date.now() + 10000; // 10 seconds from now
                     player.knockdownCount++;
                     
                     // Player can always get back up - no TKO for Little Mac
@@ -1323,9 +1353,10 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.strokeStyle = '#FFFFFF';
             ctx.strokeRect(barX, barY, barWidth, barHeight);
             
-            // Countdown timer - count 1-10
-            const countdown = Math.ceil((600 - player.knockdownTimer) / 60) + 1;
-            if (countdown <= 10) {
+            // Countdown timer - count up 1 to 10 like real boxing
+            const timeElapsed = Date.now() - (player.knockdownTimer - 10000);
+            const countdown = Math.floor(timeElapsed / 1000) + 1;
+            if (countdown <= 10 && countdown > 0) {
                 ctx.fillStyle = '#FF0000';
                 ctx.font = 'bold 48px "Courier New", monospace';
                 ctx.fillText(countdown.toString(), 400, 250);
@@ -1629,11 +1660,12 @@ async function createPunchOutGame(settings, callbacks = null) {
                 drawStar(starX, starY, 6);
             }
             
-            // Countdown timer - only show if not TKO'd and count 1-10
+            // Countdown timer - count up 1 to 10 like real boxing
             if (!gameWon) {
-                const maxTime = tkoConfig.baseGetUpTime + (opponent.knockdownCount - 1) * tkoConfig.getUpTimeIncrease;
-                const countdown = Math.ceil((maxTime - opponent.knockdownTimer) / 60) + 1;
-                if (countdown <= 10) {
+                const baseTime = 10000 + (opponent.knockdownCount - 1) * 2000;
+                const timeElapsed = Date.now() - (opponent.knockdownTimer - baseTime);
+                const countdown = Math.floor(timeElapsed / 1000) + 1;
+                if (countdown <= 10 && countdown > 0) {
                     ctx.fillStyle = '#FF0000';
                     ctx.font = 'bold 48px "Courier New", monospace';
                     ctx.textAlign = 'center';
