@@ -687,10 +687,10 @@ async function createPunchOutGame(settings, callbacks = null) {
                 opponent.tellTimer++;
             }
             
-            // Execute attack (happens before reset)
+            // Execute attack (happens before reset) - attack regardless of player state
             const attackTime = 60; // Attack at 1 second, well before reset
             if (opponent.patternTimer > attackTime && shouldAttack) {
-                if (!opponent.attacking && playerVulnerable) {
+                if (!opponent.attacking) {
                     const pattern = opponent.patterns[opponent.currentPattern];
                     executeOpponentAttack(pattern);
                     opponent.attacking = true;
