@@ -586,20 +586,22 @@ async function createPunchOutGame(settings, callbacks = null) {
         if (!opponent.stunned && !opponent.knockedDown && !opponent.gettingUp && !player.knockedDown) {
             // Handle opponent movement - walk toward fighting position
             if (opponent.walkingToPosition) {
+                console.log('DEBUG: Opponent walking - Y:', opponent.y, 'Target:', player.y - 160);
                 const targetY = player.y - 160; // Stop 160 pixels above Mac (50 pixels further back)
                 const distanceToTarget = Math.abs(opponent.y - targetY);
                 
                 if (distanceToTarget > 5) {
                     // Walk toward target position (downward toward Mac)
                     const walkSpeed = 2;
-                    if (opponent.y > targetY) {
-                        opponent.y -= walkSpeed;
-                    } else {
+                    if (opponent.y < targetY) {
                         opponent.y += walkSpeed;
+                    } else {
+                        opponent.y -= walkSpeed;
                     }
                 } else {
                     // Reached fighting position
                     opponent.walkingToPosition = false;
+                    console.log('DEBUG: Opponent reached fighting position, walkingToPosition set to false');
                 }
             }
             
@@ -2582,10 +2584,13 @@ async function createPunchOutGame(settings, callbacks = null) {
         
         // Reset opponent state completely
         opponent.x = 400;
-        opponent.y = 200;
+        opponent.y = 150; // Start at back of ring
+        opponent.walkingToPosition = true;
+        console.log('DEBUG: Restart - Set walkingToPosition to true, Y to 150');
         opponent.knockedDown = false;
         opponent.knockdownTimer = 0;
         opponent.knockdownCount = 0;
+        opponent.gettingUp = false;
         opponent.gettingUp = false;
         opponent.getUpTimer = 0;
         opponent.stunned = false;
@@ -2942,7 +2947,8 @@ async function createPunchOutGame(settings, callbacks = null) {
         opponent.patternTimer = 0;
         opponent.tellTimer = 0;
         opponent.x = 400;
-        opponent.y = 200;
+        opponent.y = 150; // Start at back of ring for walking forward
+        opponent.walkingToPosition = true;
         opponent.width = fighterData.width || 80;
         opponent.height = fighterData.height || 120;
         opponent.health = fighterData.health || 100;
