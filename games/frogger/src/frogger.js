@@ -358,7 +358,7 @@ async function createFroggerGame(settings, callbacks = null) {
             const laneType = getLaneType(visualLane);
             
             if (laneType === 0) { // Safe zone
-                ctx.fillStyle = '#4a4';
+                ctx.fillStyle = '#191'; // Even darker green for better frog leg visibility
             } else if (laneType === 1) { // Road
                 ctx.fillStyle = '#333';
             } else { // Water
