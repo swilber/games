@@ -180,6 +180,7 @@ async function createPunchOutGame(settings, callbacks = null) {
         currentBlockPattern: 0,
         blockPatternTimer: 0,
         attackFrequency: fighters[currentFighter].attackFrequency || 0.5,
+        attackCooldown: 0,
         reactionTime: fighters[currentFighter].reactionTime || 120,
         danceTimer: 0,
         danceDirection: 1, // 1 for right, -1 for left
@@ -683,8 +684,15 @@ async function createPunchOutGame(settings, callbacks = null) {
             }
             
             // Smarter attack timing based on player state and difficulty
-            const shouldAttack = Math.random() < opponent.attackFrequency;
             const playerVulnerable = !player.blocking && !player.dodging && player.punchCooldown <= 0;
+            
+            // Reduce attack cooldown
+            if (opponent.attackCooldown > 0) {
+                opponent.attackCooldown--;
+            }
+            
+            // Only check for attack if cooldown is finished
+            const shouldAttack = opponent.attackCooldown <= 0 && Math.random() < opponent.attackFrequency;
             
             // Show tell before attacking (shorter timing)
             const tellStartTime = 30;
@@ -701,6 +709,13 @@ async function createPunchOutGame(settings, callbacks = null) {
                     const pattern = opponent.patterns[opponent.currentPattern];
                     executeOpponentAttack(pattern);
                     opponent.attacking = true;
+                    // Set attack cooldown based on fighter (Glass Joe: 6s, Kaiser: 4.5s, Wilber: 3s)
+                    const cooldownMap = {
+                        "Glass Joe": 360,      // 6 seconds * 60 fps
+                        "Von Kaiser": 270,     // 4.5 seconds * 60 fps  
+                        "Steven Wilber": 180   // 3 seconds * 60 fps
+                    };
+                    opponent.attackCooldown = cooldownMap[opponent.name] || 300;
                 }
             }
             
