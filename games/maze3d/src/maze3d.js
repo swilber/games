@@ -32,7 +32,7 @@ async function createMaze3DGame(settings, callbacks = null) {
         player: { x: 1.5, y: 1.5, angle: 0 },
         maze: [],
         artifacts: [],
-        mazeSize: mazeConfig.gameplay?.mazeSize || settings?.mazeSize || 15,
+        mazeSize: mazeConfig.gameplay?.mazeSize || settings?.mazeSize || 50,
         gameOver: false,
         won: false,
         gameStarted: false
