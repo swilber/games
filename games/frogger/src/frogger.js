@@ -133,6 +133,22 @@ async function createFroggerGame(settings, callbacks = null) {
         }
     }
     
+    // Initialize lane speeds (random but consistent per lane)
+    function initializeLaneSpeeds() {
+        if (!game.laneSpeeds) {
+            game.laneSpeeds = {};
+            for (let lane = 0; lane < totalLanes; lane++) {
+                // Random speed multiplier between 0.6 and 2.0
+                game.laneSpeeds[lane] = 0.6 + Math.random() * 1.4;
+            }
+        }
+    }
+    
+    function getLaneSpeed(visualLane, difficulty) {
+        initializeLaneSpeeds();
+        return difficulty.carSpeed * game.laneSpeeds[visualLane];
+    }
+    
     function resetLevel() {
         game.frog.x = canvas.width / 2;
         game.frog.y = canvas.height - laneHeight / 2;
@@ -164,6 +180,9 @@ async function createFroggerGame(settings, callbacks = null) {
                     const x = (i * spacing) + (Math.random() * spacing * 0.5);
                     const difficulty = getCurrentDifficulty();
                     
+                    // Use random lane speed (consistent within lane)
+                    const laneSpeed = getLaneSpeed(visualLane, difficulty);
+                    
                     // Random vehicle type and color
                     const vehicleTypes = ['car', 'truck'];
                     const vehicleType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
@@ -178,7 +197,7 @@ async function createFroggerGame(settings, callbacks = null) {
                         y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
                         width: width,
                         height: height,
-                        speed: difficulty.carSpeed * direction,
+                        speed: laneSpeed * direction,
                         lane: visualLane,
                         type: vehicleType,
                         color: color
@@ -193,12 +212,15 @@ async function createFroggerGame(settings, callbacks = null) {
                     const x = (i * spacing) + (Math.random() * spacing * 0.5);
                     const difficulty = getCurrentDifficulty();
                     
+                    // Use random lane speed (consistent within lane) - logs are slower
+                    const laneSpeed = getLaneSpeed(visualLane, difficulty) * 0.6;
+                    
                     game.logs.push({
                         x: x,
                         y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
                         width: 100,
                         height: 18,
-                        speed: difficulty.carSpeed * 0.6 * direction,
+                        speed: laneSpeed * direction,
                         lane: visualLane
                     });
                 }
@@ -210,6 +232,9 @@ async function createFroggerGame(settings, callbacks = null) {
         const direction = visualLane % 2 === 0 ? 1 : -1;
         const startX = direction === 1 ? -80 : canvas.width + 80;
         const difficulty = getCurrentDifficulty();
+        
+        // Use random lane speed (consistent within lane)
+        const laneSpeed = getLaneSpeed(visualLane, difficulty);
         
         // Random vehicle type and color
         const vehicleTypes = ['car', 'truck'];
@@ -225,7 +250,7 @@ async function createFroggerGame(settings, callbacks = null) {
             y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
             width: width,
             height: height,
-            speed: difficulty.carSpeed * direction,
+            speed: laneSpeed * direction,
             visualLane: visualLane,
             type: vehicleType,
             color: color
@@ -237,12 +262,15 @@ async function createFroggerGame(settings, callbacks = null) {
         const startX = direction === 1 ? -120 : canvas.width + 120;
         const difficulty = getCurrentDifficulty();
         
+        // Use random lane speed (consistent within lane) - logs are slower
+        const laneSpeed = getLaneSpeed(visualLane, difficulty) * 0.6;
+        
         game.logs.push({
             x: startX,
             y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
             width: 100,
             height: 18,
-            speed: difficulty.carSpeed * 0.6 * direction,
+            speed: laneSpeed * direction,
             visualLane: visualLane
         });
     }
