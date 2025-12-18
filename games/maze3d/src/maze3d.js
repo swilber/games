@@ -665,33 +665,144 @@ async function createMaze3DGame(settings, callbacks = null) {
                             ctx.shadowBlur = 0;
                             
                         } else if (creature.type === 'sphinx') {
-                            // Sphinx - large golden creature with wings and human head
-                            // Body
-                            ctx.fillStyle = '#DAA520';
-                            ctx.fillRect(screenX - baseSize * 0.5, centerY - baseSize * 0.2, baseSize, baseSize * 0.6);
+                            // Sphinx - lion body with Egyptian woman's head
+                            const centerY = canvas.height / 2;
                             
-                            // Wings
+                            // Long brown hair (drawn behind everything, starts at bottom of headdress)
+                            ctx.fillStyle = '#8B4513';
+                            ctx.fillRect(screenX - baseSize * 0.3, centerY - baseSize * 0.5, baseSize * 0.6, baseSize * 0.6);
+                            
+                            // Back lion legs (middle two legs drawn behind body)
                             ctx.fillStyle = '#B8860B';
+                            ctx.fillRect(screenX - baseSize * 0.1, centerY + baseSize * 0.3, baseSize * 0.15, baseSize * 0.3);
+                            ctx.fillRect(screenX + baseSize * 0.1, centerY + baseSize * 0.3, baseSize * 0.15, baseSize * 0.3);
+                            
+                            // Back feet (ovals at bottom of back legs)
                             ctx.beginPath();
-                            ctx.ellipse(screenX - baseSize * 0.7, centerY, baseSize * 0.4, baseSize * 0.8, -0.3, 0, 2 * Math.PI);
+                            ctx.ellipse(screenX - baseSize * 0.025, centerY + baseSize * 0.65, baseSize * 0.1, baseSize * 0.06, 0, 0, 2 * Math.PI);
                             ctx.fill();
                             ctx.beginPath();
-                            ctx.ellipse(screenX + baseSize * 0.7, centerY, baseSize * 0.4, baseSize * 0.8, 0.3, 0, 2 * Math.PI);
+                            ctx.ellipse(screenX + baseSize * 0.175, centerY + baseSize * 0.65, baseSize * 0.1, baseSize * 0.06, 0, 0, 2 * Math.PI);
                             ctx.fill();
                             
-                            // Head
+                            // Lion tail (drawn behind body)
+                            ctx.strokeStyle = '#B8860B';
+                            ctx.lineWidth = baseSize * 0.08;
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + baseSize * 0.5, centerY + baseSize * 0.1);
+                            ctx.lineTo(screenX + baseSize * 0.7, centerY - baseSize * 0.2);
+                            ctx.stroke();
+                            
+                            // Tail hair (brown oval at end of tail)
+                            ctx.fillStyle = '#8B4513';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.7, centerY - baseSize * 0.2, baseSize * 0.08, baseSize * 0.12, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Lion body
+                            ctx.fillStyle = '#DAA520';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY + baseSize * 0.1, baseSize * 0.5, baseSize * 0.3, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Front lion legs (outer two legs drawn in front of body)
+                            ctx.fillStyle = '#B8860B';
+                            ctx.fillRect(screenX - baseSize * 0.4, centerY + baseSize * 0.3, baseSize * 0.15, baseSize * 0.3);
+                            ctx.fillRect(screenX + baseSize * 0.3, centerY + baseSize * 0.3, baseSize * 0.15, baseSize * 0.3);
+                            
+                            // Front feet (ovals at bottom of front legs)
+                            ctx.beginPath();
+                            ctx.ellipse(screenX - baseSize * 0.325, centerY + baseSize * 0.65, baseSize * 0.1, baseSize * 0.06, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.375, centerY + baseSize * 0.65, baseSize * 0.1, baseSize * 0.06, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Egyptian woman's head (full head)
                             ctx.fillStyle = '#DEB887';
                             ctx.beginPath();
-                            ctx.arc(screenX, centerY - baseSize * 0.6, baseSize * 0.3, 0, 2 * Math.PI);
+                            ctx.ellipse(screenX, centerY - baseSize * 0.4, baseSize * 0.25, baseSize * 0.3, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Half headdress/nemes (top half drawn over head but under bandana)
+                            ctx.fillStyle = '#4169E1';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.5, baseSize * 0.3, baseSize * 0.2, 0, Math.PI, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Headdress stripes (on half headdress)
+                            ctx.strokeStyle = '#FFD700';
+                            ctx.lineWidth = baseSize * 0.02;
+                            for (let i = 0; i < 3; i++) {
+                                const stripeY = centerY - baseSize * 0.55 + i * baseSize * 0.05;
+                                ctx.beginPath();
+                                ctx.moveTo(screenX - baseSize * 0.25, stripeY);
+                                ctx.lineTo(screenX + baseSize * 0.25, stripeY);
+                                ctx.stroke();
+                            }
+                            
+                            // Gold bandana (rectangle higher on head, edge to edge)
+                            ctx.fillStyle = '#FFD700';
+                            ctx.fillRect(screenX - baseSize * 0.25, centerY - baseSize * 0.55, baseSize * 0.5, baseSize * 0.08);
+                            
+                            // Small gold snake coming out from center of bandana
+                            ctx.strokeStyle = '#FFD700';
+                            ctx.lineWidth = baseSize * 0.02;
+                            ctx.beginPath();
+                            ctx.moveTo(screenX, centerY - baseSize * 0.51);
+                            ctx.lineTo(screenX - baseSize * 0.03, centerY - baseSize * 0.57);
+                            ctx.lineTo(screenX + baseSize * 0.02, centerY - baseSize * 0.61);
+                            ctx.stroke();
+                            
+                            // Small snake head
+                            ctx.fillStyle = '#FFD700';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX + baseSize * 0.02, centerY - baseSize * 0.61, baseSize * 0.015, baseSize * 0.02, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Snake eyes
+                            ctx.fillStyle = '#000000';
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.015, centerY - baseSize * 0.615, baseSize * 0.005, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.arc(screenX + baseSize * 0.025, centerY - baseSize * 0.615, baseSize * 0.005, 0, 2 * Math.PI);
                             ctx.fill();
                             
                             // Eyes
                             ctx.fillStyle = '#000';
                             ctx.beginPath();
-                            ctx.arc(screenX - baseSize * 0.1, centerY - baseSize * 0.65, baseSize * 0.05, 0, 2 * Math.PI);
+                            ctx.arc(screenX - baseSize * 0.08, centerY - baseSize * 0.42, baseSize * 0.03, 0, 2 * Math.PI);
                             ctx.fill();
                             ctx.beginPath();
-                            ctx.arc(screenX + baseSize * 0.1, centerY - baseSize * 0.65, baseSize * 0.05, 0, 2 * Math.PI);
+                            ctx.arc(screenX + baseSize * 0.08, centerY - baseSize * 0.42, baseSize * 0.03, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            // Nose and mouth
+                            ctx.fillStyle = '#CD853F';
+                            ctx.beginPath();
+                            ctx.ellipse(screenX, centerY - baseSize * 0.35, baseSize * 0.02, baseSize * 0.03, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                            
+                            ctx.strokeStyle = '#8B4513';
+                            ctx.lineWidth = baseSize * 0.015;
+                            ctx.beginPath();
+                            ctx.arc(screenX, centerY - baseSize * 0.3, baseSize * 0.05, 0, Math.PI);
+                            ctx.stroke();
+                            
+                            // Fangs
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.beginPath();
+                            ctx.moveTo(screenX - baseSize * 0.04, centerY - baseSize * 0.3);
+                            ctx.lineTo(screenX - baseSize * 0.04, centerY - baseSize * 0.25);
+                            ctx.lineTo(screenX - baseSize * 0.035, centerY - baseSize * 0.22);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + baseSize * 0.04, centerY - baseSize * 0.3);
+                            ctx.lineTo(screenX + baseSize * 0.04, centerY - baseSize * 0.25);
+                            ctx.lineTo(screenX + baseSize * 0.035, centerY - baseSize * 0.22);
+                            ctx.closePath();
                             ctx.fill();
                             
                         } else if (creature.type === 'skrewt') {
