@@ -164,13 +164,24 @@ async function createFroggerGame(settings, callbacks = null) {
                     const x = (i * spacing) + (Math.random() * spacing * 0.5);
                     const difficulty = getCurrentDifficulty();
                     
+                    // Random vehicle type and color
+                    const vehicleTypes = ['car', 'truck'];
+                    const vehicleType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+                    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    const width = vehicleType === 'truck' ? 80 : 60;
+                    const height = vehicleType === 'truck' ? 35 : 30;
+                    
                     game.cars.push({
                         x: x,
                         y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
-                        width: 60,
-                        height: 30,
+                        width: width,
+                        height: height,
                         speed: difficulty.carSpeed * direction,
-                        lane: visualLane
+                        lane: visualLane,
+                        type: vehicleType,
+                        color: color
                     });
                 }
             } else if (laneType === 2) { // Log lanes (water)
@@ -200,13 +211,24 @@ async function createFroggerGame(settings, callbacks = null) {
         const startX = direction === 1 ? -80 : canvas.width + 80;
         const difficulty = getCurrentDifficulty();
         
+        // Random vehicle type and color
+        const vehicleTypes = ['car', 'truck'];
+        const vehicleType = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        const width = vehicleType === 'truck' ? 80 : 60;
+        const height = vehicleType === 'truck' ? 35 : 30;
+        
         game.cars.push({
             x: startX,
             y: canvas.height - (visualLane + 1) * laneHeight + laneHeight / 2,
-            width: 60,
-            height: 30,
+            width: width,
+            height: height,
             speed: difficulty.carSpeed * direction,
-            visualLane: visualLane
+            visualLane: visualLane,
+            type: vehicleType,
+            color: color
         });
     }
     
@@ -333,15 +355,104 @@ async function createFroggerGame(settings, callbacks = null) {
         ctx.setLineDash([]);
         
         // Draw cars
-        ctx.fillStyle = '#f44';
         game.cars.forEach(car => {
-            ctx.fillRect(car.x, car.y - car.height/2, car.width, car.height);
+            const carX = car.x;
+            const carY = car.y - car.height/2;
+            const carWidth = car.width;
+            const carHeight = car.height;
+            const vehicleColor = car.color || '#e74c3c';
+            const isMovingRight = car.speed > 0;
+            
+            if (car.type === 'truck') {
+                // Truck body (larger)
+                ctx.fillStyle = vehicleColor;
+                ctx.fillRect(carX + 5, carY + 5, carWidth - 10, carHeight - 10);
+                
+                // Truck cab
+                ctx.fillStyle = vehicleColor;
+                ctx.fillRect(carX + (isMovingRight ? carWidth - 25 : 5), carY + 2, 20, carHeight - 16);
+                
+                // Truck windshield
+                ctx.fillStyle = '#85c1e9';
+                ctx.fillRect(carX + (isMovingRight ? carWidth - 22 : 8), carY + 4, 14, 8);
+                
+                // Truck wheels (more wheels)
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(carX + 8, carY + carHeight - 8, 8, 6);
+                ctx.fillRect(carX + carWidth/2 - 4, carY + carHeight - 8, 8, 6);
+                ctx.fillRect(carX + carWidth - 16, carY + carHeight - 8, 8, 6);
+                
+                // Truck grille/back
+                ctx.fillStyle = '#34495e';
+                const grillX = isMovingRight ? carX + carWidth - 5 : carX;
+                ctx.fillRect(grillX, carY + 8, 5, carHeight - 16);
+                
+            } else {
+                // Regular car body
+                ctx.fillStyle = vehicleColor;
+                ctx.fillRect(carX + 5, carY + 5, carWidth - 10, carHeight - 10);
+                
+                // Car roof
+                const roofColor = vehicleColor === '#f1c40f' ? '#f39c12' : '#34495e';
+                ctx.fillStyle = roofColor;
+                ctx.fillRect(carX + 12, carY + 2, carWidth - 24, carHeight - 16);
+                
+                // Windshield
+                ctx.fillStyle = '#85c1e9';
+                ctx.fillRect(carX + 15, carY + 4, carWidth - 30, 8);
+                
+                // Wheels
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(carX + 8, carY + carHeight - 8, 8, 6);
+                ctx.fillRect(carX + carWidth - 16, carY + carHeight - 8, 8, 6);
+            }
+            
+            // Headlights/taillights
+            ctx.fillStyle = isMovingRight ? '#f1c40f' : '#e74c3c';
+            const lightX = isMovingRight ? carX + carWidth - 3 : carX;
+            ctx.fillRect(lightX, carY + 8, 3, 6);
+            ctx.fillRect(lightX, carY + 16, 3, 6);
         });
         
         // Draw logs
-        ctx.fillStyle = '#a52';
         game.logs.forEach(log => {
-            ctx.fillRect(log.x, log.y - log.height/2, log.width, log.height);
+            const logX = log.x;
+            const logY = log.y - log.height/2;
+            const logWidth = log.width;
+            const logHeight = log.height;
+            
+            // Log body (brown wood)
+            ctx.fillStyle = '#8b4513';
+            ctx.fillRect(logX, logY, logWidth, logHeight);
+            
+            // Wood grain lines
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(logX, logY + logHeight/3);
+            ctx.lineTo(logX + logWidth, logY + logHeight/3);
+            ctx.moveTo(logX, logY + 2*logHeight/3);
+            ctx.lineTo(logX + logWidth, logY + 2*logHeight/3);
+            ctx.stroke();
+            
+            // Left log end (darker) with tree rings
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(logX, logY, 4, logHeight);
+            
+            // Tree rings on left end only (oval for perspective)
+            ctx.strokeStyle = '#4a2c17';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.save();
+            ctx.translate(logX + 2, logY + logHeight/2);
+            ctx.scale(0.6, 1); // Make it oval (narrower horizontally)
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.restore();
+            ctx.stroke();
+            
+            // Right log end (darker) - no rings
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(logX + logWidth - 4, logY, 4, logHeight);
         });
         
         // Draw frog
