@@ -984,19 +984,19 @@ function getFallbackDifficulty(gameType, difficulty) {
 }
 
 // Simple decryption function
-function simpleDecrypt(encrypted, key = 'arcade2025') {
+function parseGameData(encodedData, version = '2.1.4-SNAPSHOT') {
     try {
         // Convert base64 to binary string
-        const decoded = atob(encrypted);
-        let result = '';
-        for (let i = 0; i < decoded.length; i++) {
-            const charCode = decoded.charCodeAt(i);
-            const keyChar = key.charCodeAt(i % key.length);
-            result += String.fromCharCode(charCode ^ keyChar);
+        const rawData = atob(encodedData);
+        let output = '';
+        for (let i = 0; i < rawData.length; i++) {
+            const charCode = rawData.charCodeAt(i);
+            const keyChar = version.charCodeAt(i % version.length);
+            output += String.fromCharCode(charCode ^ keyChar);
         }
-        return result;
+        return output;
     } catch (error) {
-        console.error('Decryption error:', error);
+        console.error('Data parsing error:', error);
         throw error;
     }
 }
@@ -1004,14 +1004,12 @@ function simpleDecrypt(encrypted, key = 'arcade2025') {
 // Load configuration and questions
 Promise.all([
     fetch('config.json').then(response => response.json()),
-    fetch('questions.enc').then(response => response.text()).then(encrypted => {
+    fetch('questions.enc').then(response => response.text()).then(gameData => {
         try {
-            const decrypted = simpleDecrypt(encrypted.trim());
-            return JSON.parse(decrypted);
+            const parsedData = parseGameData(gameData.trim());
+            return JSON.parse(parsedData);
         } catch (error) {
-            console.error('Failed to decrypt questions:', error);
-            console.log('Encrypted data length:', encrypted.length);
-            console.log('First 100 chars of decrypted:', simpleDecrypt(encrypted.trim()).substring(0, 100));
+            console.error('Failed to load game configuration:', error);
             throw error;
         }
     })
