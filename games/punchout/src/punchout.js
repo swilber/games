@@ -1391,6 +1391,28 @@ async function createPunchOutGame(settings, callbacks = null) {
         ctx.ellipse(playerCenterX, player.y + 10, 35, 15, 0, 0, 2 * Math.PI);
         ctx.fill();
         
+        // Draw blocking arms and gloves behind body (if blocking)
+        if (player.blocking) {
+            const playerColor = punchOutConfig.visual?.playerColor || '#FFE4B5';
+            
+            // Draw arms behind the body (since back is facing camera) - pulled in close to body
+            ctx.fillStyle = playerColor;
+            
+            // Left arm - pulled in close to body, angled up to protect face
+            ctx.fillRect(playerCenterX - 20, playerCenterY - 60, 8, 35); // Upper arm (closer to center)
+            ctx.fillRect(playerCenterX - 18, playerCenterY - 30, 6, 25); // Forearm (closer to center)
+            
+            // Right arm - pulled in close to body, angled up to protect face  
+            ctx.fillRect(playerCenterX + 12, playerCenterY - 60, 8, 35); // Upper arm (closer to center)
+            ctx.fillRect(playerCenterX + 12, playerCenterY - 30, 6, 25); // Forearm (closer to center)
+            
+            // Gloves positioned close together over face area
+            ctx.fillStyle = '#FF0000';
+            const blockGloveSize = 18;
+            ctx.fillRect(playerCenterX - 25, playerCenterY - 65, blockGloveSize, blockGloveSize); // Left glove
+            ctx.fillRect(playerCenterX + 7, playerCenterY - 65, blockGloveSize, blockGloveSize); // Right glove
+        }
+        
         // Draw player body (Little Mac style)
         const basePlayerColor = punchOutConfig.visual?.playerColor || '#FFE4B5';
         const playerColor = player.flashTimer > 0 ? '#FFB6C1' : basePlayerColor; // Pink when flashing
@@ -1464,8 +1486,8 @@ async function createPunchOutGame(settings, callbacks = null) {
             }
             
             ctx.shadowBlur = 0;
-        } else {
-            // Normal stance - arms at shoulder level
+        } else if (!player.blocking) {
+            // Normal stance - arms at shoulder level (only when not blocking)
             ctx.fillStyle = playerColor;
             ctx.fillRect(playerCenterX - 35, playerCenterY - 45, 25, 6); // Left arm at shoulder
             ctx.fillRect(playerCenterX + 10, playerCenterY - 45, 25, 6); // Right arm at shoulder
@@ -1475,26 +1497,6 @@ async function createPunchOutGame(settings, callbacks = null) {
             ctx.fillStyle = '#FF0000';
             ctx.fillRect(playerCenterX - 40, playerCenterY - 50, gloveSize, gloveSize); // Left glove
             ctx.fillRect(playerCenterX + 22, playerCenterY - 50, gloveSize, gloveSize); // Right glove
-        }
-        
-        // Draw blocking stance with shield effect
-        if (player.blocking) {
-            ctx.strokeStyle = '#FFFF00';
-            ctx.lineWidth = 4;
-            ctx.shadowColor = '#FFFF00';
-            ctx.shadowBlur = 15;
-            
-            // Shield effect
-            ctx.beginPath();
-            ctx.arc(playerCenterX, playerCenterY - 20, 60, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            // Gloves up in blocking position
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(playerCenterX - 35, playerCenterY - 50, gloveSize, gloveSize);
-            ctx.fillRect(playerCenterX + 17, playerCenterY - 50, gloveSize, gloveSize);
-            
-            ctx.shadowBlur = 0;
         }
         
         ctx.restore();
