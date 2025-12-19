@@ -1297,7 +1297,6 @@ async function createGameLegacy(gameType, settings) {
 async function initializeLevel() {
     console.log('initializeLevel called, currentLevel:', currentLevel);
     const level = levels[currentLevel];
-    console.log('level object:', level);
     console.log('level.type:', level?.type);
     
     document.getElementById('level-title').textContent = level.title;

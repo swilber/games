@@ -26,7 +26,6 @@ let questionSystem = {
     // Show answer prompt at start of next game
     showAnswerPrompt(callback) {
         console.log('showAnswerPrompt called');
-        console.log('currentQuestion:', this.currentQuestion);
         
         if (!this.currentQuestion || !this.expectedAnswer) {
             console.log('No pending question, allowing access');
