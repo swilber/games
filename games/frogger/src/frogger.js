@@ -1,19 +1,24 @@
 async function createFroggerGame(settings, callbacks = null) {
-    const gameArea = document.getElementById('game-area');
+    console.log('createFroggerGame called with settings:', settings);
+    console.log('createFroggerGame called with callbacks:', callbacks);
     
-    // Load Frogger configuration using ConfigManager
-    let froggerConfig = {};
-    if (typeof configManager !== 'undefined') {
-        froggerConfig = await configManager.loadConfig('frogger');
-        console.log('Frogger config loaded via ConfigManager:', froggerConfig);
-    } else {
-        console.log('ConfigManager not available, using settings fallback');
-        froggerConfig = {
-            gameplay: settings,
-            physics: settings,
-            visual: settings
-        };
-    }
+    try {
+        const gameArea = document.getElementById('game-area');
+        console.log('gameArea found:', gameArea);
+        
+        // Load Frogger configuration using ConfigManager
+        let froggerConfig = {};
+        if (typeof configManager !== 'undefined') {
+            froggerConfig = await configManager.loadConfig('frogger');
+            console.log('Frogger config loaded via ConfigManager:', froggerConfig);
+        } else {
+            console.log('ConfigManager not available, using settings fallback');
+            froggerConfig = {
+                gameplay: settings,
+                physics: settings,
+                visual: settings
+            };
+        }
     
     const canvas = document.createElement('canvas');
     canvas.width = 600;
@@ -101,12 +106,16 @@ async function createFroggerGame(settings, callbacks = null) {
             
             // Call game complete callback
             if (callbacks && callbacks.onGameComplete) {
+                console.log('Frogger: Calling onGameComplete callback');
                 setTimeout(() => {
+                    console.log('Frogger: Executing onGameComplete callback now');
                     callbacks.onGameComplete('frogger', { 
                         completed: true, 
                         levelsCompleted: game.levelsCompleted 
                     });
                 }, 1000);
+            } else {
+                console.log('Frogger: No callbacks or onGameComplete callback available', callbacks);
             }
             return;
         }
@@ -342,10 +351,6 @@ async function createFroggerGame(settings, callbacks = null) {
         if (game.frog.y < laneHeight) {
             console.log('Frogger: Win condition triggered, frog.y =', game.frog.y, 'laneHeight =', laneHeight);
             nextLevel();
-            if (game.won) {
-                gameWon = true;
-                setTimeout(showQuestion, 1000);
-            }
         }
     }
     
@@ -682,15 +687,24 @@ async function createFroggerGame(settings, callbacks = null) {
     gameRunning = true;
     gameInterval = setInterval(gameLoop, 16); // ~60fps
     
-    // Return cleanup function
+    console.log('Frogger game created successfully, returning game object');
+    
+    // Return game object with cleanup function
     return {
-        cleanup: () => {
+        destroy: () => {
             gameRunning = false;
             if (gameInterval) {
                 clearInterval(gameInterval);
                 gameInterval = null;
             }
             document.removeEventListener('keydown', keyPressHandler);
+            if (canvas && canvas.parentNode) {
+                canvas.parentNode.removeChild(canvas);
+            }
         }
     };
+    } catch (error) {
+        console.error('Error in createFroggerGame:', error);
+        throw error;
+    }
 }

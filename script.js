@@ -1275,6 +1275,9 @@ async function createGameWithCallbacks(gameType, settings) {
         case 'flappy':
             console.log('Creating flappy game with settings:', settings);
             return await createFlappyGame(settings, gameCallbacks);
+        case 'frogger':
+            console.log('Creating frogger game with settings:', settings);
+            return await createFroggerGame(settings, gameCallbacks);
         default:
             // Fallback for games without callback support yet
             return await createGameLegacy(gameType, settings);
@@ -1284,8 +1287,6 @@ async function createGameWithCallbacks(gameType, settings) {
 // Legacy game creation for backward compatibility
 async function createGameLegacy(gameType, settings) {
     switch(gameType) {
-        case 'frogger':
-            return createFroggerGame(settings);
         case 'maze3d':
             return createMaze3DGame(settings);
         case 'donkeykong':
@@ -1294,7 +1295,11 @@ async function createGameLegacy(gameType, settings) {
 }
 
 async function initializeLevel() {
+    console.log('initializeLevel called, currentLevel:', currentLevel);
     const level = levels[currentLevel];
+    console.log('level object:', level);
+    console.log('level.type:', level?.type);
+    
     document.getElementById('level-title').textContent = level.title;
     
     // Clean up previous game
@@ -1323,10 +1328,6 @@ async function initializeLevel() {
                 }
             });
             break;
-        case 'frogger':
-            // Legacy games without callback support
-            currentGameInstance = await createGameLegacy(level.type, await getDifficulty(level.type));
-            break;
         case 'donkeykong':
         case 'mario':
         case 'pacman':
@@ -1341,6 +1342,7 @@ async function initializeLevel() {
         case 'punchout':
         case 'maze3d':
         case 'flappy':
+        case 'frogger':
             // Modern games with callback support
             console.log('Creating modern game:', level.type);
             currentGameInstance = await createGameWithCallbacks(level.type, await getDifficulty(level.type));
