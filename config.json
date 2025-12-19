@@ -22,15 +22,21 @@
     },
     {
       "id": 4,
-      "order": 4,
+      "order": 3,
       "enabled": true,
       "type": "flappy"
     },
     {
       "id": 5,
-      "order": 5,
+      "order": 4,
       "enabled": true,
       "type": "frogger"
+    },
+    {
+      "id": 8,
+      "order": 5,
+      "enabled": true,
+      "type": "donkeykong"
     },
     {
       "id": 6,
@@ -39,40 +45,40 @@
       "type": "maze3d"
     },
     {
-      "id": 7,
-      "order": 7,
-      "enabled": true,
-      "type": "mario"
-    },
-    {
-      "id": 8,
-      "order": 8,
-      "enabled": true,
-      "type": "donkeykong"
-    },
-    {
       "id": 9,
-      "order": 9,
+      "order": 7,
       "enabled": true,
       "type": "pacman"
     },
     {
       "id": 10,
-      "order": 10,
+      "order": 8,
       "enabled": false,
       "type": "fake"
     },
     {
+      "id": 15,
+      "order": 9,
+      "enabled": true,
+      "type": "skifree"
+    },
+    {
       "id": 11,
-      "order": 11,
+      "order": 10,
       "enabled": true,
       "type": "breakout"
     },
     {
       "id": 12,
-      "order": 12,
+      "order": 11,
       "enabled": true,
       "type": "asteroids"
+    },
+    {
+      "id": 7,
+      "order": 12,
+      "enabled": true,
+      "type": "mario"
     },
     {
       "id": 13,
@@ -81,28 +87,22 @@
       "type": "spaceinvaders"
     },
     {
-      "id": 14,
+      "id": 17,
       "order": 14,
       "enabled": true,
-      "type": "punchout"
-    },
-    {
-      "id": 15,
-      "order": 15,
-      "enabled": true,
-      "type": "skifree"
+      "type": "dirtbike"
     },
     {
       "id": 16,
-      "order": 16,
+      "order": 15,
       "enabled": true,
       "type": "tetris"
     },
     {
-      "id": 17,
-      "order": 17,
+      "id": 14,
+      "order": 16,
       "enabled": true,
-      "type": "dirtbike"
+      "type": "punchout"
     }
   ]
 }
